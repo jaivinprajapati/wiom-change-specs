@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — Change Spec — CSP Netbox Swap (Diagnosis-Driven Device Replacement)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --example-bg: #fffbeb; --example-rule: #f3d56a; --example-ink: #78350f;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg);
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px;
+  }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .quickcheck {
+    margin: 28px 0 40px; background: var(--quickcheck-bg);
+    border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule);
+    border-radius: 6px; padding: 18px 22px;
+  }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.core { background: var(--core-bg); color: var(--core); }
+  .tier.cond { background: var(--cond-bg); color: var(--cond); }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .pending { background: var(--cond-bg); border-left: 3px solid var(--cond); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: #5b3a00; border-radius: 4px; font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+  code { background: #f1f3f5; padding: 1px 5px; border-radius: 3px; font-size: 12.5px; font-family: "SF Mono", Consolas, monospace; }
+
+  .mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 14px; margin: 14px 0; text-align: center; }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin.computation { border-left-color: var(--what); }
+  .gherkin.invariant { border-left-color: var(--how); }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  .gherkin.computation .kw { color: var(--what); }
+  .gherkin.invariant .kw { color: var(--how); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  .diff-legend { font-size: 12.5px; margin: 14px 0 6px; color: var(--muted); }
+  .diff-legend .chip { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 6px; border: 1px solid; }
+  .chip.unchanged { background: #f4f4f2; color: #444; border-color: #cfcfca; }
+  .chip.added { background: #e9f5ee; color: #064e2b; border-color: #0b6b3a; }
+  .chip.changed { background: #fbf1dd; color: #5b3a00; border-color: #8a5a00; }
+  .chip.removed { background: #fee2e2; color: #7f1d1d; border-color: #b91c1c; }
+  .flow-label { font-size: 13px; font-weight: 700; margin: 18px 0 0; }
+  .flow-label.before { color: #7f1d1d; }
+  .flow-label.after { color: #064e2b; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired behaviour</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflows (before/after)</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameter changes</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v0.1 · PM deliverable</div>
+  <h1>CSP Netbox Swap — Diagnosis-Driven Device Replacement</h1>
+  <p class="lede">Makes the OS-defined netbox swap reachable end-to-end for CSPs/technicians: complaint intake opens to all connection lifecycle states, CSPs record a device diagnosis on the task, a device-fault diagnosis initiates the swap journey, and every swap leaves a verifiable, reconcilable audit trail. Per author directive, this spec carries exact technical references (API paths, event names, field names, DB columns) inline — a deliberate deviation from the template's default scope fence, requested for tech-team handover.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Jaivin Prajapati &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Full</span>
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body.</div>
+  <dl>
+    <dt>What is changing?</dt><dd>The built-but-unreachable netbox swap flow becomes a live CSP journey: intake gate on connection state removed, diagnosis capture added, device-fault diagnosis initiates the swap; swap guard G6 removed.</dd>
+    <dt>What triggered it?</dt><dd>Product decision: today's swaps run outside the OS (manual/old-app); the OS-governed flow exists in backend but has no diagnosis write-path, so it can never execute. Audit trail of swaps is unverifiable.</dd>
+    <dt>Blast radius</dt><dd>Complaint intake &amp; auto-closure (SRS), RESTORE task resolution journey (CSP app + SRS), swap emission guards (SRS), custody swap execution (ACS — no change, confirmation only).</dd>
+    <dt>Reversible?</dt><dd>Feature: Yes — disabling the diagnosis→swap journey stops all swaps cleanly. An executed swap: No, by design — there is no un-swap; reversal is a second forward swap.</dd>
+    <dt>Money / PII / migration?</dt><dd>N / N / N.</dd>
+    <dt>OS impact / sign-off?</dt><dd>SR OS (behaviour change — Varun, Pending) · ESR (contract change — Dhruv, Pending) · Asset Custody OS (confirmation-only — Dhruv, Pending). Not all signed off.</dd>
+    <dt>Tier</dt><dd>Full — lead PM: Jaivin Prajapati.</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>Why we are changing this, what it does today, what it should do, and the precise delta. Stable across implementation revisions.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>CSP Netbox Swap — Diagnosis-Driven Device Replacement (intake gate, diagnosis capture, swap initiation, post-swap behaviour)</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft</td></tr>
+    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>Support &amp; Resolution OS v1.6.1 LOCKED (<code>csp-os-yaml/os/Support_Resolution_OS_v1_6_1_LOCKED.md</code> §4.4, §7.9, §12.5) · Asset Custody OS v1.11.1 LOCKED (<code>csp-os-yaml/os/Asset_Custody_OS_v1_11_1_LOCKED.md</code> §4.4) · ESR v2.27 (DEVICE_SWAP / DEVICE_SWAP_COMPLETED entries)</td></tr>
+    <tr><td>Companion documents</td><td>SR OS amendment draft: <code>Desktop/Netbox_Swap_Spec/SR_OS_Amendment_Ticket_Creation_Gate.md</code></td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>When a CSP/technician diagnoses a faulty netbox, there is no in-system way to swap it: the OS-governed swap flow exists in the backend but is unreachable (no diagnosis can be recorded, so its entry guards can never pass), and complaints on non-ACTIVE connections are auto-voided before any resolution can happen. Real swaps therefore happen outside the system, with no verifiable record.</td></tr>
+    <tr><td>Who experiences it?</td><td>Customers with internet issues caused by faulty devices (delayed/no resolution); CSPs and technicians (no legitimate swap path); Wiom inventory &amp; finance (swaps cannot be reconciled — devices move without audit trail).</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>Every swap remains an off-books device movement: unrecoverable devices, unreconcilable inventory, customer downtime, and a complaint system that voids genuine issues based on connection lifecycle state.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>Confirmed with author 2026-06-06.</strong> Observable behaviour of the slice being changed. Technical references inline per author directive.</div>
+  <table>
+    <tr><th style="width:30%">Trigger / condition</th><th>Observable behaviour today</th></tr>
+    <tr><td>Customer on a non-ACTIVE connection (paused / deactivating) reports an issue</td><td>The complaint is auto-voided: when the system learns the connection deactivated (<code>CL_CONNECTION_DEACTIVATED</code> event), any complaint in INTAKE, CLASSIFIED, or PENDING_VERIFICATION moves to UNRESOLVABLE with reason <code>CONNECTION_INACTIVE</code>. No service ticket survives; no swap is possible.</td></tr>
+    <tr><td>CSP works a RESTORE task and concludes the device is faulty</td><td>There is no way to tell the system. The diagnosis fields exist on the task record (<code>complaint_tasks.diagnosis_outcome</code>, <code>complaint_tasks.diagnosis_fault_type</code>) but no app journey or API writes them — so the swap entry guards (G8 "diagnosis complete", G9 "device fault type") can never pass, and the swap flow is unreachable in practice.</td></tr>
+    <tr><td>A swap is submitted (<code>POST /tasks/{taskId}/device-swap</code> with <code>old_device_id</code>, <code>new_device_id</code>)</td><td>SRS validates G6–G11 (incl. G6: connection ACTIVE via CL OS query) and emits <code>DEVICE_SWAP</code>. ACS validates G1–G5, atomically moves the old device DEPLOYED → RETRIEVAL_PENDING and the new device CUSTODIED/IDLE → DEPLOYED, and emits <code>DEVICE_SWAP_COMPLETED</code>. SRS records the swap on the complaint (<code>complaints.device_swap_old_device_id</code>, <code>device_swap_new_device_id</code>, <code>device_swap_initiated_at</code>, <code>device_swap_completed_at</code>, <code>resolution_type = DEVICE_REPLACED</code>) and moves it to PENDING_VERIFICATION. Guard failure → rejection with reason (<code>DEVICE_SWAP_REJECTED</code>), complaint unchanged. No completion within 120&nbsp;s → ops flag, complaint stays open.</td></tr>
+    <tr><td>A swap completes</td><td>Nothing informs the old-app stack (inventory service, remote service) — actual internet connectivity does not shift to the new device. Only TAS updates its installation-candidate device reference.</td></tr>
+    <tr><td>Verification window runs after a swap</td><td>Telemetry check is always inconclusive in v1; customer confirmation or the customer-verification timeout resolves the complaint. Customer denial re-escalates it. A completed swap is never reversed.</td></tr>
+    <tr><td>CSP attempts another swap on the same complaint after failed verification</td><td>Nothing explicitly governs it — guards re-evaluate and a second swap proceeds if they pass. No allow/disallow rule is defined.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:30%">Trigger / condition</th><th>Desired observable behaviour</th></tr>
+    <tr><td>Customer on any connection lifecycle state reports an issue</td><td>A service ticket is created regardless of connection state. <code>CL_CONNECTION_DEACTIVATED</code> no longer voids complaints in INTAKE / CLASSIFIED / PENDING_VERIFICATION — it is consumed as context only. <code>CONNECTION_INACTIVE</code> remains available as an explicit, executor-chosen closure reason.</td></tr>
+    <tr><td>CSP works a RESTORE task and concludes the device is faulty</td><td>The CSP walks guided diagnosis steps in the app (generic in v1 — educational) and records the result: a diagnosis outcome and one fault type. Recording writes <code>diagnosis_outcome</code> + <code>diagnosis_fault_type</code> onto the active task (proposed endpoint: <code>POST /tasks/{taskId}/diagnosis</code> — engineering may rename).</td></tr>
+    <tr><td>Recorded fault type is one of the 3 device faults (<code>DEVICE_HARDWARE</code> / <code>DEVICE_SOFTWARE</code> / <code>DEVICE_CONNECTIVITY</code>)</td><td>The swap journey opens automatically — no resolution-type menu. The CSP picks a replacement netbox from their own inventory and submits. The system records <code>resolution_type = DEVICE_REPLACED</code> on the complaint without the CSP selecting it. Any other fault type → the swap journey never opens; existing resolution paths apply unchanged.</td></tr>
+    <tr><td>A swap is submitted</td><td>As today, minus G6: connection-state is no longer checked before emitting <code>DEVICE_SWAP</code> (the custody binding guards G4/G5 remain the protection — a connection without a matching device binding mechanically fails the swap). Everything else identical: ACS guards, atomic two-device transition, swap recorded on the complaint, PENDING_VERIFICATION, 120&nbsp;s completion window.</td></tr>
+    <tr><td>A swap completes</td><td>Connectivity-shift information flows to the old-app stack (inventory service, remote service, others). <strong>[Details pending — PM to supply; placeholder section, see A5-D9.]</strong> The old device is expected back at Wiom (RETRIEVAL_PENDING, unchanged custody tail).</td></tr>
+    <tr><td>Verification fails (customer denies) after a swap</td><td>The swap stands — no un-swap exists. The complaint re-escalates per the existing model; SRS already holds the new device as the connection's device; the CSP may re-diagnose and perform another swap. The displaced device proceeds to return-to-Wiom regardless.</td></tr>
+    <tr><td>Complaint reopens after swap (within reopen window)</td><td>Same complaint lineage, no fresh SLA clock — and the reopened complaint runs against the new device, because the swap already updated the complaint's device facts when ACS confirmed.</td></tr>
+    <tr><td>Repeat swap on the same complaint</td><td>Allowed, unlimited. Guards re-evaluate on every attempt; each executed swap appends to the same complaint's audit trail. Each displaced device enters RETRIEVAL_PENDING.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected">One atomic change per row. Engineering builds against this table; B5 verifies every row. Technical identifiers inline per author directive.</div>
+  <table class="delta">
+    <tr><th style="width:6%">#</th><th style="width:20%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:22%">Why</th></tr>
+    <tr><td><strong>D1</strong></td><td>Service-ticket creation gate (SRS intake)</td><td>Ticket creation effectively requires an ACTIVE connection; complaints on non-ACTIVE connections don't survive.</td><td>A ticket can be created for a connection in <em>any</em> CL OS state. No connection-state check at intake.</td><td>Customer's right to report a problem must not depend on connection lifecycle state. Swap path was structurally blocked at the ticket level.</td></tr>
+    <tr><td><strong>D2</strong></td><td>Auto-void on connection deactivation (SRS inbound handling of <code>CL_CONNECTION_DEACTIVATED</code>)</td><td>INTAKE / CLASSIFIED / PENDING_VERIFICATION → UNRESOLVABLE (<code>unresolvable_reason = CONNECTION_INACTIVE</code>) fires automatically on event receipt.</td><td>These three automatic transitions are removed. The event is still consumed (context/analytics) but never terminates a complaint.</td><td>Auto-voiding destroys intake truth and kills genuine complaints mid-flight; pollutes Quality OS unresolvable analytics.</td></tr>
+    <tr><td><strong>D3</strong></td><td><code>CONNECTION_INACTIVE</code> closure reason</td><td>System-automatic.</td><td>Retained in the <code>unresolvable_reason</code> enum but reachable only via explicit executor/ops action.</td><td>Keep the reason's analytical meaning; move the decision to a human.</td></tr>
+    <tr><td><strong>D4</strong></td><td>Swap guard G6 + failure mode FM-SR-SWAP-01 (SRS, in <code>submitDeviceReplacedResolution</code>)</td><td>Before emitting <code>DEVICE_SWAP</code>, SRS queries CL OS; connection must be ACTIVE. CL query failure blocks submission ("Cannot verify connection status").</td><td>G6 removed entirely; the CL OS connection-state query at swap submission is dropped, and FM-SR-SWAP-01 becomes obsolete. Custody guards G4/G5 (old device must hold a binding matching the complaint's <code>connection_id</code>) are the sole protection.</td><td>Consistency with D1 — if tickets exist on any CL state, swap execution must not silently re-impose the gate. Custody binding guards make a swap on an unbound connection mechanically impossible anyway.</td></tr>
+    <tr><td><strong>D5</strong></td><td>Diagnosis capture (new write path)</td><td>Diagnosis fields exist on the task (<code>complaint_tasks.diagnosis_outcome</code> VARCHAR(255), <code>complaint_tasks.diagnosis_fault_type</code> VARCHAR(50)) but nothing writes them. Swap guards G8/G9 can never pass.</td><td>CSP records a diagnosis on the active task from the app: guided generic steps (v1) ending in an outcome + exactly one fault type from the diagnostic registry (device types: <code>DEVICE_HARDWARE</code>, <code>DEVICE_SOFTWARE</code>, <code>DEVICE_CONNECTIVITY</code>; non-device types remain available so "it wasn't the device" is recordable). Proposed endpoint: <code>POST /tasks/{taskId}/diagnosis</code> body <code>{diagnosis_outcome, diagnosis_fault_type}</code> — naming is engineering's. Re-recording before swap submission is allowed; latest recorded diagnosis governs.</td><td>Unlocks the entire swap flow; creates the "why" of every swap for audit; starts user education on diagnosis discipline.</td></tr>
+    <tr><td><strong>D6</strong></td><td>Swap initiation trigger (resolution-type selection collapses)</td><td>OS conceives an explicit resolution-type choice (G11: CSP selects DEVICE_REPLACED).</td><td>No resolution-type menu in v1. Recording any of the 3 device fault types initiates the swap journey (replacement-device picker → submit via <code>POST /tasks/{taskId}/device-swap</code>). <code>resolution_type = DEVICE_REPLACED</code> is set by the system on submission. G11 is satisfied implicitly by the journey itself.</td><td>One decision instead of two for the CSP; eliminates an inconsistent state (device fault diagnosed but different resolution type picked).</td></tr>
+    <tr><td><strong>D7</strong></td><td>Repeat-swap rule (same complaint)</td><td>Unspecified — nothing governs a second swap.</td><td>Explicitly allowed, unlimited. Every attempt re-runs all guards (G7–G11 minus G6 at SRS; G1–G5 at ACS); every executed swap appends to the complaint's swap audit (same <code>complaint_id</code>, new device pair, fresh timestamps).</td><td>Failed verification or reopen legitimately needs another swap; guards + audit make volume gaming visible rather than blocked.</td></tr>
+    <tr><td><strong>D8</strong></td><td>Post-swap failed-verification behaviour (made explicit)</td><td>Undefined for swaps specifically; ambiguity about whether custody changes revert.</td><td>Defined: no un-swap, ever. Customer denial re-escalates the complaint (existing model, unchanged); the new device remains the connection's device; the displaced device stays RETRIEVAL_PENDING and must return to Wiom; CSP may re-diagnose and swap again (D7).</td><td>A swap is a physical fact; reversal is a forward operation. Removes the biggest source of reconciliation ambiguity.</td></tr>
+    <tr><td><strong>D9</strong></td><td>Old-app connectivity propagation (new boundary)</td><td>No system informs the old-app stack on swap completion; internet does not actually shift to the new device.</td><td><strong>[PLACEHOLDER — details pending from PM.]</strong> On <code>DEVICE_SWAP_COMPLETED</code>, connectivity-shift information flows to old-app services (inventory service, remote service, others TBD). Contract, ordering, and confirmation semantics to be specified in v0.2.</td><td>Without this, a "completed" swap doesn't restore the customer's internet — the core outcome.</td></tr>
+    <tr><td><strong>D10</strong></td><td><code>swap_reason = UPGRADE</code></td><td>Exists in the enum (<code>FAULTY_DEVICE</code> / <code>UPGRADE</code>), unreachable.</td><td>Remains a declared placeholder, explicitly out of v1 scope. All v1 swaps carry <code>swap_reason = FAULTY_DEVICE</code>.</td><td>Future-proofing without scope creep; the OS keeps the slot.</td></tr>
+  </table>
+  <div class="pending">⚠ D9 is the only non-buildable row in v0.1 — spec is not sendable until it is filled (see B5 coverage matrix and Completeness Checklist).</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:48%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr><td><strong>G-A</strong></td><td>Non-device resolutions on a RESTORE task (existing generic resolution submission) behave exactly as before — same states, same verification entry.</td><td>The diagnosis step is inserted upstream of resolution; it must not become a mandatory gate for non-swap resolutions.</td></tr>
+    <tr><td><strong>G-B</strong></td><td>ACS swap execution is untouched: guards G1–G5, the atomic two-device transition (old → RETRIEVAL_PENDING, new → DEPLOYED), <code>DEVICE_SWAP_COMPLETED</code> emission, audit entries, idempotency.</td><td>SRS-side guard removal (D4) could tempt a "matching" relaxation at ACS — explicitly forbidden; custody is now the only execution gate.</td></tr>
+    <tr><td><strong>G-C</strong></td><td>A swap never changes connection state and emits no signal to CL OS, Compensation OS, or Quality OS by itself.</td><td>D4 removes the only CL OS interaction in the swap path; nothing must creep in to replace it.</td></tr>
+    <tr><td><strong>G-D</strong></td><td><code>COMPLAINT_RESOLUTION_SIGNAL</code> to Quality OS: schema, semantics, and emission triggers unchanged. No new resolution events for swaps.</td><td>D2 changes which complaints reach terminal states; the terminal signal itself must stay byte-identical.</td></tr>
+    <tr><td><strong>G-E</strong></td><td>Reclassification-to-platform (router fault, system-verifiable evidence required, time-bounded) unchanged.</td><td>It is the sibling device-fault path; the new diagnosis capture must not weaken its evidence requirement.</td></tr>
+    <tr><td><strong>G-F</strong></td><td>Normal installation binding (device CUSTODIED → DEPLOYED via installation, binding-before-activation) unchanged.</td><td>Shares the custody state machine the swap transitions; easy to disturb.</td></tr>
+    <tr><td><strong>G-G</strong></td><td>The verification model (sequential: telemetry → customer → timeout; customer denial → re-escalation) unchanged — owned by the common verification service being built in parallel.</td><td>Swap completion feeds PENDING_VERIFICATION; this spec must not fork a swap-specific verification path.</td></tr>
+    <tr><td><strong>G-H</strong></td><td>The 120-second swap-completion window behaviour: ops flag on expiry, complaint stays open, no auto-resolve; late completion still processed.</td><td>Adjacent to D7/D8 — repeat-swap logic must not alter the timeout semantics.</td></tr>
+    <tr><td><strong>G-I</strong></td><td>Explicit UNRESOLVABLE closures (max escalation reached, executor-declared) keep working from ASSIGNED / ESCALATED.</td><td>D2/D3 remove only the connection-deactivation automatics; the rest of the UNRESOLVABLE machinery must survive.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases Affected <span class="tier what">WHAT</span></h2>
+  <h3>A7.1 Rules &amp; invariants (must always hold)</h3>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:30%">Rule / invariant</th><th>Statement</th></tr>
+    <tr><td><strong>I1</strong></td><td>INV — complaint anchoring</td><td>Every swap submission carries a <code>complaint_id</code> whose complaint is in ASSIGNED or ESCALATED at the moment of submission. A swap without an open complaint is structurally impossible.</td></tr>
+    <tr><td><strong>I2</strong></td><td>INV — swap atomicity</td><td>For any swap attempt, either both devices transition (old → RETRIEVAL_PENDING and new → DEPLOYED) or neither does. At no instant are zero or two devices bound to the connection.</td></tr>
+    <tr><td><strong>I3</strong></td><td>INV — single binding</td><td>A connection has at most one device bound to it at any moment — including during and after any number of repeat swaps.</td></tr>
+    <tr><td><strong>I4</strong></td><td>INV — diagnosis gate</td><td>The swap journey is reachable only when the active task carries a recorded <code>diagnosis_fault_type</code> in {DEVICE_HARDWARE, DEVICE_SOFTWARE, DEVICE_CONNECTIVITY}. No diagnosis, or a non-device diagnosis, means no swap journey.</td></tr>
+    <tr><td><strong>I5</strong></td><td>INV — audit completeness</td><td>Every executed swap is recorded on its complaint with old device id, new device id, initiation and completion timestamps — sufficient to reconcile every swap from complaint records alone.</td></tr>
+    <tr><td><strong>I6</strong></td><td>INV — no lifecycle auto-closure</td><td>No complaint is ever moved to a terminal state by a connection lifecycle event. Terminal transitions require resolution, verification outcome, or explicit executor/ops action.</td></tr>
+    <tr><td><strong>I7</strong></td><td>INV — resolution-type consistency</td><td>Every swap executed via the device-fault journey carries <code>resolution_type = DEVICE_REPLACED</code> on the complaint. No swap exists with a different or missing resolution type.</td></tr>
+    <tr><td><strong>R1</strong></td><td>RULE — unlimited repeat swaps</td><td>Any number of swaps may execute against one complaint; each attempt re-runs all remaining guards; no cap parameter exists in v1.</td></tr>
+    <tr><td><strong>R2</strong></td><td>RULE — explicit CONNECTION_INACTIVE</td><td><code>CONNECTION_INACTIVE</code> may appear as an unresolvable reason only from an explicit executor/ops closure, never from automatic event handling.</td></tr>
+    <tr><td><strong>R3</strong></td><td>RULE — duplicate-submission safety</td><td>While a swap is in flight (emitted, completion not yet received), a second submission for the same task is rejected as "swap in progress". A duplicate of an already-processed swap event is ignored (idempotent) — it never produces a second device transition.</td></tr>
+  </table>
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:38%">Edge / condition</th><th>Intended business outcome</th></tr>
+    <tr><td><strong>E1</strong></td><td>Swap submitted while the connection is deactivating (binding already cleared)</td><td>With G6 gone, SRS emits; ACS rejects on G4/G5 (no matching binding). CSP sees a clear "device not linked to this connection" rejection — error copy is a design item (B4). Complaint unchanged.</td></tr>
+    <tr><td><strong>E2</strong></td><td>Customer denies resolution after a completed swap</td><td>Complaint re-escalates (existing model). Swap stands; displaced device continues to return-to-Wiom; CSP may re-diagnose and swap again.</td></tr>
+    <tr><td><strong>E3</strong></td><td>Complaint reopens within the reopen window after a swap</td><td>Same lineage, no fresh SLA clock; reopened complaint runs against the new device (swap facts already on the complaint).</td></tr>
+    <tr><td><strong>E4</strong></td><td>Second swap on the same complaint</td><td>The first replacement (now the bound device) becomes the "old" device of swap #2 and enters RETRIEVAL_PENDING; both displaced devices are now owed back to Wiom; audit shows two swap records on one complaint.</td></tr>
+    <tr><td><strong>E5</strong></td><td><code>DEVICE_SWAP_COMPLETED</code> arrives after the 120&nbsp;s window already flagged ops</td><td>Completion is processed normally whenever it arrives (idempotent); the ops flag remains an advisory record, not a blocker.</td></tr>
+    <tr><td><strong>E6</strong></td><td>Diagnosis recorded with a non-device fault type</td><td>Swap journey never opens; complaint proceeds through existing non-swap resolution paths.</td></tr>
+    <tr><td><strong>E7</strong></td><td>Replacement device invalid — not in the CSP's custody, or not CUSTODIED/IDLE</td><td>ACS rejects (G2/G3); CSP shown the specific reason and may retry with a different device. No state change anywhere.</td></tr>
+    <tr><td><strong>E8</strong></td><td>Complaint leaves ASSIGNED/ESCALATED between diagnosis and swap submission (e.g., platform takeover, explicit closure)</td><td>G7 rejects the submission; CSP shown that the complaint is no longer actionable by them.</td></tr>
+    <tr><td><strong>E9</strong></td><td>CSP re-records the diagnosis before submitting a swap</td><td>Allowed; the latest recorded diagnosis governs. If the latest is non-device, the swap journey closes.</td></tr>
+    <tr><td><strong>E10</strong></td><td>Old-app propagation fails or partially completes after a swap</td><td><strong>[Decision needed — define with D9 details before build.]</strong></td></tr>
+    <tr><td><strong>E11</strong></td><td>A swap request carrying <code>swap_reason = UPGRADE</code></td><td>Unreachable in v1 — the journey only produces FAULTY_DEVICE. Any UPGRADE-reason request is rejected as out of scope.</td></tr>
+    <tr><td><strong>E12</strong></td><td>CSP double-submits the swap (double tap / retry while in flight)</td><td>Per R3: exactly one swap executes; the second submission is rejected as "swap in progress"; duplicate events are ignored.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <table>
+    <tr><th>OS</th><th>Impacted?</th><th>Amendment (one line)</th><th>Amendment type</th><th>Amendment owner (consulted)</th><th>Sign-off</th></tr>
+    <tr><td>Support &amp; Resolution OS v1.6.1</td><td>Yes</td><td>Remove connection-state gate at intake and the three auto-UNRESOLVABLE transitions on <code>CL_CONNECTION_DEACTIVATED</code> (D1–D3); remove guard G6 and FM-SR-SWAP-01 (D4); define diagnosis capture, implicit DEVICE_REPLACED, unlimited repeat swaps, post-swap behaviour (D5–D8). Draft: <code>Desktop/Netbox_Swap_Spec/SR_OS_Amendment_Ticket_Creation_Gate.md</code>.</td><td>Behaviour change</td><td>Varun</td><td>Pending</td></tr>
+    <tr><td>ESR (Event Schema Registry) v2.27/v2.28</td><td>Yes</td><td>DEVICE_SWAP contract: G6 removed from emitter preconditions; register <code>DEVICE_SWAP_REJECTED</code> (exists in implementation, absent from registry); register the D9 propagation contract once defined.</td><td>Cross-OS contract</td><td>Dhruv</td><td>Pending</td></tr>
+    <tr><td>Asset Custody OS v1.11.1</td><td>Yes (confirmation only)</td><td>No behaviour change. Confirmation that G1–G5, INV-ACO-19 atomicity, and the RETRIEVAL_PENDING tail remain the sole and sufficient execution gate after SRS drops G6.</td><td>Cross-OS contract</td><td>Dhruv</td><td>Pending</td></tr>
+    <tr><td>Connection Lifecycle OS v1.7.1</td><td>No</td><td>— (SRS stops querying CL at swap submission; CL OS itself is untouched — it loses a consumer call, changes nothing it owns.)</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Quality OS v1.15.1</td><td>No</td><td>— (Resolution signal unchanged per G-D; fewer auto-UNRESOLVABLE records is a data-mix shift, not a contract change.)</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Compensation / Payment OS</td><td>No</td><td>— (No money movement in this change; custody carry-fee/write-off mechanics untouched.)</td><td>None</td><td>—</td><td>—</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>The supporting detail engineering needs to build and test the delta precisely.</p>
+  <div class="author-note">Business behaviour first; exact technical identifiers carried inline per author directive.</div>
+</div>
+
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflows — Before &amp; After <span class="tier cond">Conditional</span></h2>
+  <div class="diff-legend">
+    <strong>Colour key</strong>
+    <span class="chip unchanged">Unchanged</span>
+    <span class="chip added">Added / new path</span>
+    <span class="chip changed">Behaviour changed</span>
+    <span class="chip removed">Removed / replaced</span>
+  </div>
+
+  <h3>Workflow 1 — Complaint intake vs connection lifecycle</h3>
+  <p class="flow-label before">Before — current logic</p>
+  <div class="mermaid">
+flowchart TD
+    Start([Customer reports issue]) --> Gate{Connection ACTIVE?}
+    Gate -- Yes --> Ticket[Service ticket created]
+    Gate -- No --> Void[No usable ticket / auto-UNRESOLVABLE on deactivation event]
+    Ticket --> Work[Classification, task, resolution]
+    Work --> Deact{CL_CONNECTION_DEACTIVATED received?}
+    Deact -- "Yes, in INTAKE/CLASSIFIED/PENDING_VERIFICATION" --> AutoVoid[Auto-UNRESOLVABLE CONNECTION_INACTIVE]
+    Deact -- No --> End([Normal lifecycle to closure])
+    classDef removed fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    class Gate,Void,Deact,AutoVoid removed;
+  </div>
+  <p class="flow-label after">After — changed logic</p>
+  <div class="mermaid">
+flowchart TD
+    Start([Customer reports issue]) --> Ticket[Service ticket created — any CL state]
+    Ticket --> Work[Classification, task, resolution]
+    Work --> Ctx[CL_CONNECTION_DEACTIVATED consumed as context only — never terminates a complaint]
+    Ctx --> End([Normal lifecycle to closure])
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class Ticket added;
+    class Ctx changed;
+  </div>
+
+  <h3>Workflow 2 — RESTORE task to device swap</h3>
+  <p class="flow-label before">Before — current logic</p>
+  <div class="mermaid">
+flowchart TD
+    Start([RESTORE task active on open complaint]) --> NoDiag[No way to record diagnosis]
+    NoDiag --> Generic[CSP submits generic resolution]
+    Generic --> PV[Complaint to PENDING_VERIFICATION]
+    NoDiag -.-> Dead[Swap flow exists but unreachable: G8/G9 can never pass]
+    PV --> End([Verification per existing model])
+    classDef removed fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    class NoDiag,Dead removed;
+  </div>
+  <p class="flow-label after">After — changed logic</p>
+  <div class="mermaid">
+flowchart TD
+    Start([RESTORE task active on open complaint]) --> Diag[CSP runs guided diagnosis steps and records outcome + fault type]
+    Diag --> FaultQ{Fault type is a device fault?}
+    FaultQ -- No --> Generic[Existing non-swap resolution paths — unchanged]
+    FaultQ -- "Yes: DEVICE_HARDWARE / SOFTWARE / CONNECTIVITY" --> Picker[Swap journey opens: pick replacement from own inventory]
+    Picker --> Submit[Submit swap — resolution_type set to DEVICE_REPLACED by system]
+    Submit --> SrsGuards{SRS guards G7-G11 pass? G6 removed}
+    SrsGuards -- No --> Reject1[CSP shown reason, complaint unchanged]
+    SrsGuards -- Yes --> Emit[DEVICE_SWAP emitted to Custody]
+    Emit --> AcsGuards{ACS guards G1-G5 pass?}
+    AcsGuards -- No --> Reject2[Rejection with specific reason, retry with another device]
+    AcsGuards -- Yes --> Atomic[Atomic swap: old to RETRIEVAL_PENDING, new to DEPLOYED]
+    Atomic --> Done[DEVICE_SWAP_COMPLETED, swap recorded on complaint]
+    Done --> Prop[Old-app connectivity propagation — PENDING D9]
+    Done --> PV[Complaint to PENDING_VERIFICATION]
+    Generic --> PV
+    PV --> End([Verification per existing model])
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class Diag,FaultQ,Picker,Submit,Prop added;
+    class SrsGuards changed;
+  </div>
+  <div class="hint"><strong>Repeat swaps (D7):</strong> after a failed verification or reopen, the After diagram simply re-enters at "CSP runs guided diagnosis" — same flow, no special branch. Each pass appends a swap record to the same complaint.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> State Changes <span class="tier cond">Strict conditional</span></h2>
+  <div class="expected">The complaint state machine loses three automatic transitions. The custody state machine is <strong>untouched</strong> (its swap transitions already exist — G-B).</div>
+  <p class="flow-label before">Before — complaint states (slice)</p>
+  <div class="mermaid">
+stateDiagram-v2
+    [*] --> INTAKE
+    INTAKE --> CLASSIFIED
+    CLASSIFIED --> ASSIGNED
+    ASSIGNED --> PENDING_VERIFICATION: resolution submitted
+    INTAKE --> UNRESOLVABLE: CL deactivated (REMOVED)
+    CLASSIFIED --> UNRESOLVABLE: CL deactivated (REMOVED)
+    PENDING_VERIFICATION --> UNRESOLVABLE: CL deactivated (REMOVED)
+    ASSIGNED --> UNRESOLVABLE: explicit condition (kept)
+    PENDING_VERIFICATION --> RESOLVED: verified
+  </div>
+  <p class="flow-label after">After — complaint states (slice)</p>
+  <div class="mermaid">
+stateDiagram-v2
+    [*] --> INTAKE
+    INTAKE --> CLASSIFIED
+    CLASSIFIED --> ASSIGNED
+    ASSIGNED --> PENDING_VERIFICATION: resolution submitted
+    ASSIGNED --> UNRESOLVABLE: explicit condition (kept)
+    PENDING_VERIFICATION --> RESOLVED: verified
+    PENDING_VERIFICATION --> ESCALATED: customer denies (existing)
+  </div>
+  <div class="hint">No state is added or removed — only the three automatic <code>CL_CONNECTION_DEACTIVATED → UNRESOLVABLE</code> transitions are deleted. Custody device states (DEPLOYED, RETRIEVAL_PENDING, CUSTODIED, IDLE) and their swap transitions are pre-existing and unchanged.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
+  <table>
+    <tr><th>Parameter / data</th><th>Old</th><th>New</th><th>Valid range / scope</th><th>Reason</th></tr>
+    <tr><td>Diagnosis on a task — outcome + fault type (<code>complaint_tasks.diagnosis_outcome</code>, <code>complaint_tasks.diagnosis_fault_type</code>)</td><td>Columns exist, never written</td><td>Written by the CSP diagnosis journey; latest write governs</td><td>fault type ∈ diagnostic registry (3 device types unlock swap; non-device types do not) · per task</td><td>The gate that unlocks swapping; the audit "why" of every swap.</td></tr>
+    <tr><td>Swap audit on a complaint (<code>complaints.device_swap_old_device_id</code>, <code>device_swap_new_device_id</code>, <code>device_swap_initiated_at</code>, <code>device_swap_completed_at</code>, <code>resolution_type</code>)</td><td>Written once per complaint (single swap implicitly assumed)</td><td>Must support unlimited repeat swaps per complaint — every executed swap reconstructible (engineering decides representation; business need: full history, not last-write-wins)</td><td>Per complaint, unbounded count</td><td>D7 — audit trail must reconcile every swap, not just the latest.</td></tr>
+    <tr><td><code>P_SWAP_COMPLETION_TIMEOUT</code></td><td>120 s</td><td>120 s — unchanged (referenced for completeness)</td><td>Operational · per swap attempt</td><td>G-H: timeout semantics must survive untouched.</td></tr>
+    <tr><td>Repeat-swap cap</td><td>—</td><td>Deliberately none in v1</td><td>—</td><td>R1 decision: unlimited, guard-checked, audit-visible.</td></tr>
+    <tr><td>Old-app propagation contract</td><td>—</td><td><strong>[PLACEHOLDER — pending D9 details]</strong></td><td>—</td><td>To be specified in v0.2.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> UI Impact <span class="tier cond">Conditional</span></h2>
+  <div class="expected">Information and state only — copy and layout are design's. The diagnosis education steps are deliberately generic in v1 (user habituation); design owns their content.</div>
+  <table>
+    <tr><th>Surface</th><th>What the user now sees</th></tr>
+    <tr><td>CSP app — RESTORE task</td><td>A diagnosis step: guided generic checks ending in one recorded outcome + fault type. Until recorded, no swap option exists anywhere.</td></tr>
+    <tr><td>CSP app — swap journey (opens only on device-fault diagnosis)</td><td>Replacement-device picker scoped to the CSP's own inventory; submission; then one of: in-progress (awaiting completion, up to 120&nbsp;s), success (swap recorded, complaint moves to verification), or rejection with the specific reason.</td></tr>
+    <tr><td>CSP app — rejection states</td><td>Distinct, specific reasons: complaint not actionable (G7), device not linked to this connection (custody G4/G5 — <em>new prominence now that G6 is gone</em>), replacement device invalid (G2/G3), swap already in progress (R3). Error copy: design item.</td></tr>
+    <tr><td>CSP app — repeat swap</td><td>Same journey re-enterable after failed verification/reopen; complaint shows its swap history (each swap: device pair + timestamps).</td></tr>
+    <tr><td>Customer touchpoint</td><td>Part of the common verification service's scope (G-G) — not specified here. Link to that spec when available.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected">Backend point of view, derived from the required behaviour (A5/A7), not from existing code. Labelled Given/When/Then blocks across five classes; coverage audited in B5.1.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin">
+    <strong>LOGIC_01 (D1 · happy):</strong> Ticket on a non-ACTIVE connection<br>
+    <span class="kw">Given</span> a connection in a paused or deactivating lifecycle state<br>
+    <span class="kw">When</span> the customer reports an internet issue<br>
+    <span class="kw">Then</span> a service ticket is created and proceeds to classification<br>
+    <span class="kw">And</span> no connection-state check blocks or voids it
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_02 (D2 · negative):</strong> Deactivation event no longer voids<br>
+    <span class="kw">Given</span> complaints in INTAKE, CLASSIFIED, and PENDING_VERIFICATION for one connection<br>
+    <span class="kw">When</span> a connection-deactivated event arrives for that connection<br>
+    <span class="kw">Then</span> all three complaints remain in their current states<br>
+    <span class="kw">And</span> no UNRESOLVABLE transition occurs and no resolution signal is emitted
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_03 (D3 · happy):</strong> Explicit CONNECTION_INACTIVE closure still works<br>
+    <span class="kw">Given</span> an open complaint whose connection is genuinely gone<br>
+    <span class="kw">When</span> an authorised executor/ops user explicitly closes it as unresolvable with reason CONNECTION_INACTIVE<br>
+    <span class="kw">Then</span> the complaint reaches UNRESOLVABLE with that reason recorded as an explicit action (actor + timestamp)
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_04 (D4 · happy):</strong> Swap proceeds without any connection-state query<br>
+    <span class="kw">Given</span> an open complaint with a device-fault diagnosis and a valid replacement device<br>
+    <span class="kw">When</span> the swap is submitted<br>
+    <span class="kw">Then</span> the swap emits without any connection-state lookup having occurred<br>
+    <span class="kw">And</span> an unavailable connection-state source can never block or fail a swap submission
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_05 (D5 · happy):</strong> Diagnosis recording<br>
+    <span class="kw">Given</span> a CSP on an active RESTORE task of an open complaint<br>
+    <span class="kw">When</span> they record a diagnosis with outcome text and exactly one fault type from the registry<br>
+    <span class="kw">Then</span> both values persist on that task and are retrievable<br>
+    <span class="kw">And</span> the recording actor and time are auditable
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_06 (D5 · negative):</strong> Diagnosis outside an actionable task<br>
+    <span class="kw">Given</span> a task whose complaint is not in ASSIGNED or ESCALATED<br>
+    <span class="kw">When</span> a diagnosis recording is attempted<br>
+    <span class="kw">Then</span> it is rejected and nothing is written
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_07 (D6 · happy):</strong> Device fault opens the swap journey and sets resolution type<br>
+    <span class="kw">Given</span> a recorded fault type of DEVICE_HARDWARE, DEVICE_SOFTWARE, or DEVICE_CONNECTIVITY (each tested)<br>
+    <span class="kw">When</span> the CSP completes the swap journey and submits<br>
+    <span class="kw">Then</span> the complaint carries resolution_type DEVICE_REPLACED set by the system<br>
+    <span class="kw">And</span> at no point did the CSP choose a resolution type
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_08 (D6 · negative):</strong> No diagnosis → no swap<br>
+    <span class="kw">Given</span> an active task with no recorded diagnosis<br>
+    <span class="kw">When</span> a swap submission is attempted directly (bypassing the journey)<br>
+    <span class="kw">Then</span> it is rejected on the diagnosis-complete guard and no swap event is emitted
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_09 (D7 · happy):</strong> Second swap on the same complaint<br>
+    <span class="kw">Given</span> a complaint with one completed swap and a subsequent failed verification<br>
+    <span class="kw">When</span> the CSP re-diagnoses a device fault and submits a second swap with a new replacement<br>
+    <span class="kw">Then</span> the second swap executes through the full guard set<br>
+    <span class="kw">And</span> both swaps are independently visible in the complaint's audit trail
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_10 (D8 · negative):</strong> Failed verification never reverses a swap<br>
+    <span class="kw">Given</span> a completed swap on a complaint in verification<br>
+    <span class="kw">When</span> the customer denies the resolution<br>
+    <span class="kw">Then</span> the complaint re-escalates per the existing model<br>
+    <span class="kw">And</span> both devices remain exactly in their post-swap states (new: serving the connection; old: pending return to Wiom)
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_11 (D10 · negative):</strong> UPGRADE reason unreachable<br>
+    <span class="kw">Given</span> the v1 swap journey<br>
+    <span class="kw">Then</span> every emitted swap carries reason FAULTY_DEVICE<br>
+    <span class="kw">And</span> a request carrying reason UPGRADE is rejected as out of scope
+  </div>
+
+  <h3>Computation &amp; calculation</h3>
+  <div class="gherkin computation">
+    <strong>COMPUTE_01 (completion window · normal):</strong> Completion within the window<br>
+    <span class="kw">Given</span> a swap emitted at time T with a 120-second completion window<br>
+    <span class="kw">When</span> completion arrives at T + 119&nbsp;s<br>
+    <span class="kw">Then</span> the swap is recorded as completed and no ops flag is raised
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_02 (completion window · boundary):</strong> Window expiry is exact<br>
+    <span class="kw">Given</span> a swap emitted at time T with no completion received<br>
+    <span class="kw">When</span> the clock reaches exactly T + 120&nbsp;s<br>
+    <span class="kw">Then</span> the ops flag is raised and the complaint remains open (no auto-resolve)<br>
+    <span class="kw">And</span> a completion arriving at T + 121&nbsp;s is still processed normally with the ops flag retained as advisory (E5)
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_03 (reopen window · normal):</strong> Reopen inside the window<br>
+    <span class="kw">Given</span> a complaint resolved after a swap at time R, with the reopen window configured<br>
+    <span class="kw">When</span> the customer reports the same issue (same connection, class, subtype) before the window ends<br>
+    <span class="kw">Then</span> it attaches to the original lineage with no fresh SLA clock<br>
+    <span class="kw">And</span> the reopened complaint references the new device as the connection's device
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_04 (reopen window · boundary):</strong> Reopen outside the window<br>
+    <span class="kw">Given</span> the same resolved complaint<br>
+    <span class="kw">When</span> the same issue is reported just after the reopen window expires<br>
+    <span class="kw">Then</span> a new, independent complaint is created with a fresh SLA clock<br>
+    <span class="kw">And</span> it too references the new device
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_05 (swap count · zero/unbounded):</strong> Audit under repeat swaps<br>
+    <span class="kw">Given</span> one complaint that undergoes 0, 1, and N&gt;2 swaps (each tested)<br>
+    <span class="kw">Then</span> the number of reconstructible swap records on the complaint equals exactly the number of completed swaps<br>
+    <span class="kw">And</span> rejected or timed-out attempts are distinguishable from completed swaps
+  </div>
+
+  <h3>Invariants</h3>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_01 (I1):</strong> Complaint anchoring<br>
+    <span class="kw">Given</span> any swap event ever emitted, under any path including repeats and races<br>
+    <span class="kw">Then</span> its complaint was in ASSIGNED or ESCALATED at submission time<br>
+    <span class="kw">And</span> no path exists that emits a swap without an open complaint
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_02 (I2):</strong> Atomicity<br>
+    <span class="kw">Given</span> any swap attempt, including one that fails mid-execution<br>
+    <span class="kw">Then</span> either both device transitions are observable or neither is<br>
+    <span class="kw">And</span> a partial outcome (one device moved, the other not) is never observable, even transiently to a concurrent reader
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_03 (I3):</strong> Single binding<br>
+    <span class="kw">Given</span> any connection at any moment — before, during, and after any number of swaps<br>
+    <span class="kw">Then</span> at most one device is bound to it<br>
+    <span class="kw">And</span> immediately after each completed swap exactly one device (the newest) is bound
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_04 (I4):</strong> Diagnosis gate<br>
+    <span class="kw">Given</span> every path into the swap journey, including direct API calls<br>
+    <span class="kw">Then</span> a swap can only initiate when the active task's latest recorded fault type is one of the 3 device types<br>
+    <span class="kw">And</span> no swap exists whose task lacks such a diagnosis at submission time
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_05 (I5):</strong> Audit completeness<br>
+    <span class="kw">Given</span> every completed swap in the system<br>
+    <span class="kw">Then</span> the complaint record alone yields: old device id, new device id, initiated-at, completed-at, and the governing complaint<br>
+    <span class="kw">And</span> a reconciliation run over complaints finds every device that left or entered DEPLOYED via swap
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_06 (I6):</strong> No lifecycle auto-closure<br>
+    <span class="kw">Given</span> any sequence of connection lifecycle events against any complaint in any state<br>
+    <span class="kw">Then</span> the complaint never reaches a terminal state from those events alone<br>
+    <span class="kw">And</span> every terminal transition traces to a resolution, a verification outcome, or an explicit human action
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_07 (I7):</strong> Resolution-type consistency<br>
+    <span class="kw">Given</span> every swap executed via the device-fault journey<br>
+    <span class="kw">Then</span> its complaint carries resolution_type DEVICE_REPLACED<br>
+    <span class="kw">And</span> no completed swap exists with a missing or different resolution type
+  </div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin">
+    <strong>EDGE_01 (E1):</strong> Swap on a deactivating connection<br>
+    <span class="kw">Given</span> a connection whose device binding has been cleared by deactivation<br>
+    <span class="kw">When</span> a swap is submitted for it<br>
+    <span class="kw">Then</span> submission passes (no G6) but custody rejects on the binding guards<br>
+    <span class="kw">And</span> the CSP receives the binding-specific rejection and no device changes state
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_02 (E4):</strong> Chained swap custody states<br>
+    <span class="kw">Given</span> a complaint with swap #1 completed (device A out, device B in)<br>
+    <span class="kw">When</span> swap #2 completes (device B out, device C in)<br>
+    <span class="kw">Then</span> A and B are both pending return to Wiom, C is serving the connection<br>
+    <span class="kw">And</span> the audit trail orders both swaps unambiguously
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_03 (E6):</strong> Non-device diagnosis<br>
+    <span class="kw">Given</span> a recorded fault type outside the 3 device types<br>
+    <span class="kw">Then</span> the swap journey is not offered and a direct swap submission is rejected on the fault-type guard<br>
+    <span class="kw">And</span> existing non-swap resolution paths remain available
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_04 (E7):</strong> Invalid replacement device<br>
+    <span class="kw">Given</span> a replacement device that is (a) owned by a different CSP, or (b) in a non-eligible custody state (each tested)<br>
+    <span class="kw">When</span> the swap reaches custody validation<br>
+    <span class="kw">Then</span> it is rejected with the specific guard reason and no state changes<br>
+    <span class="kw">And</span> the CSP can immediately retry with a different device on the same complaint
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_05 (E8):</strong> Complaint becomes non-actionable between diagnosis and submission<br>
+    <span class="kw">Given</span> a device-fault diagnosis recorded on a task<br>
+    <span class="kw">When</span> the complaint leaves ASSIGNED/ESCALATED (platform takeover or explicit closure) before the swap is submitted<br>
+    <span class="kw">Then</span> the submission is rejected on the open-complaint guard<br>
+    <span class="kw">And</span> no swap event is emitted
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_06 (E9):</strong> Re-recorded diagnosis governs<br>
+    <span class="kw">Given</span> a task first diagnosed DEVICE_HARDWARE, then re-recorded as a non-device fault<br>
+    <span class="kw">When</span> a swap submission is attempted<br>
+    <span class="kw">Then</span> it is rejected — the latest diagnosis governs<br>
+    <span class="kw">And</span> re-recording back to a device fault re-opens the journey
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_07 (E12 / R3):</strong> Duplicate submission<br>
+    <span class="kw">Given</span> a swap in flight (emitted, completion not yet received)<br>
+    <span class="kw">When</span> the same task submits again<br>
+    <span class="kw">Then</span> the second submission is rejected as swap-in-progress<br>
+    <span class="kw">And</span> a duplicate delivery of the same swap event to custody produces no second transition (idempotent)
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_08 (E2+E3 chain):</strong> Deny-then-reopen sequence<br>
+    <span class="kw">Given</span> a completed swap, then customer denial, then resolution, then a reopen within the window<br>
+    <span class="kw">Then</span> at every step the complaint lineage is single and continuous<br>
+    <span class="kw">And</span> every post-swap interaction references the new device, never the displaced one
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_09 (E10 — placeholder):</strong> Old-app propagation failure<br>
+    <span class="kw">Given</span> [PENDING — D9 contract not yet defined]<br>
+    <span class="kw">Then</span> [Decision needed — define before build; this block intentionally not counted as covered]
+  </div>
+
+  <h3>Regression</h3>
+  <div class="gherkin regression">
+    <strong>REGRESSION_01 (G-A):</strong> Non-swap resolutions unaffected<br>
+    <span class="kw">Given</span> a RESTORE task with no diagnosis recorded, or with a non-device diagnosis<br>
+    <span class="kw">When</span> the CSP submits a generic (non-swap) resolution<br>
+    <span class="kw">Then</span> the flow behaves exactly as before this change — same states, same verification entry, no new mandatory step
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_02 (G-B):</strong> Custody execution untouched<br>
+    <span class="kw">Given</span> a valid swap reaching custody<br>
+    <span class="kw">Then</span> all five custody guards still evaluate, the two-device transition is atomic, completion is emitted with both devices' state facts, and duplicate events remain idempotent — identical to pre-change behaviour
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_03 (G-C):</strong> No connection/quality side-effects from a swap<br>
+    <span class="kw">Given</span> a completed swap<br>
+    <span class="kw">Then</span> the connection's lifecycle state is unchanged<br>
+    <span class="kw">And</span> no event reaches connection-lifecycle, compensation, or quality systems from the swap itself
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_04 (G-D):</strong> Quality signal unchanged<br>
+    <span class="kw">Given</span> a complaint resolved after a swap and a complaint resolved without one<br>
+    <span class="kw">Then</span> both emit the same resolution-signal structure with the same semantics — no new fields, no new events
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_05 (G-E):</strong> Platform reclassification still evidence-gated<br>
+    <span class="kw">Given</span> a CSP claiming router fault to transfer ownership to the platform<br>
+    <span class="kw">Then</span> the evidence requirement and time bound apply exactly as before<br>
+    <span class="kw">And</span> recording a device-fault diagnosis does not substitute for that evidence
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_06 (G-F):</strong> Installation binding flow intact<br>
+    <span class="kw">Given</span> a normal new installation (no swap involved)<br>
+    <span class="kw">Then</span> device binding and deployment behave exactly as before the change
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_07 (G-G):</strong> Verification model unforked<br>
+    <span class="kw">Given</span> a complaint entering verification after a swap<br>
+    <span class="kw">Then</span> it follows the same sequential verification model as any other resolution — no swap-specific verification branch exists
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_08 (G-H):</strong> Timeout semantics preserved<br>
+    <span class="kw">Given</span> the swap-completion window<br>
+    <span class="kw">Then</span> expiry still raises an ops flag, never auto-resolves, and never closes the complaint — identical to pre-change behaviour
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_09 (G-I):</strong> Explicit unresolvable paths survive<br>
+    <span class="kw">Given</span> a complaint hitting max escalation, and one explicitly closed by an executor<br>
+    <span class="kw">Then</span> both still reach UNRESOLVABLE with their correct reasons — removing the connection-deactivation automatics removed nothing else
+  </div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <tr><th style="width:24%">Coverage class</th><th>Source section(s)</th><th style="width:14%">Items</th><th style="width:14%">Blocks</th><th style="width:18%">All covered?</th></tr>
+    <tr><td class="cls">Business logic</td><td>A5 delta (D1–D8, D10) · A7.1 rules R1–R3</td><td>12</td><td>11 (+R3 in EDGE_07)</td><td>Y</td></tr>
+    <tr><td class="cls">Computation</td><td>Completion window · reopen window · swap count</td><td>3</td><td>5 (each with boundary)</td><td>Y</td></tr>
+    <tr><td class="cls">Invariants</td><td>A7.1 I1–I7</td><td>7</td><td>7</td><td>Y</td></tr>
+    <tr><td class="cls">Use &amp; edge cases</td><td>A7.2 E1–E12 · B1 branches · B2 removed transitions</td><td>12 edges</td><td>9 (E2/E3 combined in EDGE_08; E5 in COMPUTE_02; E11 in LOGIC_11)</td><td><strong>N — E10 pending (blocked on D9)</strong></td></tr>
+    <tr><td class="cls">Regression</td><td>A6 guard lines G-A–G-I</td><td>9</td><td>9</td><td>Y</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--muted);">Balance: 8 happy-path blocks vs 33 negative/edge/boundary/regression blocks (~1:4). The single uncovered item (E10) is intentionally open pending D9 details — the spec is not sendable until it closes.</p>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <table>
+    <tr><th>#</th><th>Section</th><th class="tier-cell">Tier</th><th class="check">Filled</th><th class="check">N/A</th></tr>
+    <tr><td>QC</td><td>Quick Check</td><td><span class="tier core">Always</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A1</td><td>Metadata</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A2</td><td>Why this change</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A3</td><td>Current behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A4</td><td>Desired behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A5</td><td>The delta</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">— (D9 placeholder)</td></tr>
+    <tr><td>A6</td><td>Must-not-change (guard)</td><td><span class="tier guard">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edge cases</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">— (E10 decision pending)</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td><span class="tier guard">Always — gate</span></td><td class="check">[x]</td><td class="check">— (3 sign-offs Pending)</td></tr>
+    <tr><td>B1</td><td>Changed workflows (before/after)</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B2</td><td>State changes</td><td><span class="tier cond">Strict cond.</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B3</td><td>Data &amp; parameter changes</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B4</td><td>UI impact</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria (verification layer)</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">— (E10 block pending)</td></tr>
+  </table>
+  <div class="footer note">
+    <strong>Not sendable yet — three blockers:</strong> (1) D9 old-app propagation details pending from PM → E10 edge undecided → B5 Use&amp;Edge class not "all covered". (2) All three A8 sign-offs Pending (Varun: SR OS · Dhruv: ESR, Custody). (3) Status = Draft pending human review.<br><br>
+    <strong>Deliberate template deviation (author-directed):</strong> exact API paths, event names, field names, and DB columns are carried inline throughout, overriding the template's default out-of-scope fence. Engineering still owns final naming, schemas, concurrency, and transport.
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:130px">Author</th><th style="width:90px">Section(s)</th><th>Change &amp; rationale</th><th style="width:110px">Approver</th></tr>
+    <tr><td>v0.1</td><td>2026-06-06</td><td>Jaivin Prajapati (with Claude)</td><td>All</td><td>Initial draft. Decisions baked in: Full tier; G6 removed; repeat swaps unlimited; no un-swap; tech detail inline. D9 (old-app propagation) stubbed pending details.</td><td>—</td></tr>
+  </table>
+</section>
+
+<p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
+  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.1 Draft
+</p>
+
+</main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>

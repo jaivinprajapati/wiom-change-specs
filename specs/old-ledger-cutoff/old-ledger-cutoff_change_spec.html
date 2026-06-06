@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Old-App Wallet Ledger Visibility Cut-off — Change Specification (v0.1 Draft)</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg);
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px;
+  }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .quickcheck {
+    margin: 28px 0 40px; background: var(--quickcheck-bg);
+    border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule);
+    border-radius: 6px; padding: 18px 22px;
+  }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.core { background: var(--core-bg); color: var(--core); }
+  .tier.cond { background: var(--cond-bg); color: var(--cond); }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin.computation { border-left-color: var(--what); }
+  .gherkin.invariant { border-left-color: var(--how); }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  .gherkin.computation .kw { color: var(--what); }
+  .gherkin.invariant .kw { color: var(--how); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 200px; text-align: left; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v0.1 Draft · PM deliverable · Light tier</div>
+  <h1>Old-App Wallet Ledger Visibility Cut-off for Migrated Partners</h1>
+  <p class="lede">A migrated partner sees two wallet ledgers in the new CSP app: the new wallet ledger and their old-app wallet history. Old-app entries dated <strong>after the partner's migration cut-over</strong> must no longer be shown, so the old ledger ends exactly where the new one begins — old closing balance = new opening balance. Display-only: no balance, transaction, or money movement changes anywhere.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Jaivin Prajapati (PM) &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Light (A3/A4/A7/B1–B4 skipped; A5 rows are self-contained)</span>
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled after the body was completed.</div>
+  <dl>
+    <dt>What is changing?</dt><dd>A migrated partner's old-app wallet history now ends at their migration cut-over; post-cut-over old-app entries are no longer displayed.</dd>
+    <dt>What triggered it?</dt><dd>Migrated-wallet reconciliation: partners see the same post-migration activity in both ledgers, so the two ledgers don't reconcile on screen and money appears double-counted.</dd>
+    <dt>Blast radius</dt><dd>Old-app wallet history display for migrated partners; old-ledger entry point for partners without old history. New wallet ledger is read-only reference. Actors: migrated CSP partners, finance-ops/support.</dd>
+    <dt>Reversible?</dt><dd>Yes — the visibility rule can be removed to restore today's full display; no data is changed.</dd>
+    <dt>Money / PII / migration?</dt><dd>Money: display-only — no balance, amount, or movement changes (guarded in A6/B5). PII: No. Migration: No.</dd>
+    <dt>OS impact / sign-off?</dt><dd>None — Payment &amp; Settlement OS behaviour, contracts and data semantics unchanged (declared No in A8 with reason). No sign-offs required.</dd>
+    <dt>Tier</dt><dd>Light — contained display-logic change, no state machine, no new parameters. (Lead PM: Jaivin Prajapati)</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: why we are changing this and the precise delta. Light tier — the delta rows stand alone.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Old-app wallet ledger visibility cut-off for migrated partners</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft</td></tr>
+    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>Current old-app wallet history display in the new CSP app (full pass-through of the partner's old-app ledger) · Engineering reference with verified code &amp; data analysis: <code>Desktop\Migrated_Wallet_Recon\Rebaseline_TABS1_Live\Action1_Tech_Handover.md</code> · Project tracker: <code>Desktop\Migrated_Wallet_Recon\PROJECT_TRACKER.md</code></td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>A migrated partner's old-app wallet history is shown in full, including entries dated after their migration. Every post-migration transaction therefore appears in both ledgers, and the old ledger's closing balance no longer matches the new ledger's opening balance — the two ledgers visibly fail to reconcile.</td></tr>
+    <tr><td>Who experiences it?</td><td>Migrated CSP partners reviewing their wallet history (money appears double-counted), and finance-ops/support who field the resulting confusion and reconciliation disputes.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>Recurring partner disputes and support load on every migrated partner who scrolls their history; erosion of trust in the new wallet at exactly the moment partners are being moved onto it.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <table class="delta">
+    <tr><th style="width:20%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:24%">Why</th></tr>
+    <tr><td>1 · Old-app history visibility for a migrated partner</td><td>The partner's entire old-app wallet history is shown, including entries dated after their migration.</td><td>Old-app entries dated after the partner's cut-over are not shown. The visible old history ends at the cut-over, so the last visible old-app balance equals the new ledger's opening balance.</td><td>Post-cut-over activity already lives in the new ledger; showing it twice breaks on-screen reconciliation.</td></tr>
+    <tr><td>2 · Cut-over definition</td><td>No cut-over concept exists for display purposes.</td><td>A partner's cut-over is the moment of their <strong>first entry in the new wallet ledger</strong> — any entry kind, not only the migration opening credit. Timestamps are compared in UTC.</td><td>Uniform for every partner, including the known case whose new ledger starts with a payout rather than an opening credit. The first new-ledger entry is, by definition, where the new ledger takes over.</td></tr>
+    <tr><td>3 · Old-ledger entry point for partners without a cut-over</td><td>The old-ledger entry point can be presented regardless of whether the partner has any old-app history.</td><td>A partner with no new-ledger entry yet (in practice only a newly onboarded partner, who has no old-app history) is not shown the old-ledger entry point at all.</td><td>No old history exists to display; offering an empty ledger is meaningless and confusing. Migrated partners always have at least one new-ledger entry, so they are unaffected.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <table>
+    <tr><th style="width:50%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr><td>1 · Old-app entries up to and including the cut-over are shown exactly as today — same entries, same order, same values.</td><td>The truncation rule must not over-truncate or reorder; only strictly-after-cut-over entries disappear.</td></tr>
+    <tr><td>2 · The new wallet ledger — content, balances, ordering, display — is unchanged.</td><td>The new ledger is read to derive the cut-over; reading it must not alter anything about it.</td></tr>
+    <tr><td>3 · No balance, transaction amount, or money movement changes anywhere, in either system.</td><td>The change is adjacent to partner money; it must remain display-only.</td></tr>
+    <tr><td>4 · The old-app system's data is never modified — the change only filters what is displayed.</td><td>The old ledger lives in an external system; this change must remain read-only towards it.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <table>
+    <tr><th>OS</th><th>Impacted?</th><th>Amendment (one line)</th><th>Amendment type</th><th>Amendment owner (consulted)</th><th>Sign-off</th></tr>
+    <tr><td>Payment &amp; Settlement OS</td><td>No</td><td>Ledger data semantics, balances, money movement and contracts are untouched. The new ledger is only read to derive the display cut-over.</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Old-app wallet system (external, i2e1)</td><td>No</td><td>External system's data is never written or modified; this change only filters which of its entries are displayed in the new app.</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>All other OSes</td><td>No</td><td>The change is confined to the wallet-history display layer for migrated partners; no other OS territory is plausibly in the blast radius.</td><td>None</td><td>—</td><td>—</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>Light tier — only the verification layer is required.</p>
+  <div class="author-note">Still business behaviour — criteria assert what is observable, never how it is built.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+
+  <h3>Business logic</h3>
+  <div class="gherkin">
+    <strong>LOGIC_01 (business logic · happy):</strong> Old history ends at the cut-over — A5-1<br>
+    <span class="kw">Given</span> a migrated partner whose old-app history has entries both before and after their cut-over<br>
+    <span class="kw">When</span> they view their old-app wallet history in the new app<br>
+    <span class="kw">Then</span> no entry dated after the cut-over is shown<br>
+    <span class="kw">And</span> the last visible old-app entry's balance equals the new ledger's opening balance
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_02 (business logic · rule):</strong> Cut-over is the first new-ledger entry of any kind — A5-2<br>
+    <span class="kw">Given</span> a migrated partner whose first new-ledger entry is not a migration opening credit (e.g. it is a payout)<br>
+    <span class="kw">When</span> their cut-over is determined<br>
+    <span class="kw">Then</span> it is the moment of that first entry, the same rule as for every other partner<br>
+    <span class="kw">And</span> their old-app history is truncated at that moment
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_03 (business logic · negative):</strong> No cut-over → no old ledger offered — A5-3<br>
+    <span class="kw">Given</span> a partner with no entry yet in the new wallet ledger (a newly onboarded partner)<br>
+    <span class="kw">When</span> they use the wallet area of the app<br>
+    <span class="kw">Then</span> the old-ledger entry point is not shown to them at all
+  </div>
+  <h3>Computation &amp; calculation</h3>
+  <div class="gherkin computation">
+    <strong>COMPUTE_01 (computation · boundary):</strong> The boundary entry stays visible<br>
+    <span class="kw">Given</span> an old-app entry whose timestamp is exactly equal to the partner's cut-over<br>
+    <span class="kw">When</span> the old-app history is displayed<br>
+    <span class="kw">Then</span> that entry remains visible — only entries strictly after the cut-over are hidden<br>
+    <span class="kw">And</span> the entry that established the closing balance is therefore never hidden
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_02 (computation · boundary):</strong> Comparison is in UTC, regardless of display timezone<br>
+    <span class="kw">Given</span> an old-app entry posted near midnight IST on the cut-over day<br>
+    <span class="kw">When</span> it is compared against the cut-over<br>
+    <span class="kw">Then</span> the comparison uses the entry's UTC instant, not its displayed local time<br>
+    <span class="kw">And</span> no entry is wrongly hidden or shown because of the IST offset
+  </div>
+
+  <h3>Invariants</h3>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_01:</strong> Old closing equals new opening<br>
+    <span class="kw">Given</span> any migrated partner<br>
+    <span class="kw">Then</span> the last visible old-app balance always equals the new ledger's opening balance<br>
+    <span class="kw">And</span> this holds for every migrated partner
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_02:</strong> Display-only — no stored money value ever changes<br>
+    <span class="kw">Given</span> any partner at any moment after this change ships<br>
+    <span class="kw">Then</span> no balance, transaction amount, or ledger entry content differs from before the change, in either system<br>
+    <span class="kw">And</span> no stored data anywhere is created, modified, or deleted by this change
+  </div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin">
+    <strong>EDGE_01 (edge):</strong> Browsing across the cut-over stays seamless<br>
+    <span class="kw">Given</span> a migrated partner browsing their old-app history page by page<br>
+    <span class="kw">When</span> their browsing reaches the cut-over point<br>
+    <span class="kw">Then</span> the history simply ends at the cut-over with no broken, stuck, or odd paging behaviour
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_02 (edge):</strong> Partner with no old-app history<br>
+    <span class="kw">Given</span> a partner whose old-app system returns no history at all<br>
+    <span class="kw">When</span> they use the wallet area<br>
+    <span class="kw">Then</span> behaviour is unchanged from today — there is nothing to truncate and nothing new appears
+  </div>
+
+  <h3>Regression (from A6)</h3>
+  <div class="gherkin regression">
+    <strong>REGRESSION_01 (guard · A6-1):</strong> Pre-cut-over history identical<br>
+    <span class="kw">Given</span> a migrated partner's old-app entries dated up to and including the cut-over<br>
+    <span class="kw">When</span> the history is displayed after this change<br>
+    <span class="kw">Then</span> those entries appear exactly as before — same entries, same order, same values
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_02 (guard · A6-2):</strong> New wallet ledger untouched<br>
+    <span class="kw">Given</span> any partner viewing their new wallet ledger<br>
+    <span class="kw">When</span> this change is live<br>
+    <span class="kw">Then</span> the new ledger's content, balances, ordering and display are exactly as before the change
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_03 (guard · A6-3):</strong> No money moved<br>
+    <span class="kw">Given</span> all partner balances and transactions in both systems<br>
+    <span class="kw">When</span> this change ships<br>
+    <span class="kw">Then</span> every balance and amount is unchanged — the change is provably display-only
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_04 (guard · A6-4):</strong> Old-app system never written<br>
+    <span class="kw">Given</span> the old-app wallet system<br>
+    <span class="kw">When</span> this change operates, for any partner and any volume of history<br>
+    <span class="kw">Then</span> no data in the old-app system is created, modified, or deleted by the new app
+  </div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <tr><th style="width:24%">Coverage class</th><th>Source section(s)</th><th style="width:14%">Items</th><th style="width:14%">Blocks</th><th style="width:16%">All covered?</th></tr>
+    <tr><td class="cls">Business logic</td><td>A5 delta (3 rows)</td><td>3</td><td>3 (LOGIC_01–03)</td><td>Y</td></tr>
+    <tr><td class="cls">Computation</td><td>A5-2 (cut-over comparison: boundary instant, timezone)</td><td>2</td><td>2 (COMPUTE_01–02)</td><td>Y</td></tr>
+    <tr><td class="cls">Invariants</td><td>Implied by A5-1 (reconciliation) and A6-3 (display-only)</td><td>2</td><td>2 (INVARIANT_01–02)</td><td>Y</td></tr>
+    <tr><td class="cls">Use &amp; edge cases</td><td>Edge analysis (paging seam; empty old history)</td><td>2</td><td>2 (EDGE_01–02)</td><td>Y</td></tr>
+    <tr><td class="cls">Regression</td><td>A6 guard lines</td><td>4</td><td>4 (REGRESSION_01–04)</td><td>Y</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--muted);">Balance: 2 happy vs 11 negative/edge/regression (~1:5). No exceptions taken.</p>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <table>
+    <tr><th>#</th><th>Section</th><th class="tier-cell">Tier</th><th class="check">Status</th></tr>
+    <tr><td>QC</td><td>Quick Check</td><td><span class="tier core">Always</span></td><td class="check">[x] Filled</td></tr>
+    <tr><td>A1</td><td>Metadata</td><td><span class="tier core">Light</span></td><td class="check">[x] Filled</td></tr>
+    <tr><td>A2</td><td>Why this change</td><td><span class="tier core">Light</span></td><td class="check">[x] Filled</td></tr>
+    <tr><td>A3</td><td>Current behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x] N/A — Light tier</td></tr>
+    <tr><td>A4</td><td>Desired behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x] N/A — Light tier</td></tr>
+    <tr><td>A5</td><td>The delta</td><td><span class="tier core">Light</span></td><td class="check">[x] Filled</td></tr>
+    <tr><td>A6</td><td>Must-not-change (guard)</td><td><span class="tier guard">Light</span></td><td class="check">[x] Filled</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edge cases</td><td><span class="tier how">Full</span></td><td class="check">[x] N/A — Light tier (invariants &amp; edges carried directly in B5)</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td><span class="tier guard">Always — gate</span></td><td class="check">[x] Filled (all No, with reasons)</td></tr>
+    <tr><td>B1</td><td>Changed workflows (before/after)</td><td><span class="tier cond">Cond.</span></td><td class="check">[x] N/A — visibility rule only; no decision-flow structure changes</td></tr>
+    <tr><td>B2</td><td>State changes</td><td><span class="tier cond">Strict cond.</span></td><td class="check">[x] N/A — no state machine touched</td></tr>
+    <tr><td>B3</td><td>Data &amp; parameter changes</td><td><span class="tier how">Full</span></td><td class="check">[x] N/A — no configurable value; cut-over is derived, not configured</td></tr>
+    <tr><td>B4</td><td>UI impact</td><td><span class="tier cond">Cond.</span></td><td class="check">[x] N/A — Light tier; user-visible effect fully stated in A5-1/-4 (history ends at cut-over; entry point hidden when no old history)</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria (verification layer)</td><td><span class="tier core">Light</span></td><td class="check">[x] Filled</td></tr>
+  </table>
+  <div class="footer note">
+    <strong>Out-of-scope for this change (declared):</strong> any reconciliation or correction of the underlying wallet data (handled in the migrated-wallet-recon workstream, shared with engineering separately); changes to the old-app system itself; changes to the new wallet ledger's content or rules.<br><br>
+    <strong>Reviewer rule (engineering):</strong> Read Quick Check, then A5 (delta), A6 (guard), A8 (OS impact), and the B5 coverage matrix in full.
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:130px">Author</th><th style="width:90px">Section(s)</th><th>Change &amp; rationale</th><th style="width:110px">Approver</th></tr>
+    <tr><td>v0.1</td><td>2026-06-04</td><td>Jaivin Prajapati</td><td>All</td><td>Initial change spec: truncate old-app wallet history at each migrated partner's cut-over (first new-ledger entry, UTC); old-ledger entry point hidden when no cut-over exists. Display-only; money untouched.</td><td>—</td></tr>
+  </table>
+</section>
+
+<p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
+  Wiom Change Spec Template v1.0 (PM deliverable) · Old-App Wallet Ledger Visibility Cut-off · v0.1 Draft · Light tier · 2026-06-04
+</p>
+
+</main>
+</div>
+</body>
+</html>

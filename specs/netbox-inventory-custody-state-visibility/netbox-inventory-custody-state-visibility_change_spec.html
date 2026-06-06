@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetBox Inventory — Custody-State Visibility — Change Spec v0.1</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --example-bg: #fffbeb; --example-rule: #f3d56a; --example-ink: #78350f;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg);
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px;
+  }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .quickcheck {
+    margin: 28px 0 40px; background: var(--quickcheck-bg);
+    border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule);
+    border-radius: 6px; padding: 18px 22px;
+  }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.core { background: var(--core-bg); color: var(--core); }
+  .tier.cond { background: var(--cond-bg); color: var(--cond); }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .hint strong { color: var(--hint-ink); }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 14px; margin: 14px 0; text-align: center; }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin.computation { border-left-color: var(--what); }
+  .gherkin.invariant { border-left-color: var(--how); }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  .gherkin.computation .kw { color: var(--what); }
+  .gherkin.invariant .kw { color: var(--how); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  .diff-legend { font-size: 12.5px; margin: 14px 0 6px; color: var(--muted); }
+  .diff-legend .chip { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 6px; border: 1px solid; }
+  .chip.unchanged { background: #f4f4f2; color: #444; border-color: #cfcfca; }
+  .chip.added { background: #e9f5ee; color: #064e2b; border-color: #0b6b3a; }
+  .chip.changed { background: #fbf1dd; color: #5b3a00; border-color: #8a5a00; }
+  .chip.removed { background: #fee2e2; color: #7f1d1d; border-color: #b91c1c; }
+  .flow-label { font-size: 13px; font-weight: 700; margin: 18px 0 0; }
+  .flow-label.before { color: #7f1d1d; }
+  .flow-label.after { color: #064e2b; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired behaviour</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflows (before/after)</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameter changes</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v0.1 · PM deliverable</div>
+  <h1>NetBox Inventory — Custody-State Visibility in Summary &amp; Filters</h1>
+  <p class="lede">The "All NetBox" inventory page shows a state-wise summary of a CSP's devices and a matching filter-chip row. Today, devices in three custody states are counted nowhere on this page, and written-off devices are counted under a category whose name does not mention them. This spec makes every resting custody state visible and correctly named, without changing how any existing category behaves.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Jaivin Prajapati &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier governed by:</strong> Lead PM</span>
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled after the body was completed.</div>
+  <dl>
+    <dt>What is changing?</dt><dd>Four custody states gain their own summary category + filter chip on the All NetBox page (Pending Receipt, Recovery Pending, To Be Handed Over, Written Off — the last split out of "Damaged / Lost"); devices in previously unmapped states get readable state text.</dd>
+    <dt>What triggered it?</dt><dd>PM audit: devices in 3 of 12 custody states are invisible in the summary/filters; the "All" headline undercounts the listed devices; some device rows render an untranslated placeholder code.</dd>
+    <dt>Blast radius</dt><dd>All NetBox page (summary card, filter chips, device rows) and device-detail state text — CSP-facing only.</dd>
+    <dt>Reversible?</dt><dd>Yes — removing the four new categories and the new state texts restores today's view exactly; no data is created or destroyed.</dd>
+    <dt>Money / PII / migration?</dt><dd>No / No / No — display and categorisation only; carry-fee and write-off liability computations untouched.</dd>
+    <dt>OS impact / sign-off?</dt><dd>NetBox Asset Custody OS — Yes (inventory category contract amended 6 → 10). Sign-off: <strong>Pending</strong>. All other OSes: No.</dd>
+    <dt>Tier</dt><dd>Full</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: why we are changing this, what it does today, what it should do, and the precise delta. Stable across implementation revisions.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>NetBox Inventory — custody-state visibility in summary &amp; filters</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft</td></tr>
+    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>NetBox Asset Custody OS (custody lifecycle &amp; inventory view contract — <code>wiom-tech/csp-os-yaml</code>, asset-custody service spec) · CSP App NetBox module spec (<code>wiom-tech/wiom-csp-app-apr09</code>, <code>docs/features/netbox-module/</code>, incl. label registry <code>netbox_labels_v1.2_hi_en.json</code>)</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>The custody lifecycle has 11 resting states, but the inventory page's summary and filters cover only 8 of them. Devices that are (a) dispatched but not yet receipt-confirmed, (b) awaiting recovery from a customer after deactivation, or (c) recovered after being declared lost are counted in no category and cannot be filtered to. Written-off devices are counted under "खराब / गुम (Damaged / Lost)" — a name that never mentions them. The "All" headline is the sum of the visible categories, so it is lower than the number of devices actually listed under "All". Two of the invisible states also render an untranslated placeholder code as the device-row state text.</td></tr>
+    <tr><td>Who experiences it?</td><td>Every CSP viewing their NetBox inventory — most acutely CSPs with devices in transit, in customer recovery, or written off. Secondary: support/ops who field "my device count doesn't add up" and "what does this code mean" queries.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>CSPs cannot account for devices they are financially responsible for (write-off liability, recovery obligations), eroding trust in the app as the single source of truth; avoidable support tickets; disputes during settlement because the CSP "never saw" the device in the app.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="hint"><strong>Tip:</strong> written as "Given X, the system does Y" — observable behaviour only.</div>
+  <table>
+    <tr><th style="width:34%">Trigger / condition</th><th>Observable behaviour today</th></tr>
+    <tr><td>CSP opens the All NetBox (inventory) page</td><td>A summary card shows an "All" row with a total, followed by six category rows with counts: With customers · With me · On order · Returning · Returned · Damaged / Lost. Below it, a horizontally scrollable filter-chip row mirrors the same six categories plus "All". Tapping a row or chip filters the device list to that category.</td></tr>
+    <tr><td>A device has been dispatched to the CSP but the CSP has not yet confirmed receipt (state: pending receipt confirmation)</td><td>The device is counted in <em>no</em> summary category and has no filter chip. It appears only in the unfiltered "All" device list, where its state text renders as an untranslated placeholder code instead of readable text.</td></tr>
+    <tr><td>A customer's connection has been deactivated and the device is still with the customer, awaiting recovery (state: customer recovery pending)</td><td>The device is counted in no summary category and has no filter chip. It appears in the unfiltered "All" list with readable state text ("कस्टमर से वापस लाना है"), but the CSP cannot see how many such devices exist or filter to them.</td></tr>
+    <tr><td>A device that was declared lost is later recovered and is awaiting handover back to Wiom (state: recovery hold)</td><td>The device is counted in no summary category and has no filter chip. It appears in the unfiltered "All" list with an untranslated placeholder code as its state text. It has also left the "Damaged / Lost" count (it is no longer lost), so it is visible nowhere.</td></tr>
+    <tr><td>A device is written off</td><td>It is counted inside the "खराब / गुम (Damaged / Lost)" category together with damaged and lost devices. There is no way to see the written-off count on its own, despite write-off carrying a distinct financial consequence for the CSP.</td></tr>
+    <tr><td>CSP reads the "All" total on the summary card</td><td>The total equals the sum of the six visible category counts. When devices exist in the three invisible states, the device list under the "All" filter contains more devices than the headline number.</td></tr>
+    <tr><td>CSP opens device detail for a device in one of the two unmapped states</td><td>The state timeline shows the same untranslated placeholder code wherever those states appear.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:34%">Trigger / condition</th><th>Desired observable behaviour</th></tr>
+    <tr><td>CSP opens the All NetBox (inventory) page</td><td>The summary card shows "All" plus <strong>ten</strong> category rows: With customers · With me · On order · <strong>Pending Receipt</strong> · <strong>Recovery Pending</strong> · Returning · <strong>To Be Handed Over</strong> · Returned · Damaged / Lost · <strong>Written Off</strong>. The filter-chip row mirrors all ten plus "All". Tapping any row or chip filters the device list to exactly that category, as it does today for the existing six.</td></tr>
+    <tr><td>A device has been dispatched but receipt is not yet confirmed</td><td>It is counted under "रसीद बाकी / Pending Receipt", filterable via its chip, and its device-row state text reads "रसीद बाकी / Pending receipt".</td></tr>
+    <tr><td>A connection is deactivated and the device is still with the customer</td><td>It is counted under "रिकवरी जारी / Recovery Pending" and filterable via its chip. Its device-row state text is unchanged ("कस्टमर से वापस लाना है").</td></tr>
+    <tr><td>A lost device is recovered and awaits handover to Wiom</td><td>It is counted under "जमा करना बाकी / To Be Handed Over", filterable via its chip, and its device-row state text reads "जमा करना बाकी / To be handed over".</td></tr>
+    <tr><td>A device is written off</td><td>It is counted under "राइट-ऑफ़ / Written Off" with its own chip. "खराब / गुम (Damaged / Lost)" now contains only damaged and lost devices, so its name is truthful.</td></tr>
+    <tr><td>CSP reads the "All" total</td><td>Every device in the CSP's custody is counted in exactly one category, so the headline reconciles with the "All" device list (the known On-order ↔ Pending-Receipt overlap window excepted — see A7.2 E1).</td></tr>
+    <tr><td>A device is ever in a state the app does not recognise (future-proofing)</td><td>Its state text shows a graceful fallback — "स्थिति अपडेट हो रही है / Status updating" — never a raw placeholder code. (Same fallback applies on the device-detail timeline.)</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="hint"><strong>A4 or A5?</strong> A4 above is the picture; this table is the itemised diff engineering builds and tests against. One change per row.</div>
+  <table class="delta">
+    <tr><th style="width:20%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:24%">Why</th></tr>
+    <tr><td><strong>R1</strong> · New category: Pending Receipt</td><td>Devices dispatched but not receipt-confirmed are counted in no category and have no chip.</td><td>New summary row + filter chip "रसीद बाकी / Pending Receipt" counting exactly these devices; chip filters to them.</td><td>CSP must see devices they are about to take responsibility for; today they vanish between dispatch and confirmation.</td></tr>
+    <tr><td><strong>R2</strong> · New category: Recovery Pending</td><td>Devices awaiting recovery from a deactivated customer are counted in no category and have no chip.</td><td>New summary row + filter chip "रिकवरी जारी / Recovery Pending" counting exactly these devices; chip filters to them.</td><td>Recovery is a CSP obligation with a deadline; an uncountable, unfilterable queue cannot be worked.</td></tr>
+    <tr><td><strong>R3</strong> · New category: To Be Handed Over</td><td>Devices recovered after being declared lost are counted in no category and have no chip.</td><td>New summary row + filter chip "जमा करना बाकी / To Be Handed Over" counting exactly these devices; chip filters to them.</td><td>These devices require a CSP action (hand the device back); invisibility stalls the handover.</td></tr>
+    <tr><td><strong>R4</strong> · Written Off split out of Damaged / Lost</td><td>Written-off devices are counted inside "खराब / गुम (Damaged / Lost)".</td><td>New summary row + filter chip "राइट-ऑफ़ / Written Off"; "Damaged / Lost" counts only damaged and lost devices.</td><td>Write-off carries a distinct financial consequence; hiding it under a name that never mentions it confuses and undercommunicates liability.</td></tr>
+    <tr><td><strong>R5</strong> · Device-row state text: pending receipt</td><td>Renders an untranslated placeholder code.</td><td>Reads "रसीद बाकी / Pending receipt" (list rows and device-detail timeline).</td><td>Raw codes are meaningless to CSPs and look broken.</td></tr>
+    <tr><td><strong>R6</strong> · Device-row state text: handover pending</td><td>Renders an untranslated placeholder code.</td><td>Reads "जमा करना बाकी / To be handed over" (list rows and device-detail timeline).</td><td>Same as R5.</td></tr>
+    <tr><td><strong>R7</strong> · Fallback state text</td><td>Any state without a display text renders the raw placeholder code.</td><td>Renders "स्थिति अपडेट हो रही है / Status updating".</td><td>Future states must degrade gracefully, never as visible codes.</td></tr>
+    <tr><td><strong>R8</strong> · Filter behaviour of the four new categories</td><td>Not possible.</td><td>Tapping a new chip (or its summary row) lists exactly the devices counted in that category — identical interaction to existing chips.</td><td>Count without drill-down is a dead end; parity with existing categories keeps the page predictable.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="hint"><strong>Reviewer note:</strong> scoped to what an engineer might realistically break while adding categories to a shared summary/filter surface. Each line has a REGRESSION block in B5.</div>
+  <table>
+    <tr><th style="width:50%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr><td><strong>G1</strong> · "With me" remains one merged category (setup-pending + idle devices together); its membership and count basis are unchanged.</td><td>An explicit product decision; splitting categories elsewhere invites "splitting" this one too.</td></tr>
+    <tr><td><strong>G2</strong> · "On order" keeps its current count basis (units on the active order) and remains count-only (no device list behind its chip), including during the dispatch→receipt window.</td><td>The new Pending Receipt category overlaps it in time; the accepted-overlap decision (A7.2 E1) must not silently morph into a change to On order.</td></tr>
+    <tr><td><strong>G3</strong> · Membership and counts of With customers, Returning and Returned are byte-for-byte as today.</td><td>They share the same summary/categorisation surface being edited.</td></tr>
+    <tr><td><strong>G4</strong> · Damaged and lost devices remain counted in "Damaged / Lost" (only written-off leaves it).</td><td>R4 narrows this category; over-narrowing would orphan damaged/lost devices the same way this change fixes others.</td></tr>
+    <tr><td><strong>G5</strong> · Existing device-row state texts (active, idle, setup-pending, returning, returned, damaged, lost, written-off, recovery-pending) are unchanged.</td><td>New text entries are being added to the same label set; existing entries must not be touched.</td></tr>
+    <tr><td><strong>G6</strong> · Existing chips' filtered lists, the search box, pagination, and tapping a device row to open its detail behave exactly as today.</td><td>All live on the page being modified.</td></tr>
+    <tr><td><strong>G7</strong> · The NetBox Home (action window) — device count, carry-fee strip, prioritised device list, quick actions — is unchanged.</td><td>It is fed by the same inventory data; a categorisation change must not leak into the action surface.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases Affected <span class="tier what">WHAT</span></h2>
+  <div class="hint"><strong>A6 or A7?</strong> Preserved behaviour → A6. New/changed rules, new invariants, new edges → here. Everything here is verified in B5.</div>
+  <h3>A7.1 Rules &amp; invariants (must always hold)</h3>
+  <table>
+    <tr><th style="width:35%">Rule / invariant</th><th>Statement</th></tr>
+    <tr><td><strong>INV-1</strong> — single-category membership</td><td>At any moment, every device in a CSP's custody is counted in exactly one summary category (On order excepted — it counts ordered units, not custody devices).</td></tr>
+    <tr><td><strong>INV-2</strong> — no raw state codes</td><td>No CSP-facing surface ever renders a raw/untranslated state code as a device's state text — every state resolves to readable Hindi/English text or the fallback.</td></tr>
+    <tr><td><strong>INV-3</strong> — count ↔ list consistency</td><td>For every device-backed category, the number shown on its summary row equals the number of devices its filter returns.</td></tr>
+    <tr><td><strong>RULE-1</strong> — truthful Damaged / Lost</td><td>The "Damaged / Lost" category contains only damaged and lost devices.</td></tr>
+    <tr><td><strong>RULE-2</strong> — category completeness</td><td>Every resting custody state maps to exactly one summary category (the in-transfer moment is excluded by design — see A7.2 E5).</td></tr>
+  </table>
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:35%">Edge / condition</th><th>Intended business outcome</th></tr>
+    <tr><td><strong>E1</strong> · Device in the dispatch→receipt window (order still active <em>and</em> device pending receipt)</td><td><strong>Accepted overlap (PM decision, 2026-06-06):</strong> the units stay in "On order" <em>and</em> the devices appear in "Pending Receipt"; the "All" headline includes both during this window. No change to On order.</td></tr>
+    <tr><td><strong>E2</strong> · Lost device is recovered</td><td>It moves from "Damaged / Lost" to "To Be Handed Over": Damaged / Lost count decreases by one, To Be Handed Over increases by one, at the same refresh.</td></tr>
+    <tr><td><strong>E3</strong> · A category has zero devices</td><td>The summary row and chip still appear, showing 0 — consistent with how existing categories behave today.</td></tr>
+    <tr><td><strong>E4</strong> · A device reports a state the app does not recognise</td><td>It appears in the "All" list with the fallback state text; it is counted in no category. (No category is invented for unknown states.)</td></tr>
+    <tr><td><strong>E5</strong> · Device at the instant of transfer between CSPs (transient reassignment)</td><td>Excluded by design: this state never rests, so no CSP can observe a device in it; it gets no category, no chip, no state text. If one were ever observed, E4's fallback applies.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="hint"><strong>How to read:</strong> every plausibly-affected OS gets an explicit Yes/No. The single "Yes" blocks shipping until sign-off is Received.</div>
+  <table>
+    <tr><th>OS</th><th>Impacted?</th><th>Amendment (one line)</th><th>Amendment type</th><th>Amendment owner (consulted)</th><th>Sign-off</th></tr>
+    <tr><td>NetBox Asset Custody OS</td><td><strong>Yes</strong></td><td>Inventory-view category contract amended from 6 fixed categories to 10 (three new state-backed categories + Written Off split out of Damaged / Lost). Custody lifecycle itself untouched.</td><td>Cross-OS contract</td><td><em>[Owner — to be named]</em></td><td><strong>Pending</strong></td></tr>
+    <tr><td>Payment &amp; Settlement OS</td><td>No</td><td>— (write-off liability and deposit computations are unchanged; only where the device is <em>counted on screen</em> changes)</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Compensation OS</td><td>No</td><td>— (carry-fee accrual and display are untouched)</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Connection Lifecycle OS</td><td>No</td><td>— (deactivation/recovery flows unchanged; this spec only surfaces their existing custody outcomes)</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Demand &amp; Allocation OS</td><td>No</td><td>— (ordering flow and On-order counting basis explicitly unchanged — guard G2)</td><td>None</td><td>—</td><td>—</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>The supporting detail engineering needs to build and test the delta precisely.</p>
+  <div class="author-note">Still business behaviour — diagrams describe logic and outcomes, never architecture.</div>
+</div>
+
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflows — Before &amp; After <span class="tier cond">Conditional — filled</span></h2>
+  <div class="expected"><strong>Workflow affected:</strong> "Assign a device to a summary category" — the categorisation step that runs for every device when the inventory page is built. (On-order counting is a separate, unchanged input and is omitted from both diagrams — guard G2.)</div>
+
+  <div class="diff-legend">
+    <strong>Colour key</strong>
+    <span class="chip unchanged">Unchanged</span>
+    <span class="chip added">Added / new path</span>
+    <span class="chip changed">Behaviour changed</span>
+    <span class="chip removed">Removed / replaced</span>
+  </div>
+
+  <p class="flow-label before">Before — current categorisation</p>
+  <div class="mermaid">
+flowchart TD
+    Start([Device custody state evaluated]) --> Q{Which state?}
+    Q -- "with customer" --> C1[With customers]
+    Q -- "in my custody / idle" --> C2[With me]
+    Q -- "being returned" --> C3[Returning]
+    Q -- "returned" --> C4[Returned]
+    Q -- "damaged / lost / written off" --> C5[Damaged / Lost]
+    Q -- "pending receipt · recovery pending · handover pending" --> X[Not counted in any category]
+    C1 --> End([Shown in summary row + filter chip])
+    C2 --> End
+    C3 --> End
+    C4 --> End
+    C5 --> End
+    X --> EndX([Invisible — appears only in unfiltered All list])
+    classDef removed fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class X,EndX removed;
+    class C5 changed;
+  </div>
+
+  <p class="flow-label after">After — changed categorisation</p>
+  <div class="mermaid">
+flowchart TD
+    Start([Device custody state evaluated]) --> Q{Which state?}
+    Q -- "with customer" --> C1[With customers]
+    Q -- "in my custody / idle" --> C2[With me]
+    Q -- "being returned" --> C3[Returning]
+    Q -- "returned" --> C4[Returned]
+    Q -- "damaged / lost" --> C5[Damaged / Lost]
+    Q -- "written off" --> C6[Written Off]
+    Q -- "pending receipt" --> N1[Pending Receipt]
+    Q -- "recovery pending" --> N2[Recovery Pending]
+    Q -- "handover pending" --> N3[To Be Handed Over]
+    C1 --> End([Shown in summary row + filter chip])
+    C2 --> End
+    C3 --> End
+    C4 --> End
+    C5 --> End
+    C6 --> End
+    N1 --> End
+    N2 --> End
+    N3 --> End
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class C6,N1,N2,N3 added;
+    class C5 changed;
+  </div>
+
+  <div class="hint"><strong>Reading the diff:</strong> the red "not counted" path in Before is eliminated — every resting state now reaches a category. "Damaged / Lost" is amber in both: its membership narrows (written-off leaves). The four green nodes are the new categories.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> State Changes <span class="tier cond">Strict conditional</span></h2>
+  <p><strong>N/A</strong> — no lifecycle state is added, removed, or re-routed. The custody lifecycle is untouched; this change only alters how existing states are <em>grouped and displayed</em> on the inventory page.</p>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
+  <table>
+    <tr><th>Parameter / data</th><th>Old</th><th>New</th><th>Valid range / scope</th><th>Reason</th></tr>
+    <tr><td>Inventory category set (state → category mapping)</td><td>6 fixed categories; 3 resting states unmapped; written-off folded into Damaged / Lost</td><td>10 fixed categories; every resting state mapped to exactly one (mapping per B1 After)</td><td>Fixed list, same for every CSP; ordering per B4</td><td>The delta R1–R4.</td></tr>
+    <tr><td>Display-text entries (state &amp; category labels)</td><td>No entries for the two unmapped state texts; no fallback entry; no category labels in use for the four new categories</td><td>4 category labels + 2 state texts + 1 fallback text added (exact agreed text in B4; final copy ownership stays with the label registry)</td><td>Hindi + English pair per entry; CSP app label registry scope</td><td>R5–R7.</td></tr>
+    <tr><td>Configurable values</td><td colspan="4">None — no new thresholds, windows, or tunable values; no existing parameter changes.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> UI Impact <span class="tier cond">Conditional — filled</span></h2>
+  <table>
+    <tr><th style="width:34%">Surface</th><th>What the user now sees</th></tr>
+    <tr><td>All NetBox page — summary card</td><td>Four additional category rows with live counts, in this order: …With me · On order · <strong>Pending Receipt</strong> · <strong>Recovery Pending</strong> · Returning · <strong>To Be Handed Over</strong> · Returned · Damaged / Lost · <strong>Written Off</strong>. Zero-count rows still shown (E3).</td></tr>
+    <tr><td>All NetBox page — filter-chip row</td><td>Four additional chips mirroring the new rows; selecting one filters the list to that category (R8).</td></tr>
+    <tr><td>All NetBox page — device rows</td><td>Devices pending receipt and devices awaiting handover now show readable state text instead of a placeholder code (R5, R6).</td></tr>
+    <tr><td>Device detail — state timeline</td><td>Timeline entries for the two newly-texted states render readable text; unknown states render the fallback (R7).</td></tr>
+  </table>
+  <h3>Agreed display text (information &amp; state level — final copy sits with the label registry)</h3>
+  <table>
+    <tr><th>Category / state</th><th>Hindi</th><th>English</th><th>State tone</th></tr>
+    <tr><td>Pending Receipt (category + device-row state)</td><td>रसीद बाकी</td><td>Pending Receipt</td><td>Informational (in transit)</td></tr>
+    <tr><td>Recovery Pending (category; device-row state text already exists and is unchanged)</td><td>रिकवरी जारी</td><td>Recovery Pending</td><td>Attention (CSP action owed)</td></tr>
+    <tr><td>To Be Handed Over (category + device-row state)</td><td>जमा करना बाकी</td><td>To Be Handed Over</td><td>Attention (CSP action owed)</td></tr>
+    <tr><td>Written Off (category; device-row state text already exists and is unchanged)</td><td>राइट-ऑफ़</td><td>Written Off</td><td>Negative (terminal, liability)</td></tr>
+    <tr><td>Fallback state text (any unrecognised state)</td><td>स्थिति अपडेट हो रही है</td><td>Status updating</td><td>Neutral</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="hint"><strong>Why this matters:</strong> code is AI-generated; review is human. B5 is the contract the generated code is checked against. Every block is labelled with its class.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin">
+    <strong>LOGIC_01 (logic · happy · R1):</strong> Pending-receipt device is counted and filterable<br>
+    <span class="kw">Given</span> a CSP with one device dispatched to them and receipt not yet confirmed<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> the "Pending Receipt" summary row shows 1<br>
+    <span class="kw">And</span> selecting the "Pending Receipt" chip lists exactly that device
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_02 (logic · happy · R2):</strong> Recovery-pending device is counted and filterable<br>
+    <span class="kw">Given</span> a CSP with one device awaiting recovery from a deactivated customer<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> the "Recovery Pending" summary row shows 1<br>
+    <span class="kw">And</span> selecting its chip lists exactly that device
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_03 (logic · happy · R3):</strong> Handover-pending device is counted and filterable<br>
+    <span class="kw">Given</span> a CSP with one device recovered after being declared lost, awaiting handover<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> the "To Be Handed Over" summary row shows 1<br>
+    <span class="kw">And</span> selecting its chip lists exactly that device
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_04 (logic · happy · R4):</strong> Written-off device sits in Written Off, not Damaged / Lost<br>
+    <span class="kw">Given</span> a CSP with one written-off device and no damaged or lost devices<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> "Written Off" shows 1 and "Damaged / Lost" shows 0<br>
+    <span class="kw">And</span> the device appears under the "Written Off" chip only
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_05 (logic · negative · R4/RULE-1):</strong> Damaged and lost devices do not leak into Written Off<br>
+    <span class="kw">Given</span> a CSP with one damaged device and one lost device and no written-off devices<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> "Damaged / Lost" shows 2 and "Written Off" shows 0<br>
+    <span class="kw">And</span> the "Written Off" chip lists no devices
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_06 (logic · negative · R8):</strong> New-state devices do not appear under any old category's filter<br>
+    <span class="kw">Given</span> a CSP with devices only in the three newly-categorised states<br>
+    <span class="kw">When</span> they select each pre-existing chip in turn (With customers, With me, Returning, Returned, Damaged / Lost)<br>
+    <span class="kw">Then</span> every one of those filters returns an empty list<br>
+    <span class="kw">And</span> each pre-existing summary row shows 0
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_07 (logic · happy · R5/R6):</strong> Readable state text for the two newly-texted states<br>
+    <span class="kw">Given</span> one device pending receipt and one device awaiting handover<br>
+    <span class="kw">When</span> the CSP views them in the device list (Hindi and English app language in turn)<br>
+    <span class="kw">Then</span> the first reads "रसीद बाकी" / "Pending receipt" and the second "जमा करना बाकी" / "To be handed over"<br>
+    <span class="kw">And</span> no placeholder code is visible anywhere on the row
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_08 (logic · negative · R7):</strong> Unknown state falls back gracefully<br>
+    <span class="kw">Given</span> a device reporting a state the app has no display text for<br>
+    <span class="kw">When</span> the CSP views it in the All list and opens its detail timeline<br>
+    <span class="kw">Then</span> its state text reads "स्थिति अपडेट हो रही है" / "Status updating" in both places<br>
+    <span class="kw">And</span> the device is counted in no summary category (E4)
+  </div>
+
+  <h3>Computation &amp; calculation</h3>
+  <div class="gherkin computation">
+    <strong>COMPUTE_01 (computation · normal):</strong> All headline reconciles with category counts<br>
+    <span class="kw">Given</span> a CSP with devices spread across all ten categories and no active order<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> the "All" total equals the sum of the ten category counts<br>
+    <span class="kw">And</span> equals the number of devices listed under the "All" filter
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_02 (computation · boundary zero · E3):</strong> Zero-count categories<br>
+    <span class="kw">Given</span> a CSP with no devices in any of the four new categories<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> all four new rows and chips are present showing 0<br>
+    <span class="kw">And</span> selecting any of their chips shows the empty-result state, not an error
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_03 (computation · boundary max-shift · E2):</strong> Lost → recovered moves exactly one unit between categories<br>
+    <span class="kw">Given</span> a CSP whose "Damaged / Lost" shows N (N ≥ 1) including one lost device<br>
+    <span class="kw">When</span> that lost device is recovered and the page is refreshed<br>
+    <span class="kw">Then</span> "Damaged / Lost" shows N−1 and "To Be Handed Over" has increased by exactly 1<br>
+    <span class="kw">And</span> the "All" total is unchanged
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_04 (computation · boundary overlap · E1):</strong> Dispatch→receipt window counts in both On order and Pending Receipt<br>
+    <span class="kw">Given</span> a CSP with an active order of 3 units that has been dispatched and not yet receipt-confirmed<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> "On order" shows 3 and "Pending Receipt" shows 3 simultaneously (accepted overlap)<br>
+    <span class="kw">And</span> after the CSP confirms receipt, "On order" shows 0, "Pending Receipt" shows 0, and "With me" has increased by 3
+  </div>
+
+  <h3>Invariants</h3>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_01 (from A7.1 INV-1):</strong> Single-category membership<br>
+    <span class="kw">Given</span> any device in a CSP's custody, in any resting state, at any moment including immediately after a state change<br>
+    <span class="kw">Then</span> it is counted in exactly one summary category<br>
+    <span class="kw">And</span> never in two categories at once, and never in zero (unknown states per E4 excepted)
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_02 (from A7.1 INV-2):</strong> No raw state codes anywhere<br>
+    <span class="kw">Given</span> every CSP-facing surface that shows a device state (summary, chips, list rows, detail, timeline), across every custody state and both languages<br>
+    <span class="kw">Then</span> the rendered state text is always readable Hindi/English or the declared fallback<br>
+    <span class="kw">And</span> never a raw code or placeholder key
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_03 (from A7.1 INV-3):</strong> Count ↔ list consistency<br>
+    <span class="kw">Given</span> any device-backed category (all except On order) with count N on its summary row<br>
+    <span class="kw">Then</span> its filter returns exactly N devices<br>
+    <span class="kw">And</span> this holds for every one of the nine device-backed categories
+  </div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin">
+    <strong>EDGE_01 (edge · E5):</strong> In-transfer devices are never visible<br>
+    <span class="kw">Given</span> a device at the instant of being transferred between CSPs<br>
+    <span class="kw">When</span> either CSP views their inventory at any observable moment<br>
+    <span class="kw">Then</span> the device appears either under the old CSP (pre-transfer state) or the new CSP ("With me") — never in a "transfer" category, which must not exist
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_02 (edge · B1 branch):</strong> Every resting state reaches a category — none left behind<br>
+    <span class="kw">Given</span> a CSP holding one device in each of the eleven resting custody states<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> each of the nine device-backed categories shows its expected count and the eleven devices are all accounted for<br>
+    <span class="kw">And</span> the unfiltered All list contains exactly eleven devices, each with readable state text
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_03 (edge · E4 negative):</strong> Unknown state does not invent a category<br>
+    <span class="kw">Given</span> a device reporting an unrecognised state<br>
+    <span class="kw">When</span> the CSP opens the All NetBox page<br>
+    <span class="kw">Then</span> no new summary row or chip appears for it<br>
+    <span class="kw">And</span> the page renders without error, with the device visible only in the All list (per LOGIC_08)
+  </div>
+
+  <h3>Regression (one block per A6 guard)</h3>
+  <div class="gherkin regression">
+    <strong>REGRESSION_01 (guard G1):</strong> With me stays merged<br>
+    <span class="kw">Given</span> a CSP with two setup-pending devices and three idle devices<br>
+    <span class="kw">When</span> they open the All NetBox page<br>
+    <span class="kw">Then</span> "With me" shows 5, exactly as before the change<br>
+    <span class="kw">And</span> no separate setup-pending or idle category exists
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_02 (guard G2):</strong> On order is untouched<br>
+    <span class="kw">Given</span> a CSP with an active order in each stage in turn (requested, approved, dispatched)<br>
+    <span class="kw">When</span> they open the All NetBox page at each stage<br>
+    <span class="kw">Then</span> the "On order" count equals the ordered units exactly as today<br>
+    <span class="kw">And</span> its chip still returns no device list (count-only), exactly as today
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_03 (guard G3):</strong> Unchanged categories count as before<br>
+    <span class="kw">Given</span> a CSP with devices with customers, being returned, and returned<br>
+    <span class="kw">When</span> they open the All NetBox page before and after the change<br>
+    <span class="kw">Then</span> "With customers", "Returning" and "Returned" show identical counts and identical filtered lists in both versions
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_04 (guard G4):</strong> Damaged and lost devices stay put<br>
+    <span class="kw">Given</span> a CSP with one damaged and one lost device<br>
+    <span class="kw">When</span> they open the All NetBox page after the change<br>
+    <span class="kw">Then</span> both devices remain counted and listed under "Damaged / Lost"<br>
+    <span class="kw">And</span> their device-row state texts ("खराब", "गुम") are unchanged
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_05 (guard G5):</strong> Existing state texts unchanged<br>
+    <span class="kw">Given</span> devices in every previously-texted state (active, idle, setup-pending, returning, returned, damaged, lost, written-off, recovery-pending)<br>
+    <span class="kw">When</span> their rows are rendered in Hindi and English after the change<br>
+    <span class="kw">Then</span> every state text is character-identical to before the change
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_06 (guard G6):</strong> Page interactions unchanged<br>
+    <span class="kw">Given</span> a CSP on the All NetBox page after the change<br>
+    <span class="kw">When</span> they search for a device, scroll to paginate, and tap a device row<br>
+    <span class="kw">Then</span> search matches, pagination, and navigation to device detail behave exactly as before the change
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_07 (guard G7):</strong> NetBox Home untouched<br>
+    <span class="kw">Given</span> a CSP with devices in all custody states, including the three newly-categorised ones<br>
+    <span class="kw">When</span> they open NetBox Home (the action window)<br>
+    <span class="kw">Then</span> the device count, carry-fee strip, prioritised device list, and quick actions are identical to before the change
+  </div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <tr><th style="width:24%">Coverage class</th><th>Source section(s)</th><th style="width:14%">Items</th><th style="width:14%">Blocks</th><th style="width:16%">All covered?</th></tr>
+    <tr><td class="cls">Business logic</td><td>A5 R1–R8 · A7.1 RULE-1, RULE-2</td><td>10</td><td>LOGIC_01–08, EDGE_02 (RULE-2)</td><td>Yes</td></tr>
+    <tr><td class="cls">Computation</td><td>Category counts &amp; All total (A5 R1–R4)</td><td>4</td><td>COMPUTE_01–04 (incl. zero, shift, overlap boundaries)</td><td>Yes</td></tr>
+    <tr><td class="cls">Invariants</td><td>A7.1 INV-1, INV-2, INV-3</td><td>3</td><td>INVARIANT_01–03</td><td>Yes</td></tr>
+    <tr><td class="cls">Use &amp; edge cases</td><td>A7.2 E1–E5 · B1 new/changed branches</td><td>5 edges + 5 branches</td><td>COMPUTE_03 (E2), COMPUTE_04 (E1), COMPUTE_02 (E3), LOGIC_08 + EDGE_03 (E4), EDGE_01 (E5), EDGE_02 + LOGIC_01–04 (branches)</td><td>Yes</td></tr>
+    <tr><td class="cls">Regression</td><td>A6 G1–G7</td><td>7</td><td>REGRESSION_01–07</td><td>Yes</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--muted);">Balance: 7 happy-path blocks vs 18 negative/boundary/edge/regression blocks (~1 : 2.6).</p>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <table>
+    <tr><th>#</th><th>Section</th><th class="tier-cell">Tier</th><th class="check">Filled</th><th class="check">N/A</th></tr>
+    <tr><td>QC</td><td>Quick Check</td><td><span class="tier core">Always</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A1</td><td>Metadata</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A2</td><td>Why this change</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A3</td><td>Current behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A4</td><td>Desired behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A5</td><td>The delta</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A6</td><td>Must-not-change (guard)</td><td><span class="tier guard">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edge cases</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td><span class="tier guard">Always — gate</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B1</td><td>Changed workflows (before/after)</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">[ ]</td></tr>
+    <tr><td>B2</td><td>State changes</td><td><span class="tier cond">Strict cond.</span></td><td class="check">[ ]</td><td class="check">[x] no lifecycle state added/removed/re-routed</td></tr>
+    <tr><td>B3</td><td>Data &amp; parameter changes</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B4</td><td>UI impact</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">[ ]</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria (verification layer)</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+  </table>
+  <div class="footer note">
+    <strong>Shipping gate:</strong> the single A8 "Yes" (NetBox Asset Custody OS) has sign-off <strong>Pending</strong> — this spec must not start build until it reads Received, per the A8 gate.<br><br>
+    <strong>Out-of-scope for this spec:</strong> API contracts, payload schemas, database design, concurrency, retry mechanics, monitoring, pixel-level UI and final copy. Engineering and design own these.
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:130px">Author</th><th style="width:90px">Section(s)</th><th>Change &amp; rationale</th><th style="width:110px">Approver</th></tr>
+    <tr><td>v0.1</td><td>2026-06-06</td><td>Jaivin Prajapati</td><td>All</td><td>Initial change spec. Decisions baked in: keep existing six categories as-is incl. merged "With me"; add Pending Receipt / Recovery Pending / To Be Handed Over; split Written Off out of Damaged / Lost; On-order overlap accepted; in-transfer state excluded; fallback state text added. RECOVERY_HOLD display text chosen: "जमा करना बाकी / To Be Handed Over".</td><td>—</td></tr>
+  </table>
+</section>
+
+<p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
+  Wiom Change Spec v1.0 format · NetBox Inventory — Custody-State Visibility · Draft v0.1 · 2026-06-06
+</p>
+
+</main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>
