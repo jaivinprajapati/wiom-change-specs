@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — Change Specs</title>
+<style>
+  :root { --bg:#fafaf9; --surface:#fff; --ink:#1a1a1a; --muted:#6b6b6b; --rule:#e5e5e2; --what:#1f3c6e; --qc:#ca8a04; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif; font-size:15px; line-height:1.55; color:var(--ink); background:var(--bg); }
+  main { max-width:840px; margin:0 auto; padding:48px 24px 96px; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:18px; margin-bottom:28px; }
+  .eyebrow { font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+  h1 { font-size:30px; margin:6px 0 8px; }
+  p.lede { color:var(--muted); margin:0; max-width:70ch; }
+  ul.specs { list-style:none; padding:0; margin:24px 0; }
+  ul.specs li { background:var(--surface); border:1px solid var(--rule); border-left:4px solid var(--what); border-radius:6px; margin:12px 0; }
+  ul.specs li a { display:block; padding:14px 18px; text-decoration:none; color:var(--ink); }
+  ul.specs li a:hover { background:#f4f6fa; }
+  .spec-title { font-weight:700; font-size:16px; }
+  .spec-sub { font-size:13px; color:var(--muted); margin-top:2px; }
+  h2 { font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:36px 0 8px; }
+  ul.aux { list-style:none; padding:0; }
+  ul.aux li { margin:6px 0; }
+  ul.aux a { color:var(--what); }
+  footer { margin-top:48px; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Wiom · PM deliverables</div>
+    <h1>Change Specs</h1>
+    <p class="lede">Canonical specs for modifications to existing features (Wiom Change Spec Template v1.0). Each spec opens directly in the browser.</p>
+  </header>
+
+  <ul class="specs">
+    <li><a href="specs/netbox-inventory-custody-state-visibility/netbox-inventory-custody-state-visibility_change_spec.html">
+      <div class="spec-title">NetBox Inventory — Custody-State Visibility in Summary &amp; Filters</div>
+      <div class="spec-sub">v0.1 Draft · 2026-06-06 · 4 new inventory categories + readable state text for unmapped states</div>
+    </a></li>
+    <li><a href="specs/netbox-device-swap/netbox-device-swap_change_spec.html">
+      <div class="spec-title">NetBox Device Swap</div>
+      <div class="spec-sub">See spec for status</div>
+    </a></li>
+    <li><a href="specs/lost-device-lifecycle/lost-device-lifecycle_change_spec.html">
+      <div class="spec-title">Lost Device Lifecycle</div>
+      <div class="spec-sub">See spec for status</div>
+    </a></li>
+    <li><a href="specs/old-ledger-cutoff/old-ledger-cutoff_change_spec.html">
+      <div class="spec-title">Old Ledger Cutoff</div>
+      <div class="spec-sub">See spec for status</div>
+    </a></li>
+  </ul>
+
+  <h2>Reference</h2>
+  <ul class="aux">
+    <li><a href="templates/Wiom_Change_Spec_Template_v1_0.html">Change Spec Template v1.0 (blank, with worked examples)</a></li>
+  </ul>
+
+  <footer>Repo: <a href="https://github.com/jaivinprajapati/wiom-change-specs">jaivinprajapati/wiom-change-specs</a> · Authored via the /change-spec workflow.</footer>
+</main>
+</body>
+</html>
