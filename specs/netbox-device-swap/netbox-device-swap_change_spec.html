@@ -158,10 +158,11 @@
     <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
     <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameter changes</a></li>
     <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
-    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (test cases)</a></li>
   </ol>
-  <h2 class="close">Closeout</h2>
+  <h2 class="close">Future &amp; Closeout</h2>
   <ol>
+    <li><a href="#future"><span class="ix">F.</span>Future scope (noted, not specced)</a></li>
     <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
     <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
   </ol>
@@ -170,7 +171,7 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v0.4 · PM deliverable</div>
+  <div class="eyebrow">Wiom · Change Spec · v0.5 · PM deliverable</div>
   <h1>CSP Netbox Swap — Diagnosis-Driven Device Replacement</h1>
   <p class="lede">Backend specification for the netbox swap flow inside SRS: a swap initiates on an open service ticket with a device-fault diagnosis, executes through ACS only after the old-app services (Remote, Inventory) confirm the connectivity shift, and completes without resolving the ticket — resolution and verification then proceed through the normal flow, verified by the common verification service. Scope is strictly swap-related; SRS fundamentals (ticket-creation gating, complaint lifecycle automatics) are a separate amendment and are <strong>not</strong> part of this spec. Per author directive, exact technical references (API paths, event names, field names, DB columns) are carried inline — a deliberate deviation from the template's default scope fence.</p>
   <div class="meta-row">
@@ -206,7 +207,7 @@
     <tr><td>Change title</td><td>CSP Netbox Swap — Diagnosis-Driven Device Replacement (swap initiation contract, execution sequencing, post-swap ticket behaviour)</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.4</td></tr>
+    <tr><td>Version</td><td>v0.5</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td>Support &amp; Resolution OS v1.6.1 LOCKED (<code>csp-os-yaml/os/Support_Resolution_OS_v1_6_1_LOCKED.md</code> §4.4, §7.9, §12.5) · Asset Custody OS v1.11.1 LOCKED (<code>csp-os-yaml/os/Asset_Custody_OS_v1_11_1_LOCKED.md</code> §4.4) · ESR v2.27 (DEVICE_SWAP / DEVICE_SWAP_COMPLETED entries)</td></tr>
     <tr><td>Companion documents</td><td>Swap OS amendments: <code>Desktop/Netbox_Swap_Spec/Netbox_Swap_OS_Amendments.md</code>. Out of this spec's scope: the SRS-fundamentals amendment (ticket-creation gate / complaint lifecycle automatics) — tracked separately.</td></tr>
   </table>
@@ -507,6 +508,22 @@ flowchart TD
   <hr class="sect-end">
 </section>
 
+<section class="spec" id="future">
+  <h2><span class="num">F.</span> Future Scope — Noted, Not Specced <span class="tier cond">Out of scope for this version</span></h2>
+  <div class="expected">Items intentionally parked. Recorded here so the intent is not lost, but explicitly <strong>not</strong> part of this spec's build. Each will need its own spec (and, where flagged, its own cross-OS amendments) before it can be picked up.</div>
+
+  <h3>F1. Closing a Pickup Ticket (PUT) by swapping a device</h3>
+  <table>
+    <tr><th style="width:22%">Aspect</th><th>Detail</th></tr>
+    <tr><td>Today's scope</td><td>This spec enables a swap only when the customer has raised a <strong>service ticket</strong> (a complaint about internet quality). The swap lives inside that complaint's lifecycle.</td></tr>
+    <tr><td>The gap / scenario</td><td>Customers frustrated with connectivity often raise a <strong>Pickup Ticket (PUT)</strong> — they want to leave Wiom and return the device — rather than a service ticket. The CSP visits, diagnoses the device on site, and convinces the customer to stay <em>on the condition that a new device is provided</em>. The customer agrees. Today there is no in-system way to honour that: the PUT can only be closed by the customer recharging or by the device being picked up — neither reflects what actually happened (a save-via-swap).</td></tr>
+    <tr><td>The proposal</td><td>Introduce <strong>swapping as a third PUT-closure path</strong>, alongside the existing two (customer recharge · device pickup). A PUT would close as "retained via device replacement", the old device would route to return-to-Wiom as in a service-ticket swap, and the new device would bind to the connection.</td></tr>
+    <tr><td>Why deferred</td><td>This is materially larger than the service-ticket swap. It changes how a PUT can terminate, which ripples across multiple OSes — Exit OS (PUT lifecycle &amp; closure reasons), Connection Lifecycle OS (a connection saved from exit), Asset Custody OS (swap initiated from a non-complaint context), and SR OS / the PUT-owning surface (a swap initiation that is <em>not</em> anchored to a complaint_id). Several invariants in <em>this</em> spec — notably "every swap carries an open complaint_id" (I1) — would need rethinking for a PUT-anchored swap. It is not a delta on this change; it is its own initiative.</td></tr>
+    <tr><td>Status</td><td><strong>Noted only.</strong> No design, no amendment, no estimate here. To be picked up as a separate change spec when prioritised.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
 <footer class="checklist" id="checklist">
   <h2>Completeness Checklist</h2>
   <table>
@@ -541,11 +558,12 @@ flowchart TD
     <tr><td>v0.2</td><td>2026-06-06</td><td>Jaivin Prajapati (with Claude)</td><td>All</td><td>Re-scoped to swap-only after author review: SRS fundamentals (ticket gate, lifecycle automatics) removed from scope, A5, A8, B1, B2, B5. Diagnosis now travels with the swap-initiation request (D2). Swap completion no longer resolves the ticket — verification by the common verification service (D3). NEW: ACS pre-execution gate — Remote + Inventory confirmation before custody transitions (D4). B1 redrawn as the single SRS→ACS→old-app→ACS→SRS flow. B4 made journey-agnostic (backend contract only).</td><td>—</td></tr>
     <tr><td>v0.3</td><td>2026-06-06</td><td>Jaivin Prajapati (with Claude)</td><td>A4, D3, B1, B3, B5, A8</td><td>B1 Before replaced with "no flow exists today, not even manual". A4/D3/LOGIC_04: swap completion also updates the SRS device mapping — all further tasks/steps consider the new device. P_SWAP_COMPLETION_TIMEOUT decided: 120 s → 300 s (old-app round-trip in window; recalibrate after production measurement). Remote/Inventory contract owner named: TBD with Rahul Nijhawan (A8 owner, D4, B3, E2, EDGE_10).</td><td>—</td></tr>
     <tr><td>v0.4</td><td>2026-06-08</td><td>Jaivin Prajapati (with Claude)</td><td>B5</td><td>B5 redesigned per author: replaced the Gherkin blocks + coverage matrix with a single prioritised test-case table (30 cases, critical → non-critical), each row carrying both a plain-business statement and the exact technical condition (states, guards, fields). One row, TC-02b (partial old-app confirmation failure), left open pending the Rahul Nijhawan contract.</td><td>—</td></tr>
+    <tr><td>v0.5</td><td>2026-06-08</td><td>Jaivin Prajapati (with Claude)</td><td>F (new)</td><td>Added Future Scope section (F1): closing a Pickup Ticket (PUT) by swapping a device — a third PUT-closure path beyond recharge and pickup, for the save-on-site scenario. Noted only; deferred as a separate cross-OS initiative (Exit, CL, Custody, SR).</td><td>—</td></tr>
   </table>
 </section>
 
 <p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
-  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.4 Draft
+  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.5 Draft
 </p>
 
 </main>
