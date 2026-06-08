@@ -171,7 +171,7 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v0.6 · PM deliverable</div>
+  <div class="eyebrow">Wiom · Change Spec · v0.7 · PM deliverable</div>
   <h1>CSP Netbox Swap — Diagnosis-Driven Device Replacement</h1>
   <p class="lede">Backend specification for the netbox swap flow inside SRS: a swap initiates on an open service ticket with a device-fault diagnosis, executes through ACS only after the old-app services (Remote, Inventory) confirm the connectivity shift, and completes without resolving the ticket — resolution and verification then proceed through the normal flow, verified by the common verification service. Scope is strictly swap-related; SRS fundamentals (ticket-creation gating, complaint lifecycle automatics) are a separate amendment and are <strong>not</strong> part of this spec. Per author directive, exact technical references (API paths, event names, field names, DB columns) are carried inline — a deliberate deviation from the template's default scope fence.</p>
   <div class="meta-row">
@@ -207,7 +207,7 @@
     <tr><td>Change title</td><td>CSP Netbox Swap — Diagnosis-Driven Device Replacement (swap initiation contract, execution sequencing, post-swap ticket behaviour)</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.6</td></tr>
+    <tr><td>Version</td><td>v0.7</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td>Support &amp; Resolution OS v1.6.1 LOCKED (<code>csp-os-yaml/os/Support_Resolution_OS_v1_6_1_LOCKED.md</code> §4.4, §7.9, §12.5) · Asset Custody OS v1.11.1 LOCKED (<code>csp-os-yaml/os/Asset_Custody_OS_v1_11_1_LOCKED.md</code> §4.4) · ESR v2.27 (DEVICE_SWAP / DEVICE_SWAP_COMPLETED entries)</td></tr>
     <tr><td>Companion documents</td><td>Swap OS amendments: <code>Desktop/Netbox_Swap_Spec/Netbox_Swap_OS_Amendments.md</code>. Out of this spec's scope: the SRS-fundamentals amendment (ticket-creation gate / complaint lifecycle automatics) — tracked separately.</td></tr>
   </table>
@@ -247,7 +247,7 @@
     <tr><td>CSP initiates a device swap on an open service ticket</td><td>The backend receives, in the swap-initiation request: the diagnosis fault type, the diagnosis outcome, the resolution type (<code>DEVICE_REPLACED</code>), and the replacement device. The frontend journey is the frontend's decision. SRS persists the diagnosis onto the active task before evaluating guards.</td></tr>
     <tr><td>Gate checks run</td><td>SRS validates its guards G7–G11 (open complaint; diagnosis present; device fault type; replacement specified; resolution type). <strong>G6 is removed</strong> — no connection-state query. ACS <strong>validates</strong> its guards G1–G5 (old device DEPLOYED &amp; bound to this connection; new device CUSTODIED/IDLE; same CSP) <em>without executing yet</em>. Any failure → CSP shown the reason; nothing changes.</td></tr>
     <tr><td>Gate checks pass → SRS shifts connectivity</td><td><strong>SRS</strong> (not ACS) calls the <strong>Remote service and Inventory service</strong> to execute the connectivity shift onto the new device. (Exact operations: TBD with Rahul Nijhawan.)</td></tr>
-    <tr><td>SRS asks the Validation Layer to confirm the swap really happened</td><td>SRS calls the <strong>Validation Layer (VL) — the same common verification layer being built for all ticket types</strong>. For a swap, VL confirms via router pings: the <em>new</em> device has pinged at least once in the last 10 minutes <strong>and</strong> the <em>old</em> device is no longer pinging. If not yet satisfied, VL retries (up to 2 retries, 20 minutes total) on the normal ~5-minute ping cadence. The CSP sees a synchronous "verifying…" screen with a countdown.</td></tr>
+    <tr><td>SRS asks the Validation Layer to confirm the swap really happened</td><td>SRS calls the <strong>Validation Layer (VL) — the same common verification layer being built for all ticket types</strong>. For a swap, VL confirms via router pings: the <em>new</em> device has pinged at least once in the last 10 minutes <strong>and</strong> the <em>old</em> device is no longer pinging. If unmet, VL <strong>waits 5 minutes and re-checks</strong> — up to 2 retries (3 checks total, ~10 minutes max) — because pinging immediately after a failure tends to repeat the same result. The CSP sees a synchronous "verifying…" screen with a countdown. Exact check in B3.</td></tr>
     <tr><td>VL = CONFIRMED</td><td>SRS signals ACS to <strong>execute</strong> the atomic custody transition (old device <code>DEPLOYED → RETRIEVAL_PENDING</code>, new device <code>CUSTODIED/IDLE → DEPLOYED</code>); ACS emits <code>DEVICE_SWAP_COMPLETED</code> back to SRS. SRS updates its own device mapping to the new device and <strong>auto-closes the ticket</strong> — a confirmed swap is the resolution.</td></tr>
     <tr><td>VL = DECLINED or NO_DATA</td><td>SRS <strong>reverses</strong> the connectivity shift by re-calling Remote + Inventory to restore the pre-swap state. ACS never executed, so there is nothing to undo in custody. The ticket stays <strong>open</strong>; the validation outcome is flagged for analysis; the CSP is shown: <em>"We couldn't verify the swap. If you've found another problem, fix it and retry; otherwise swap the devices back (old → customer, new → CSP)."</em> No physical return is needed unless they give up.</td></tr>
     <tr><td>Ticket reopens after a confirmed+closed swap (within reopen window)</td><td>Same complaint lineage, no fresh SLA clock — and the reopened ticket runs against the new device, because the swap already updated the device facts on completion.</td></tr>
@@ -264,7 +264,7 @@
     <tr><td><strong>D1</strong></td><td>Swap guard G6 + FM-SR-SWAP-01</td><td>SRS queries CL OS; connection must be ACTIVE before emitting the swap. CL query failure blocks submission.</td><td>G6 removed; the CL connection-state query is dropped and FM-SR-SWAP-01 is obsolete. Custody binding guards G4/G5 are the protection.</td><td>A swap on an unbound connection fails at custody anyway; the pre-check only adds a dependency.</td></tr>
     <tr><td><strong>D2</strong></td><td>Swap-initiation contract (diagnosis travels with the request)</td><td>Diagnosis fields exist on the task (<code>complaint_tasks.diagnosis_outcome</code>, <code>diagnosis_fault_type</code>) but nothing writes them; the flow is unreachable.</td><td>The initiation request (<code>POST /tasks/{taskId}/device-swap</code>) carries <code>diagnosis_fault_type</code>, <code>diagnosis_outcome</code>, <code>resolution_type = DEVICE_REPLACED</code>, <code>new_device_id</code>. SRS persists the diagnosis on the task first, then evaluates guards. Latest diagnosis governs.</td><td>One round-trip matching the real CSP flow; audit preserved before any swap acts.</td></tr>
     <tr><td><strong>D3</strong></td><td>Old-app orchestration owner</td><td>(Designed earlier as) ACS calls Remote + Inventory after its own guards. In live code, nothing informs the old-app stack at all.</td><td><strong>SRS</strong> owns the old-app calls. After gate checks pass, SRS calls Remote + Inventory to execute the connectivity shift; ACS no longer talks to the old app.</td><td>SRS orchestrates the whole swap (gate → shift → verify → commit); ACS becomes a pure custody executor.</td></tr>
-    <tr><td><strong>D4</strong></td><td>Validation Layer gate (NEW)</td><td>No verification that a swap physically took effect; custody changed regardless of reality.</td><td>After the connectivity shift, SRS calls the <strong>Validation Layer</strong> (the common verification layer). VL = CONFIRMED requires: new device pinged in the last 10 min <strong>and</strong> old device not pinging; up to 2 retries over a 20-min window. Outcome recorded as <code>swap_validation_outcome ∈ {CONFIRMED, DECLINED, NO_DATA}</code>. Ping = internet for v1 (known limitation).</td><td>Custody must never claim a swap the network didn't actually perform; this is the truth check.</td></tr>
+    <tr><td><strong>D4</strong></td><td>Validation Layer gate (NEW)</td><td>No verification that a swap physically took effect; custody changed regardless of reality.</td><td>After the connectivity shift, SRS calls the <strong>Validation Layer</strong> (the common verification layer). VL = CONFIRMED requires: new device pinged ≥1 in the last 10 min <strong>and</strong> old device not pinging. If unmet, VL waits 5 min and re-checks — up to 2 retries (3 checks, ~10 min max). Outcome recorded as <code>swap_validation_outcome ∈ {CONFIRMED, DECLINED, NO_DATA}</code>. Exact check in B3. Ping = internet for v1 (known limitation).</td><td>Custody must never claim a swap the network didn't actually perform; this is the truth check.</td></tr>
     <tr><td><strong>D5</strong></td><td>ACS validate-then-execute split</td><td>ACS validates G1–G5 and immediately executes the custody transition in one step.</td><td>ACS <strong>validates</strong> G1–G5 at gate-check (step 3) and <strong>executes</strong> the atomic transition only when SRS signals VL = CONFIRMED (step 6), then emits <code>DEVICE_SWAP_COMPLETED</code>. Validation and execution are two calls.</td><td>The verification step sits between validation and commit; custody is the last thing to move.</td></tr>
     <tr><td><strong>D6</strong></td><td>Reversal on non-confirmation</td><td>No reversal concept — a swap, once started, only went forward.</td><td>VL = DECLINED or NO_DATA → SRS reverses the shift by re-calling Remote + Inventory to restore the pre-swap state. ACS never executed (nothing to undo in custody). Ticket stays open; outcome flagged; CSP shown the fix-and-retry / swap-back message. Reverse is part of the Remote/Inventory contract (TBD with Rahul Nijhawan).</td><td>An unverified swap must leave no false "it worked" state; the CSP resolves the real issue and retries.</td></tr>
     <tr><td><strong>D7</strong></td><td>Swap completion = ticket closure</td><td>(Designed earlier as) swap completion keeps the ticket open; resolution submitted separately; verified later by the common service.</td><td>A VL-confirmed swap completion <strong>auto-closes the ticket</strong>. SRS updates its device mapping to the new device on completion. Verification happens <em>inside</em> the flow (VL), so there is no separate resolution step for a swap-resolved ticket. Because VL <em>is</em> the common verification layer, this does not fork verification.</td><td>A confirmed swap has both fixed the device and proven service is back — that is the resolution.</td></tr>
@@ -286,7 +286,7 @@
     <tr><td><strong>G-E</strong></td><td>Reclassification-to-platform (router fault, system-verifiable evidence, time-bounded) unchanged.</td><td>Sibling device-fault path; the swap diagnosis must not substitute for its evidence.</td></tr>
     <tr><td><strong>G-F</strong></td><td>Normal installation binding (<code>CUSTODIED → DEPLOYED</code>) unchanged. The old-app shift, VL gate, and reversal apply only to swaps.</td><td>Shares the custody machine; the new steps must not leak into installs.</td></tr>
     <tr><td><strong>G-G</strong></td><td>Verification is the <strong>common verification layer's</strong> responsibility. This change feeds it swap-specific inputs (the ping rules) but does not fork it into a separate swap-only verifier.</td><td>D4 routes swaps through the common layer; building a parallel verifier would split the verification truth.</td></tr>
-    <tr><td><strong>G-H</strong></td><td>Swap-completion timeout semantics: ops flag on expiry, ticket not auto-resolved on timeout, late completion still processed.</td><td>D4/D5 lengthen the path (old-app + 20-min VL window); the timeout <em>value</em> changes (B3) but its <em>semantics</em> must survive.</td></tr>
+    <tr><td><strong>G-H</strong></td><td>Swap-completion timeout semantics: ops flag on expiry, ticket not auto-resolved on timeout, late completion still processed.</td><td>D4/D5 lengthen the path (old-app + ~10-min VL window); the timeout <em>value</em> changes (B3) but its <em>semantics</em> must survive.</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -314,7 +314,7 @@
     <tr><th style="width:6%">#</th><th style="width:38%">Edge / condition</th><th>Intended business outcome</th></tr>
     <tr><td><strong>E1</strong></td><td>Old device has no matching binding (e.g., connection deactivating)</td><td>ACS validation rejects on G4/G5 at gate-check, before any old-app call. CSP shown the binding reason; nothing changes.</td></tr>
     <tr><td><strong>E2</strong></td><td>New device pings, but the old device is still pinging too</td><td>Not confirmed (old not down) → after the retry window, reverse. The swap didn't truly take; CSP ensures the old device is disconnected and retries. <em>(Known edge: a software-fault device left powered may keep pinging — surfaced to ops via the flag.)</em></td></tr>
-    <tr><td><strong>E3</strong></td><td>New device never pings within the 20-min window (2 retries)</td><td>DECLINED / NO_DATA → reverse; ticket open; CSP shown fix-and-retry message.</td></tr>
+    <tr><td><strong>E3</strong></td><td>New device never pings across the validation window (~10 min, 2 retries)</td><td>DECLINED / NO_DATA → reverse; ticket open; CSP shown fix-and-retry message.</td></tr>
     <tr><td><strong>E4</strong></td><td>The reversal call to Remote/Inventory itself fails</td><td>Ops flag / escalation — the system cannot silently sit in a shifted-but-unverified state. <strong>[Decision needed — reversal-failure handling, define with the Remote/Inventory contract.]</strong></td></tr>
     <tr><td><strong>E5</strong></td><td>CSP closes the app during the synchronous verification wait</td><td>VL continues server-side; the outcome (close, or reverse) is applied regardless; the CSP sees the result on next open.</td></tr>
     <tr><td><strong>E6</strong></td><td>CSP retries after a reversal</td><td>Full flow re-runs. If the CSP fixed the real issue, the second attempt confirms and closes; otherwise it reverses again.</td></tr>
@@ -337,7 +337,7 @@
     <tr><td>Asset Custody OS v1.11.1</td><td>Yes</td><td>Validate-then-execute split: ACS validates G1–G5 at gate-check and executes the atomic transition only on SRS's VL-confirmed signal; ACS no longer calls the old app (D5). Draft: <code>Netbox_Swap_OS_Amendments.md</code> §2.</td><td>Behaviour change</td><td>Dhruv</td><td>Pending</td></tr>
     <tr><td>ESR v2.27/v2.28</td><td>Yes</td><td>G6 removed from emitter preconditions; register <code>DEVICE_SWAP_REJECTED</code>; register the old-app + VL contract events once defined.</td><td>Cross-OS contract</td><td>Dhruv</td><td>Pending</td></tr>
     <tr><td>Remote service + Inventory service (old app)</td><td>Yes</td><td>Connectivity-shift contract with SRS: a <strong>forward</strong> call (shift to new device) and a <strong>reverse</strong> call (restore pre-swap state), with confirmation + partial-failure semantics. [Operations TBD with Rahul Nijhawan.]</td><td>Cross-system contract</td><td>Rahul Nijhawan</td><td>Pending</td></tr>
-    <tr><td>Validation Layer (common verification layer)</td><td>Yes</td><td>Swap-specific validation rules layered on the common VL: confirm new device up (ping in last 10 min) AND old device down; 2 retries / 20-min window; outcome CONFIRMED / DECLINED / NO_DATA. Core VL owned by another PM.</td><td>Cross-system contract</td><td>TBD (VL-owning PM)</td><td>Pending</td></tr>
+    <tr><td>Validation Layer (common verification layer)</td><td>Yes</td><td>Swap-specific validation rules layered on the common VL: confirm new device up (≥1 ping in last 10 min) AND old device down; on a failed check, wait 5 min then re-check, up to 2 retries (~10 min); outcome CONFIRMED / DECLINED / NO_DATA. Core VL owned by another PM.</td><td>Cross-system contract</td><td>TBD (VL-owning PM)</td><td>Pending</td></tr>
     <tr><td>Connection Lifecycle OS v1.7.1</td><td>No</td><td>— (SRS stops querying CL at swap submission; CL owns nothing that changes.)</td><td>None</td><td>—</td><td>—</td></tr>
     <tr><td>Quality OS v1.15.1</td><td>No</td><td>— (Resolution signal unchanged per G-D.)</td><td>None</td><td>—</td><td>—</td></tr>
     <tr><td>Compensation / Payment OS</td><td>No</td><td>— (No money movement; custody carry-fee/write-off untouched.)</td><td>None</td><td>—</td><td>—</td></tr>
@@ -375,7 +375,7 @@ flowchart TD
     Persist --> Gate{Gate checks pass? SRS G7-G11 + ACS validates G1-G5}
     Gate -- No --> Rej[Rejected with reason - ticket unchanged]
     Gate -- Yes --> Shift[SRS calls Remote + Inventory - execute connectivity shift to new device]
-    Shift --> VL["SRS calls Validation Layer: new device pinged in last 10 min AND old device down? - up to 2 retries, 20 min"]
+    Shift --> VL["SRS calls Validation Layer: new pinged in last 10 min AND old down? - on fail wait 5 min then re-check, up to 2 retries, ~10 min"]
     VL --> Outcome{VL outcome}
     Outcome -- "CONFIRMED" --> Exec[SRS signals ACS - execute atomic custody: old to RETRIEVAL_PENDING, new to DEPLOYED]
     Exec --> Done[ACS emits DEVICE_SWAP_COMPLETED to SRS]
@@ -388,7 +388,7 @@ flowchart TD
     class Init,Persist,Shift,VL,Outcome,Reverse,Keep added;
     class Gate,Exec,Close changed;
   </div>
-  <div class="hint"><strong>Synchronous:</strong> the CSP stays on a "verifying…" screen with a countdown for the VL window (up to 20 min); the swap finalises (close) or reverses (fix-and-retry) on-screen.</div>
+  <div class="hint"><strong>Synchronous:</strong> the CSP stays on a "verifying…" screen with a countdown for the VL window (up to ~10 min); the swap finalises (close) or reverses (fix-and-retry) on-screen.</div>
   <hr class="sect-end">
 </section>
 
@@ -411,11 +411,26 @@ flowchart TD
     <tr><td>Swap audit on a complaint (<code>device_swap_old_device_id</code>, <code>device_swap_new_device_id</code>, <code>device_swap_initiated_at</code>, <code>device_swap_completed_at</code>, <code>resolution_type</code>) + <strong>NEW</strong> <code>swap_validation_outcome</code></td><td>Single swap implicitly assumed; no validation outcome</td><td>Support unlimited swaps per complaint (full ordered history); record <code>swap_validation_outcome ∈ {CONFIRMED, DECLINED, NO_DATA}</code> per attempt</td><td>Per complaint, unbounded count</td><td>D8 + D4 — reconcile every swap and every validation result.</td></tr>
     <tr><td>VL ping-cadence</td><td>—</td><td>~5 min, per-device, scheduled (not on-demand)</td><td>Operational · per device</td><td>D4 — the rhythm VL reads; on-demand was rejected to avoid CSPs flooding retries.</td></tr>
     <tr><td>VL ping-lookback</td><td>—</td><td>10 min (≥1 ping in last 10 min = device up)</td><td>Operational</td><td>D4 — recency window for "up".</td></tr>
-    <tr><td>VL deadline / retries</td><td>—</td><td>2 retries, 20 min total window</td><td>Operational</td><td>D4 — give a freshly-swapped device time to come up before declining.</td></tr>
-    <tr><td><code>P_SWAP_COMPLETION_TIMEOUT</code></td><td>120 s</td><td><strong>~30 min</strong> (must exceed the 20-min VL window) — semantics unchanged (G-H)</td><td>Operational · 20–40 min sane range — <strong>tech to set ~30 min</strong></td><td>D4/D5 — the VL window now sits inside the completion path; a 120 s / 300 s timeout would flag every swap.</td></tr>
+    <tr><td>VL retry policy</td><td>—</td><td>On a failed check, <strong>wait 5 min then re-check</strong>; up to 2 retries (3 checks total, ~10 min max window)</td><td>Operational</td><td>D4 — the 5-min spacing avoids re-pinging into the same transient failure; immediate re-checks would just repeat the result.</td></tr>
+    <tr><td><code>P_SWAP_COMPLETION_TIMEOUT</code></td><td>120 s</td><td><strong>~20 min</strong> (must exceed the ~10-min VL window plus old-app round-trips) — semantics unchanged (G-H)</td><td>Operational · 15–30 min sane range — <strong>tech to set ~20 min</strong></td><td>D4/D5 — the VL window now sits inside the completion path; a 120 s / 300 s timeout would flag every swap.</td></tr>
     <tr><td>Repeat-swap cap</td><td>—</td><td>Deliberately none in v1</td><td>—</td><td>R1.</td></tr>
     <tr><td>Old-app forward + reverse contract (Remote + Inventory)</td><td>—</td><td><strong>[PLACEHOLDER — TBD with Rahul Nijhawan]</strong></td><td>—</td><td>D3/D6.</td></tr>
   </table>
+
+  <h3>Exact validation check (D4)</h3>
+  <div class="expected">Let <strong>T₀</strong> = the moment SRS calls VL (immediately after the connectivity shift). At an evaluation time <em>t</em>, over the trailing 10-minute window (<em>t</em> − 10 min, <em>t</em>]:
+    <br>· <code>new_up(t)</code> = the new device has <strong>≥ 1 ping</strong> in that window.
+    <br>· <code>old_down(t)</code> = the old device has <strong>0 pings</strong> in that window.
+    <br>· <code>CONFIRM(t)</code> = <code>new_up(t)</code> AND <code>old_down(t)</code>.
+    <br><br><strong>Schedule</strong> — at most 3 evaluations, each failure followed by a 5-minute wait:
+    <br>· Eval 1 at <em>t</em> = T₀.
+    <br>· If not CONFIRM → wait 5 min → Eval 2 at <em>t</em> = T₀ + 5 min.
+    <br>· If not CONFIRM → wait 5 min → Eval 3 at <em>t</em> = T₀ + 10 min.
+    <br><br><strong>Verdict:</strong>
+    <br>· <code>CONFIRMED</code> — the first eval where <code>CONFIRM(t)</code> is true (early-exit; no further waiting).
+    <br>· <code>DECLINED</code> — <code>CONFIRM(t)</code> false at all 3 evals, with usable ping data present (e.g., new never pinged, or old kept pinging).
+    <br>· <code>NO_DATA</code> — no usable ping data for the device(s) across the window (telemetry gap; up/down undeterminable).
+    <br><br>Max time to verdict = <strong>~10 min</strong>. Both <code>DECLINED</code> and <code>NO_DATA</code> → reverse (fail-closed). The 5-min spacing avoids re-pinging into the same transient failure; the 10-min trailing lookback tolerates the per-device ~5-min ping cadence; Eval 1 at T₀ is kept because it catches the fast path where the fault had already killed the old device (instant CONFIRMED).</div>
   <hr class="sect-end">
 </section>
 
@@ -425,7 +440,7 @@ flowchart TD
   <table>
     <tr><th>Surface</th><th>What the backend requires / makes available</th></tr>
     <tr><td>CSP app — swap initiation</td><td>The initiation call must deliver: diagnosis fault type, diagnosis outcome, resolution type (<code>DEVICE_REPLACED</code>), replacement device id. Replacement must be the CSP's own (custody guards enforce it).</td></tr>
-    <tr><td>CSP app — synchronous verification screen <span style="color:#0b6b3a">(design ask)</span></td><td>A "verifying swap…" state with a <strong>countdown timer</strong> for the VL window (up to 20 min). The CSP waits; the result lands on-screen.</td></tr>
+    <tr><td>CSP app — synchronous verification screen <span style="color:#0b6b3a">(design ask)</span></td><td>A "verifying swap…" state with a <strong>countdown timer</strong> for the VL window (up to ~10 min). The CSP waits; the result lands on-screen.</td></tr>
     <tr><td>CSP app — confirmed outcome</td><td>"Swap verified — done." The ticket is closed automatically; no separate resolution step.</td></tr>
     <tr><td>CSP app — reversed outcome <span style="color:#0b6b3a">(design ask: copy)</span></td><td>Message: <em>"We couldn't verify the swap. If you've found another problem, fix it and retry; otherwise swap the devices back (old → customer, new → CSP)."</em> No physical return unless they give up.</td></tr>
     <tr><td>CSP app — rejection states</td><td>Distinct reasons: ticket not actionable (G7), invalid fault type (G9), device not linked to this connection (G4/G5), replacement invalid (G2/G3), swap in progress (R3).</td></tr>
@@ -483,7 +498,7 @@ flowchart TD
 
     <tr><td>TC-18</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The swap no longer depends on the connection being "active".</td><td>No CL OS connection-state query at submission (G6 removed); CL unavailability can't block a swap.</td><td>No connection-state lookup occurs.</td><td>D1</td></tr>
 
-    <tr><td>TC-19</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>The CSP waits on a verification screen and sees the result there.</td><td>Synchronous flow: VL runs up to 20 min on a ~5-min cadence (2 retries); the CSP app shows a countdown; finalises (close) or reverses on-screen.</td><td>Synchronous; CSP sees confirm-or-reverse outcome with a visible timer.</td><td>D4 · B4</td></tr>
+    <tr><td>TC-19</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>The CSP waits on a verification screen and sees the result there.</td><td>Synchronous flow: VL checks, and on failure waits 5 min then re-checks, up to 2 retries (~10 min total); the CSP app shows a countdown; finalises (close) or reverses on-screen.</td><td>Synchronous; CSP sees confirm-or-reverse outcome with a visible timer.</td><td>D4 · B4</td></tr>
 
     <tr><td>TC-20</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>If the CSP leaves mid-verification, the swap still resolves correctly.</td><td>CSP closes the app during the VL wait → VL continues server-side; close-or-reverse applied regardless; result visible on next open.</td><td>Outcome applied server-side independent of the app session.</td><td>E5</td></tr>
 
@@ -530,7 +545,7 @@ flowchart TD
   <h3>F2. Device locking / concurrency between gate-check and execution</h3>
   <table>
     <tr><th style="width:22%">Aspect</th><th>Detail</th></tr>
-    <tr><td>The gap</td><td>Gate checks (G1–G5) run at initiation, but ACS executes custody up to ~20 min later (after the VL window). In that gap, a device's state could change underneath the swap (e.g., deployed elsewhere, deactivated), so a stale validation could execute.</td></tr>
+    <tr><td>The gap</td><td>Gate checks (G1–G5) run at initiation, but ACS executes custody up to ~10 min later (after the VL window). In that gap, a device's state could change underneath the swap (e.g., deployed elsewhere, deactivated), so a stale validation could execute.</td></tr>
     <tr><td>Why deferred</td><td>Judged too small an edge for this effort; a full fix needs reservation/lock checks across multiple OSes and services. Accepted as a known limitation for v1 — ACS re-reads device state at execution, but no exclusive lock is held.</td></tr>
     <tr><td>Status</td><td><strong>Noted only.</strong> Revisit if it shows up in practice.</td></tr>
   </table>
@@ -582,11 +597,12 @@ flowchart TD
     <tr><td>v0.4</td><td>2026-06-08</td><td>Jaivin Prajapati (with Claude)</td><td>B5</td><td>B5 redesigned per author: replaced the Gherkin blocks + coverage matrix with a single prioritised test-case table (30 cases, critical → non-critical), each row carrying both a plain-business statement and the exact technical condition (states, guards, fields). One row, TC-02b (partial old-app confirmation failure), left open pending the Rahul Nijhawan contract.</td><td>—</td></tr>
     <tr><td>v0.5</td><td>2026-06-08</td><td>Jaivin Prajapati (with Claude)</td><td>F (new)</td><td>Added Future Scope section (F1): closing a Pickup Ticket (PUT) by swapping a device — a third PUT-closure path beyond recharge and pickup, for the save-on-site scenario. Noted only; deferred as a separate cross-OS initiative (Exit, CL, Custody, SR).</td><td>—</td></tr>
     <tr><td>v0.6</td><td>2026-06-08</td><td>Jaivin Prajapati (with Claude)</td><td>A4–A8, B1–B5, F</td><td>Major flow redesign per author. SRS (not ACS) now orchestrates the old-app connectivity shift (D3). NEW Validation Layer gate (= common verification layer): confirms new device up + old device down via pings, 1-in-10-min, 2 retries / 20-min window, outcome CONFIRMED/DECLINED/NO_DATA (D4). ACS split into validate (gate-check) then execute-on-confirm (D5). Non-confirmation reverses the old-app shift; ticket stays open with a fix-and-retry CSP message (D6). A confirmed swap now AUTO-CLOSES the ticket (D7, reverses the v0.2 "completion ≠ resolution" decision). Synchronous with a CSP countdown. P_SWAP_COMPLETION_TIMEOUT → ~30 min (must exceed the 20-min VL window). B1 redrawn SRS→old-app→VL→ACS→SRS with the reverse branch. B5 reworked (31 cases). F2 (device-locking, deferred) + F3 (validation beyond ping) added.</td><td>—</td></tr>
+    <tr><td>v0.7</td><td>2026-06-08</td><td>Jaivin Prajapati (with Claude)</td><td>A4, D4, B1, B3, B4, B5, A8</td><td>VL timing per author: confirm needs just 1 ping in the last 10 min (unchanged); retries now SPACED — on a failed check, wait 5 min then re-check, up to 2 retries (3 checks, ~10 min max) instead of a 20-min window, because immediate re-pinging repeats the failure. Added an explicit "Exact validation check" definition in B3 (T₀, new_up/old_down over a trailing 10-min window, 3-eval schedule, verdict rules). P_SWAP_COMPLETION_TIMEOUT lowered ~30 → ~20 min to match the shorter window.</td><td>—</td></tr>
   </table>
 </section>
 
 <p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
-  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.6 Draft
+  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.7 Draft
 </p>
 
 </main>
