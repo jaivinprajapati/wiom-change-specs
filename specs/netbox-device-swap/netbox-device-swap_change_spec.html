@@ -170,7 +170,7 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v0.3 · PM deliverable</div>
+  <div class="eyebrow">Wiom · Change Spec · v0.4 · PM deliverable</div>
   <h1>CSP Netbox Swap — Diagnosis-Driven Device Replacement</h1>
   <p class="lede">Backend specification for the netbox swap flow inside SRS: a swap initiates on an open service ticket with a device-fault diagnosis, executes through ACS only after the old-app services (Remote, Inventory) confirm the connectivity shift, and completes without resolving the ticket — resolution and verification then proceed through the normal flow, verified by the common verification service. Scope is strictly swap-related; SRS fundamentals (ticket-creation gating, complaint lifecycle automatics) are a separate amendment and are <strong>not</strong> part of this spec. Per author directive, exact technical references (API paths, event names, field names, DB columns) are carried inline — a deliberate deviation from the template's default scope fence.</p>
   <div class="meta-row">
@@ -206,7 +206,7 @@
     <tr><td>Change title</td><td>CSP Netbox Swap — Diagnosis-Driven Device Replacement (swap initiation contract, execution sequencing, post-swap ticket behaviour)</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.3</td></tr>
+    <tr><td>Version</td><td>v0.4</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td>Support &amp; Resolution OS v1.6.1 LOCKED (<code>csp-os-yaml/os/Support_Resolution_OS_v1_6_1_LOCKED.md</code> §4.4, §7.9, §12.5) · Asset Custody OS v1.11.1 LOCKED (<code>csp-os-yaml/os/Asset_Custody_OS_v1_11_1_LOCKED.md</code> §4.4) · ESR v2.27 (DEVICE_SWAP / DEVICE_SWAP_COMPLETED entries)</td></tr>
     <tr><td>Companion documents</td><td>Swap OS amendments: <code>Desktop/Netbox_Swap_Spec/Netbox_Swap_OS_Amendments.md</code>. Out of this spec's scope: the SRS-fundamentals amendment (ticket-creation gate / complaint lifecycle automatics) — tracked separately.</td></tr>
   </table>
@@ -429,280 +429,81 @@ flowchart TD
 </section>
 
 <section class="spec" id="b5">
-  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
-  <div class="expected">Backend point of view, derived from required behaviour (A5/A7), not from existing code. Labelled Given/When/Then blocks across five classes; coverage audited in B5.1. SRS-fundamentals scenarios are out of scope.</div>
+  <h2><span class="num">B5.</span> Acceptance Criteria — Test Cases <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>Backend test cases, derived from the required behaviour (A5 / A6 / A7), not from existing code.</strong> Listed critical → non-critical. Each row states the test in plain business terms <em>and</em> the exact technical condition to check. "Ref" points to the delta / guard / invariant it proves. Pass = every row green.</div>
+  <table>
+    <tr>
+      <th style="width:4%">#</th>
+      <th style="width:8%">Priority</th>
+      <th style="width:26%">Test case — in plain terms</th>
+      <th style="width:30%">Technical condition / check</th>
+      <th style="width:24%">Expected result</th>
+      <th style="width:8%">Ref</th>
+    </tr>
 
-  <h3>Business logic</h3>
-  <div class="gherkin">
-    <strong>LOGIC_01 (D1 · happy):</strong> Swap proceeds without any connection-state query<br>
-    <span class="kw">Given</span> an open ticket and a valid swap initiation<br>
-    <span class="kw">When</span> SRS processes it<br>
-    <span class="kw">Then</span> the swap emits without any connection-state lookup having occurred<br>
-    <span class="kw">And</span> an unavailable connection-state source can never block or fail a swap initiation
-  </div>
-  <div class="gherkin">
-    <strong>LOGIC_02 (D2 · happy):</strong> Initiation carries and persists the diagnosis<br>
-    <span class="kw">Given</span> a swap initiation carrying fault type DEVICE_HARDWARE, DEVICE_SOFTWARE, or DEVICE_CONNECTIVITY (each tested), an outcome, resolution type DEVICE_REPLACED, and a replacement device<br>
-    <span class="kw">When</span> SRS processes the request<br>
-    <span class="kw">Then</span> the diagnosis is persisted on the active task before any guard is evaluated<br>
-    <span class="kw">And</span> the persisted values are retrievable with recording actor and time
-  </div>
-  <div class="gherkin">
-    <strong>LOGIC_03 (D2 · negative):</strong> Missing diagnosis fields reject the initiation<br>
-    <span class="kw">Given</span> a swap initiation missing the fault type, or the resolution type, or the replacement device (each tested)<br>
-    <span class="kw">When</span> SRS processes the request<br>
-    <span class="kw">Then</span> it is rejected with the specific missing-field reason and no swap event is emitted
-  </div>
-  <div class="gherkin">
-    <strong>LOGIC_04 (D3 · happy):</strong> Completion leaves the ticket open<br>
-    <span class="kw">Given</span> a ticket in ASSIGNED (and separately in ESCALATED) with a swap in flight<br>
-    <span class="kw">When</span> the swap completes<br>
-    <span class="kw">Then</span> the swap is recorded on the ticket and the ticket remains in exactly the state it was in<br>
-    <span class="kw">And</span> it does not enter PENDING_VERIFICATION, RESOLVED, or any other state<br>
-    <span class="kw">And</span> the SRS device mapping for the ticket now references the new device — every subsequent task, step, or action on the ticket considers the new device, never the old
-  </div>
-  <div class="gherkin">
-    <strong>LOGIC_05 (D3 · happy):</strong> Resolution flows normally after a swap<br>
-    <span class="kw">Given</span> a ticket with a completed swap<br>
-    <span class="kw">When</span> the CSP submits resolution through the normal resolution flow<br>
-    <span class="kw">Then</span> the ticket enters verification exactly as any non-swap ticket would<br>
-    <span class="kw">And</span> verification is performed by the common verification service with no swap-specific branch
-  </div>
-  <div class="gherkin">
-    <strong>LOGIC_06 (D4 · happy):</strong> Old-app confirmation precedes custody change<br>
-    <span class="kw">Given</span> a swap that has passed ACS guards G1–G5<br>
-    <span class="kw">When</span> the Remote and Inventory services both confirm the connectivity shift<br>
-    <span class="kw">Then</span> and only then ACS executes the atomic transitions and emits completion<br>
-    <span class="kw">And</span> the custody transition timestamps are never earlier than the confirmations
-  </div>
-  <div class="gherkin">
-    <strong>LOGIC_07 (D4 · negative):</strong> Failed confirmation nullifies the swap<br>
-    <span class="kw">Given</span> a swap that has passed ACS guards G1–G5<br>
-    <span class="kw">When</span> the Remote or Inventory confirmation fails<br>
-    <span class="kw">Then</span> no custody state changes, no completion event is emitted, and nothing records the swap as executed<br>
-    <span class="kw">And</span> the rejection reaches the CSP with reason "ACS failed", leaving the ticket unchanged and retry possible
-  </div>
-  <div class="gherkin">
-    <strong>LOGIC_08 (D5 · happy):</strong> Second swap on the same ticket<br>
-    <span class="kw">Given</span> a ticket with one completed swap and a subsequent verification denial<br>
-    <span class="kw">When</span> the CSP initiates a second swap with a new replacement and a fresh diagnosis<br>
-    <span class="kw">Then</span> the second swap executes through the full guard set including the old-app gate<br>
-    <span class="kw">And</span> both swaps are independently visible and ordered in the ticket's audit trail
-  </div>
-  <div class="gherkin">
-    <strong>LOGIC_09 (D6 · negative):</strong> Failed verification never reverses a swap<br>
-    <span class="kw">Given</span> a completed swap on a ticket whose resolution is later denied in verification<br>
-    <span class="kw">Then</span> both devices remain exactly in their post-swap states (new: serving the connection; old: pending return to Wiom)<br>
-    <span class="kw">And</span> no reversal mechanism exists on any path
-  </div>
-  <div class="gherkin">
-    <strong>LOGIC_10 (D7 · negative):</strong> UPGRADE and wrong resolution types rejected<br>
-    <span class="kw">Given</span> an initiation carrying swap reason UPGRADE, and separately one carrying a resolution type other than DEVICE_REPLACED<br>
-    <span class="kw">When</span> SRS processes each<br>
-    <span class="kw">Then</span> each is rejected as invalid for v1 and no swap event is emitted
-  </div>
+    <tr><td>TC-01</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>The customer's internet must actually move to the new device before the system records the swap as done.</td><td>On <code>DEVICE_SWAP</code>, ACS calls the Remote service and the Inventory service and waits for both to confirm the connectivity shift. Custody writes (<code>device.status</code>, <code>CUSTODY_STATE_CHANGED</code>) and <code>DEVICE_SWAP_COMPLETED</code> happen only after both confirmations; transition timestamps are never earlier than the confirmation timestamps.</td><td>No custody change is ever visible before both old-app confirmations land.</td><td>I6 · D4</td></tr>
 
-  <h3>Computation &amp; calculation</h3>
-  <div class="gherkin computation">
-    <strong>COMPUTE_01 (completion window · normal):</strong> Completion within the window<br>
-    <span class="kw">Given</span> a swap emitted at time T with a 120-second completion window<br>
-    <span class="kw">When</span> completion (including the old-app round-trip) arrives at T + 119&nbsp;s<br>
-    <span class="kw">Then</span> the swap is recorded as completed and no ops flag is raised
-  </div>
-  <div class="gherkin computation">
-    <strong>COMPUTE_02 (completion window · boundary):</strong> Window expiry is exact and non-terminal<br>
-    <span class="kw">Given</span> a swap emitted at time T with no completion received<br>
-    <span class="kw">When</span> the clock reaches exactly T + 120&nbsp;s<br>
-    <span class="kw">Then</span> the ops flag is raised, the ticket remains open, and nothing auto-resolves<br>
-    <span class="kw">And</span> a completion arriving at T + 121&nbsp;s is still processed normally with the ops flag retained as advisory (E6)
-  </div>
-  <div class="gherkin computation">
-    <strong>COMPUTE_03 (reopen window · normal):</strong> Reopen inside the window references the new device<br>
-    <span class="kw">Given</span> a ticket resolved after a swap at time R, with the reopen window configured<br>
-    <span class="kw">When</span> the customer reports the same issue (same connection, class, subtype) before the window ends<br>
-    <span class="kw">Then</span> it attaches to the original lineage with no fresh SLA clock<br>
-    <span class="kw">And</span> the reopened ticket references the new device as the connection's device
-  </div>
-  <div class="gherkin computation">
-    <strong>COMPUTE_04 (reopen window · boundary):</strong> Reopen outside the window is independent<br>
-    <span class="kw">Given</span> the same resolved ticket<br>
-    <span class="kw">When</span> the same issue is reported just after the reopen window expires<br>
-    <span class="kw">Then</span> a new, independent ticket is created with a fresh SLA clock — and it too references the new device
-  </div>
-  <div class="gherkin computation">
-    <strong>COMPUTE_05 (swap count · zero/unbounded):</strong> Audit under repeat swaps<br>
-    <span class="kw">Given</span> one ticket that undergoes 0, 1, and N&gt;2 swaps (each tested)<br>
-    <span class="kw">Then</span> the number of reconstructible swap records on the ticket equals exactly the number of completed swaps<br>
-    <span class="kw">And</span> rejected, nullified, and timed-out attempts are distinguishable from completed swaps
-  </div>
+    <tr><td>TC-02</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>If the old-app services can't perform the shift, the swap must be cancelled cleanly — never half-done.</td><td>Remote or Inventory confirmation fails or times out → no custody transition, no <code>DEVICE_SWAP_COMPLETED</code>, nothing recorded on the complaint as executed. SRS receives a rejection with reason "ACS failed"; ticket unchanged; CSP may retry.</td><td>Zero state change anywhere; CSP sees "ACS failed"; retry possible.</td><td>E2 · D4</td></tr>
 
-  <h3>Invariants</h3>
-  <div class="gherkin invariant">
-    <strong>INVARIANT_01 (I1):</strong> Complaint anchoring<br>
-    <span class="kw">Given</span> any swap event ever emitted, under any path including repeats and races<br>
-    <span class="kw">Then</span> its ticket was in ASSIGNED or ESCALATED at initiation time<br>
-    <span class="kw">And</span> no path exists that emits a swap without an open service ticket
-  </div>
-  <div class="gherkin invariant">
-    <strong>INVARIANT_02 (I2):</strong> Atomicity<br>
-    <span class="kw">Given</span> any swap attempt, including one that fails mid-execution<br>
-    <span class="kw">Then</span> either both device transitions are observable or neither is<br>
-    <span class="kw">And</span> a partial outcome is never observable, even transiently to a concurrent reader
-  </div>
-  <div class="gherkin invariant">
-    <strong>INVARIANT_03 (I3):</strong> Single binding<br>
-    <span class="kw">Given</span> any connection at any moment — before, during, and after any number of swaps<br>
-    <span class="kw">Then</span> at most one device is bound to it<br>
-    <span class="kw">And</span> immediately after each completed swap exactly one device (the newest) is bound
-  </div>
-  <div class="gherkin invariant">
-    <strong>INVARIANT_04 (I4):</strong> Diagnosis gate<br>
-    <span class="kw">Given</span> every path that emits a swap, including direct API calls<br>
-    <span class="kw">Then</span> the initiation carried a device fault type and it was persisted on the task before guard evaluation<br>
-    <span class="kw">And</span> no emitted swap exists whose task lacks such a diagnosis at emission time
-  </div>
-  <div class="gherkin invariant">
-    <strong>INVARIANT_05 (I5):</strong> Audit completeness<br>
-    <span class="kw">Given</span> every completed swap in the system<br>
-    <span class="kw">Then</span> the ticket record alone yields: old device id, new device id, initiated-at, completed-at, and the governing ticket<br>
-    <span class="kw">And</span> a reconciliation run over tickets finds every device that left or entered DEPLOYED via swap
-  </div>
-  <div class="gherkin invariant">
-    <strong>INVARIANT_06 (I6):</strong> Connectivity-before-custody<br>
-    <span class="kw">Given</span> every custody transition executed by a swap, under all paths including retries and races<br>
-    <span class="kw">Then</span> a Remote-service confirmation and an Inventory-service confirmation for that swap precede it<br>
-    <span class="kw">And</span> a failed or absent confirmation coexists with zero custody change for that attempt — no path executes custody first
-  </div>
-  <div class="gherkin invariant">
-    <strong>INVARIANT_07 (I7):</strong> Resolution-type consistency<br>
-    <span class="kw">Given</span> every swap initiation accepted and every swap executed<br>
-    <span class="kw">Then</span> resolution type DEVICE_REPLACED was received on initiation and is recorded on the ticket<br>
-    <span class="kw">And</span> no completed swap exists with a missing or different resolution type
-  </div>
+    <tr><td>TC-02b</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>If only one of the two old-app services confirms and the other fails, the swap must still resolve safely.</td><td><strong>[PENDING — partial-failure / one-confirms-one-fails semantics TBD with Rahul Nijhawan; define before build.]</strong></td><td>[To be defined — not yet covered.]</td><td>E2 · D4</td></tr>
 
-  <h3>Use &amp; edge cases</h3>
-  <div class="gherkin">
-    <strong>EDGE_01 (E1):</strong> Swap on a connection with no matching binding<br>
-    <span class="kw">Given</span> a connection whose device binding has been cleared (e.g., deactivation in progress)<br>
-    <span class="kw">When</span> a swap is initiated for it<br>
-    <span class="kw">Then</span> initiation passes (no G6) but custody rejects on the binding guards before the old-app gate is called<br>
-    <span class="kw">And</span> the CSP receives the binding-specific rejection and no device or old-app state changes
-  </div>
-  <div class="gherkin">
-    <strong>EDGE_02 (E5):</strong> Chained swap custody states<br>
-    <span class="kw">Given</span> a ticket with swap #1 completed (device A out, device B in)<br>
-    <span class="kw">When</span> swap #2 completes (device B out, device C in)<br>
-    <span class="kw">Then</span> A and B are both pending return to Wiom, C is serving the connection<br>
-    <span class="kw">And</span> the audit trail orders both swaps unambiguously
-  </div>
-  <div class="gherkin">
-    <strong>EDGE_03 (E7):</strong> Non-device fault type<br>
-    <span class="kw">Given</span> an initiation carrying a fault type outside the 3 device types<br>
-    <span class="kw">When</span> SRS processes it<br>
-    <span class="kw">Then</span> the diagnosis is persisted on the task (truthful information) but the swap is rejected on the fault-type guard<br>
-    <span class="kw">And</span> no swap event is emitted
-  </div>
-  <div class="gherkin">
-    <strong>EDGE_04 (E8):</strong> Invalid replacement device<br>
-    <span class="kw">Given</span> a replacement device that is (a) owned by a different CSP, or (b) in a non-eligible custody state (each tested)<br>
-    <span class="kw">When</span> the swap reaches custody validation<br>
-    <span class="kw">Then</span> it is rejected with the specific guard reason, the old-app services are never called, and no state changes<br>
-    <span class="kw">And</span> the CSP can immediately retry with a different device on the same ticket
-  </div>
-  <div class="gherkin">
-    <strong>EDGE_05 (E9):</strong> Ticket becomes non-actionable before initiation<br>
-    <span class="kw">Given</span> a ticket that leaves ASSIGNED/ESCALATED (platform takeover or explicit closure)<br>
-    <span class="kw">When</span> a swap initiation lands for it<br>
-    <span class="kw">Then</span> it is rejected on the open-ticket guard and no swap event is emitted
-  </div>
-  <div class="gherkin">
-    <strong>EDGE_06 (E10):</strong> Re-initiation with a different fault type<br>
-    <span class="kw">Given</span> a task whose last initiation carried DEVICE_HARDWARE, followed by a new initiation carrying a non-device fault<br>
-    <span class="kw">When</span> the new initiation is processed<br>
-    <span class="kw">Then</span> the latest persisted diagnosis governs and the swap is rejected<br>
-    <span class="kw">And</span> a further initiation carrying a device fault succeeds normally
-  </div>
-  <div class="gherkin">
-    <strong>EDGE_07 (E12 / R3):</strong> Duplicate initiation<br>
-    <span class="kw">Given</span> a swap in flight (emitted, neither completion nor rejection received)<br>
-    <span class="kw">When</span> the same task initiates again<br>
-    <span class="kw">Then</span> the second initiation is rejected as swap-in-progress<br>
-    <span class="kw">And</span> a duplicate delivery of the same swap event to custody produces no second transition (idempotent)
-  </div>
-  <div class="gherkin">
-    <strong>EDGE_08 (E13 / R2):</strong> Resolution during an in-flight swap<br>
-    <span class="kw">Given</span> a ticket with a swap in flight<br>
-    <span class="kw">When</span> a resolution submission lands for the same ticket<br>
-    <span class="kw">Then</span> it is blocked until the swap completes or is rejected — swap ends before resolution begins
-  </div>
-  <div class="gherkin">
-    <strong>EDGE_09 (E3+E4 chain):</strong> Deny-then-reopen sequence<br>
-    <span class="kw">Given</span> a completed swap, then resolution, then customer denial, then a reopen within the window<br>
-    <span class="kw">Then</span> at every step the ticket lineage is single and continuous<br>
-    <span class="kw">And</span> every post-swap interaction references the new device, never the displaced one
-  </div>
-  <div class="gherkin">
-    <strong>EDGE_10 (E2 — partially pending):</strong> Old-app confirmation failure detail<br>
-    <span class="kw">Given</span> the nullify-on-failure outcome is verified in LOGIC_07<br>
-    <span class="kw">Then</span> partial-failure semantics (one of the two services confirms, the other fails or times out) are <strong>[TBD with Rahul Nijhawan — define with the D4 contract before build; this block intentionally not counted as covered]</strong>
-  </div>
+    <tr><td>TC-03</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A swap moves both devices together or neither — never one without the other.</td><td>In one transaction: old device <code>DEPLOYED → RETRIEVAL_PENDING</code> AND new device <code>CUSTODIED/IDLE → DEPLOYED</code>. A failure mid-way rolls both back. No concurrent reader ever sees a partial result.</td><td>Both transition or neither; no partial state observable, even transiently.</td><td>I2</td></tr>
 
-  <h3>Regression</h3>
-  <div class="gherkin regression">
-    <strong>REGRESSION_01 (G-A):</strong> Non-swap resolutions unaffected<br>
-    <span class="kw">Given</span> a RESTORE task that never initiates a swap<br>
-    <span class="kw">When</span> the CSP submits a normal resolution<br>
-    <span class="kw">Then</span> the flow behaves exactly as before this change — same states, same verification entry, and no diagnosis is required anywhere
-  </div>
-  <div class="gherkin regression">
-    <strong>REGRESSION_02 (G-B):</strong> Custody mechanics untouched around the new gate<br>
-    <span class="kw">Given</span> a valid swap reaching custody<br>
-    <span class="kw">Then</span> all five custody guards still evaluate first, the two-device transition remains atomic, the completion event carries both devices' state facts, and duplicate events remain idempotent — identical to pre-change behaviour with only the confirmation step inserted between validation and execution
-  </div>
-  <div class="gherkin regression">
-    <strong>REGRESSION_03 (G-C):</strong> No connection/quality side-effects from a swap<br>
-    <span class="kw">Given</span> a completed swap<br>
-    <span class="kw">Then</span> the connection's lifecycle state is unchanged<br>
-    <span class="kw">And</span> no event reaches connection-lifecycle, compensation, or quality systems from the swap itself
-  </div>
-  <div class="gherkin regression">
-    <strong>REGRESSION_04 (G-D):</strong> Quality signal unchanged<br>
-    <span class="kw">Given</span> a ticket resolved after a swap and a ticket resolved without one<br>
-    <span class="kw">Then</span> both emit the same resolution-signal structure with the same semantics — no new fields, no new events
-  </div>
-  <div class="gherkin regression">
-    <strong>REGRESSION_05 (G-E):</strong> Platform reclassification still evidence-gated<br>
-    <span class="kw">Given</span> a CSP claiming router fault to transfer ownership to the platform<br>
-    <span class="kw">Then</span> the evidence requirement and time bound apply exactly as before<br>
-    <span class="kw">And</span> a diagnosis supplied with a swap initiation does not substitute for that evidence
-  </div>
-  <div class="gherkin regression">
-    <strong>REGRESSION_06 (G-F):</strong> Installation binding flow intact<br>
-    <span class="kw">Given</span> a normal new installation (no swap involved)<br>
-    <span class="kw">Then</span> device binding and deployment behave exactly as before the change<br>
-    <span class="kw">And</span> the old-app confirmation gate applies only to swaps, never to installations
-  </div>
-  <div class="gherkin regression">
-    <strong>REGRESSION_07 (G-G):</strong> Verification model unforked<br>
-    <span class="kw">Given</span> a ticket entering verification after a swap<br>
-    <span class="kw">Then</span> it follows the same model as any other ticket under the common verification service — no swap-specific verification branch, state, or event exists
-  </div>
-  <div class="gherkin regression">
-    <strong>REGRESSION_08 (G-H):</strong> Timeout semantics preserved<br>
-    <span class="kw">Given</span> the swap-completion window, regardless of any recalibrated value<br>
-    <span class="kw">Then</span> expiry still raises an ops flag, never auto-resolves, never closes the ticket, and late completions are still processed — identical semantics to pre-change behaviour
-  </div>
+    <tr><td>TC-04</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A device that is currently with a customer cannot be brought in as the replacement.</td><td>The new device (<code>new_device_id</code>) must be in custody state <code>CUSTODIED</code> or <code>IDLE</code>. Any other state — <code>DEPLOYED</code>, <code>RETRIEVAL_PENDING</code>, <code>RETURNED</code>, <code>DAMAGED</code>, <code>LOST</code>, <code>WRITTEN_OFF</code>, <code>REASSIGNED</code> — is rejected (guard G2).</td><td>Only an IDLE/CUSTODIED device is accepted as the replacement; all else rejected.</td><td>G2 · E8</td></tr>
 
-  <h3>B5.1 Coverage matrix</h3>
-  <table class="coverage">
-    <tr><th style="width:24%">Coverage class</th><th>Source section(s)</th><th style="width:14%">Items</th><th style="width:14%">Blocks</th><th style="width:18%">All covered?</th></tr>
-    <tr><td class="cls">Business logic</td><td>A5 delta D1–D7 · A7.1 rules R1–R3</td><td>10</td><td>10 (R2 in EDGE_08, R3 in EDGE_07)</td><td>Y</td></tr>
-    <tr><td class="cls">Computation</td><td>Completion window · reopen window · swap count</td><td>3</td><td>5 (each with boundary)</td><td>Y</td></tr>
-    <tr><td class="cls">Invariants</td><td>A7.1 I1–I7</td><td>7</td><td>7</td><td>Y</td></tr>
-    <tr><td class="cls">Use &amp; edge cases</td><td>A7.2 E1–E13 · B1 branches · B2 transition</td><td>13 edges</td><td>10 (E3/E4 in EDGE_09; E6 in COMPUTE_02; E11 in LOGIC_10)</td><td><strong>N — E2 partial-failure detail pending (blocked on D4 contract)</strong></td></tr>
-    <tr><td class="cls">Regression</td><td>A6 guard lines G-A–G-H</td><td>8</td><td>8</td><td>Y</td></tr>
+    <tr><td>TC-05</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>Only the device currently serving this customer's connection can be the one swapped out.</td><td>The old device (<code>old_device_id</code>) must be <code>DEPLOYED</code> (G1) with a non-null <code>current_connection_id</code> (G4) that equals the complaint's <code>connection_id</code> (G5). Otherwise rejected.</td><td>Mismatched / unbound old device → rejected with the specific binding reason; no state change.</td><td>G1·G4·G5 · E1</td></tr>
+
+    <tr><td>TC-06</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A CSP can only swap using devices that belong to them.</td><td>Both devices' custodian must match: <code>old_device.csp_id == new_device.csp_id == event.csp_id</code>. Any mismatch is rejected (guard G3).</td><td>A device owned by another CSP is never usable in the swap.</td><td>G3</td></tr>
+
+    <tr><td>TC-07</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A connection always has exactly one device on it — never two, never none.</td><td>Before, during, and after any number of swaps, at most one device has <code>current_connection_id</code> = this connection. Immediately after a completed swap, exactly the new device is bound.</td><td>Single-binding holds across all paths; the newest device is the sole bound device post-swap.</td><td>I3</td></tr>
+
+    <tr><td>TC-08</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>After a swap, the ticket must treat the new device as the connection's device — never the old one.</td><td>On <code>DEVICE_SWAP_COMPLETED</code>, SRS updates its own device mapping for the complaint to <code>new_device_id</code>. Every subsequent task, step, guard evaluation, or action on the ticket reads the new device.</td><td>All further SRS activity references the new device; the old device is never re-used by the ticket.</td><td>D3</td></tr>
+
+    <tr><td>TC-09</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A completed swap is never undone, even if the fix turns out wrong.</td><td>No reverse-swap transition exists. After completion, a verification denial leaves the old device in <code>RETRIEVAL_PENDING</code> and the new device in <code>DEPLOYED</code>; correction is only a fresh forward swap.</td><td>No code path reverses a completed swap; devices stay in their post-swap states.</td><td>D6</td></tr>
+
+    <tr><td>TC-10</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>A swap can only happen on a live, open service ticket.</td><td>The complaint must be in <code>ASSIGNED</code> or <code>ESCALATED</code> at initiation (guard G7). Any other state → rejected; no swap event emitted.</td><td>No swap is ever emitted without an open ticket behind it.</td><td>I1 · E9</td></tr>
+
+    <tr><td>TC-11</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>A swap can only start when the CSP has diagnosed a device fault.</td><td>Swap emits only if <code>diagnosis_fault_type ∈ {DEVICE_HARDWARE, DEVICE_SOFTWARE, DEVICE_CONNECTIVITY}</code> (guards G8 present + G9 device-fault). Missing or non-device fault type → rejected.</td><td>No device-fault diagnosis → no swap.</td><td>I4</td></tr>
+
+    <tr><td>TC-12</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The diagnosis given at swap time is saved before anything else happens, for audit.</td><td>The swap-initiation request carries <code>diagnosis_fault_type</code> + <code>diagnosis_outcome</code>; SRS writes them to <code>complaint_tasks.diagnosis_fault_type</code> / <code>diagnosis_outcome</code> <em>before</em> evaluating guards. Recording actor + timestamp are auditable.</td><td>Diagnosis is persisted on the task ahead of guard evaluation; latest write governs.</td><td>D2</td></tr>
+
+    <tr><td>TC-13</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>Every swap is tagged as a device-replacement resolution.</td><td><code>resolution_type = DEVICE_REPLACED</code> is recorded on the complaint for every swap. A request carrying any other <code>resolution_type</code> is rejected.</td><td>No completed swap exists with a missing or different resolution type.</td><td>I7 · E11</td></tr>
+
+    <tr><td>TC-14</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>Finishing a swap does NOT resolve the ticket — the swap is just one step inside it.</td><td>On <code>DEVICE_SWAP_COMPLETED</code>, the complaint stays in its current state (<code>ASSIGNED</code>/<code>ESCALATED</code>). It does not auto-move to <code>PENDING_VERIFICATION</code>, <code>RESOLVED</code>, or any other state.</td><td>Ticket remains open after swap; resolution is a separate, later action.</td><td>D3</td></tr>
+
+    <tr><td>TC-15</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>Every swap can be reconciled from the ticket record alone.</td><td>The complaint stores <code>device_swap_old_device_id</code>, <code>device_swap_new_device_id</code>, <code>device_swap_initiated_at</code>, <code>device_swap_completed_at</code>. A reconciliation over complaints finds every device that entered/left <code>DEPLOYED</code> via swap.</td><td>Full swap history reconstructible from complaint records.</td><td>I5</td></tr>
+
+    <tr><td>TC-16</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>Tapping submit twice (or a duplicate event) must never cause two swaps.</td><td>A second initiation for the same task while one is in flight → rejected as "swap in progress". A duplicate delivery of the same <code>DEVICE_SWAP</code> event → no second transition (idempotent on <code>event_id</code>).</td><td>Exactly one swap executes per intent; duplicates are ignored.</td><td>R3 · E12</td></tr>
+
+    <tr><td>TC-17</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The swap no longer depends on the connection's billing/lifecycle state being "active".</td><td>Swap submission makes no CL OS connection-state query (guard G6 removed). CL OS being unavailable can never block or fail a swap.</td><td>No connection-state lookup occurs; CL availability is irrelevant to swap submission.</td><td>D1</td></tr>
+
+    <tr><td>TC-18</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>A second swap on the same ticket is allowed, and chains correctly.</td><td>After swap #1 (A→B), swap #2 (B→C): device B (now <code>DEPLOYED</code>) becomes the old device → <code>RETRIEVAL_PENDING</code>; C → <code>DEPLOYED</code>. Both A and B are owed back to Wiom. Two ordered swap records on one complaint.</td><td>Unlimited repeats; each chains custody states correctly and appends to the audit.</td><td>D5 · E5</td></tr>
+
+    <tr><td>TC-19</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>A CSP can't resolve the ticket while a swap is still running.</td><td>A resolution submission for a ticket with a swap in flight is blocked until the swap completes or is rejected. (Swap ends before resolution begins.)</td><td>Resolution is gated until the in-flight swap settles.</td><td>R2 · E13</td></tr>
+
+    <tr><td>TC-20</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>If a swap doesn't confirm in time, it's flagged but never silently resolved.</td><td>No <code>DEVICE_SWAP_COMPLETED</code> within <code>P_SWAP_COMPLETION_TIMEOUT</code> (300 s) → ops flag raised, ticket stays open, nothing auto-resolves. A completion arriving after 300 s is still processed (idempotent), flag retained as advisory.</td><td>Timeout = ops flag only; late completion still processed; never auto-resolved.</td><td>G-H</td></tr>
+
+    <tr><td>TC-21</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>If the CSP diagnoses something other than a device fault, no swap starts — but the diagnosis is still saved.</td><td>A fault type outside the 3 device types is persisted to the task (truthful record) but the swap is rejected on guard G9. Existing non-swap resolution paths remain available.</td><td>Diagnosis recorded; swap rejected; other resolutions still usable.</td><td>E7</td></tr>
+
+    <tr><td>TC-22</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>If the CSP changes their diagnosis, the latest one decides whether a swap can happen.</td><td>Re-recording diagnosis: latest persisted <code>diagnosis_fault_type</code> governs. Device→non-device closes the swap path; non-device→device re-opens it.</td><td>Most recent diagnosis is authoritative for the swap decision.</td><td>E10</td></tr>
+
+    <tr><td>TC-23</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>If the same issue is reported again soon after a swap, it continues on the new device.</td><td>A reopen within <code>P_SR_REOPEN_WINDOW</code> (same connection + primary class + subtype) → same lineage, no fresh SLA clock, and runs against the new device. Outside the window → new independent ticket, also on the new device.</td><td>Reopen attaches to lineage and references the new device.</td><td>E4</td></tr>
+
+    <tr><td>TC-24</td><td><span style="color:#6b7280">Low / Regression</span></td><td>Ordinary (non-swap) ticket resolutions behave exactly as before.</td><td>A RESTORE task that never initiates a swap follows the unchanged resolution flow; diagnosis is not a mandatory step for it.</td><td>No behaviour change for non-swap resolutions.</td><td>G-A</td></tr>
+
+    <tr><td>TC-25</td><td><span style="color:#6b7280">Low / Regression</span></td><td>A swap by itself doesn't disturb billing, connection state, or quality scoring.</td><td>A completed swap emits no signal to CL OS, Compensation OS, or Quality OS, and the connection's lifecycle state is unchanged.</td><td>No cross-OS side effects from the swap alone.</td><td>G-C</td></tr>
+
+    <tr><td>TC-26</td><td><span style="color:#6b7280">Low / Regression</span></td><td>The signal sent to Quality on ticket closure is identical whether or not a swap happened.</td><td><code>COMPLAINT_RESOLUTION_SIGNAL</code> schema, fields, and semantics are the same for swap and non-swap resolutions. No new resolution events for swaps.</td><td>Quality signal byte-identical across swap / non-swap.</td><td>G-D</td></tr>
+
+    <tr><td>TC-27</td><td><span style="color:#6b7280">Low / Regression</span></td><td>Blaming the router to hand a ticket to Wiom still needs real evidence.</td><td>Reclassification-to-platform still requires system-verifiable evidence within its time bound; a device-fault diagnosis supplied with a swap does not substitute for it.</td><td>Reclassification evidence requirement unchanged.</td><td>G-E</td></tr>
+
+    <tr><td>TC-28</td><td><span style="color:#6b7280">Low / Regression</span></td><td>Normal new installations are untouched, and the old-app gate applies only to swaps.</td><td>A normal install binding (<code>CUSTODIED → DEPLOYED</code>) behaves as before; the Remote/Inventory confirmation gate fires only on swaps, never on installations.</td><td>Install flow intact; new gate is swap-only.</td><td>G-F</td></tr>
+
+    <tr><td>TC-29</td><td><span style="color:#6b7280">Low / Regression</span></td><td>A swapped ticket is verified by the same service that verifies every other ticket.</td><td>Post-swap, verification runs through the common verification service — no swap-specific verification branch, state, or event exists.</td><td>One verification model for all ticket types.</td><td>G-G</td></tr>
+
+    <tr><td>TC-30</td><td><span style="color:#6b7280">Low / Regression</span></td><td>"Upgrade" swaps are not allowed in this version.</td><td>Every v1 swap carries <code>swap_reason = FAULTY_DEVICE</code>. A request with <code>swap_reason = UPGRADE</code> is rejected as out of scope.</td><td>UPGRADE rejected; only FAULTY_DEVICE swaps execute.</td><td>D7 · E11</td></tr>
   </table>
-  <p style="font-size:13px;color:var(--muted);">Balance: 9 happy-path blocks vs 31 negative/edge/boundary/regression blocks (~1:3.4). The single uncovered item (E2 partial-failure semantics) is intentionally open pending the D4 Remote/Inventory contract — the spec is not sendable until it closes.</p>
+  <p style="font-size:13px;color:var(--muted);"><strong>Coverage:</strong> 30 test cases spanning every A5 delta (D1–D7), every A7.1 invariant/rule (I1–I7, R1–R3), every guard (G1–G11 minus removed G6), and every A6 regression guard (G-A…G-H). One row is open: <strong>TC-02b</strong> (partial old-app confirmation failure) — pending the Remote/Inventory contract with Rahul Nijhawan. The spec is not sendable until TC-02b is defined.</p>
   <hr class="sect-end">
 </section>
 
@@ -723,10 +524,10 @@ flowchart TD
     <tr><td>B2</td><td>State changes</td><td><span class="tier cond">Strict cond.</span></td><td class="check">[x]</td><td class="check">— (one transition removed; no machine restructure)</td></tr>
     <tr><td>B3</td><td>Data &amp; parameter changes</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
     <tr><td>B4</td><td>UI impact</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">— (backend-required information only)</td></tr>
-    <tr><td>B5</td><td>Acceptance criteria (verification layer)</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">— (E2 detail block pending)</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria (test cases)</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">— (TC-02b pending)</td></tr>
   </table>
   <div class="footer note">
-    <strong>Not sendable yet — three blockers:</strong> (1) D4 Remote/Inventory contract TBD with Rahul Nijhawan → E2 partial-failure edge undecided → B5 Use&amp;Edge class not "all covered". (2) All four A8 sign-offs Pending (Varun: SR OS · Dhruv: Custody OS, ESR · Rahul Nijhawan: Remote/Inventory). (3) Status = Draft pending human review.<br><br>
+    <strong>Not sendable yet — three blockers:</strong> (1) D4 Remote/Inventory contract TBD with Rahul Nijhawan → test case TC-02b (partial old-app confirmation failure) undefined. (2) All four A8 sign-offs Pending (Varun: SR OS · Dhruv: Custody OS, ESR · Rahul Nijhawan: Remote/Inventory). (3) Status = Draft pending human review.<br><br>
     <strong>Deliberate template deviation (author-directed):</strong> exact API paths, event names, field names, and DB columns are carried inline throughout, overriding the template's default out-of-scope fence. Engineering still owns final naming, schemas, concurrency, and transport.<br><br>
     <strong>Explicit non-scope:</strong> SRS fundamentals (ticket-creation gating by connection state, complaint lifecycle automatics) — separate amendment, separate owner. Frontend journey design — frontend/design team's deliverable; this spec defines only what the backend receives and exposes.
   </div>
@@ -739,11 +540,12 @@ flowchart TD
     <tr><td>v0.1</td><td>2026-06-06</td><td>Jaivin Prajapati (with Claude)</td><td>All</td><td>Initial draft. Full tier; G6 removed; repeat swaps unlimited; no un-swap; tech detail inline.</td><td>—</td></tr>
     <tr><td>v0.2</td><td>2026-06-06</td><td>Jaivin Prajapati (with Claude)</td><td>All</td><td>Re-scoped to swap-only after author review: SRS fundamentals (ticket gate, lifecycle automatics) removed from scope, A5, A8, B1, B2, B5. Diagnosis now travels with the swap-initiation request (D2). Swap completion no longer resolves the ticket — verification by the common verification service (D3). NEW: ACS pre-execution gate — Remote + Inventory confirmation before custody transitions (D4). B1 redrawn as the single SRS→ACS→old-app→ACS→SRS flow. B4 made journey-agnostic (backend contract only).</td><td>—</td></tr>
     <tr><td>v0.3</td><td>2026-06-06</td><td>Jaivin Prajapati (with Claude)</td><td>A4, D3, B1, B3, B5, A8</td><td>B1 Before replaced with "no flow exists today, not even manual". A4/D3/LOGIC_04: swap completion also updates the SRS device mapping — all further tasks/steps consider the new device. P_SWAP_COMPLETION_TIMEOUT decided: 120 s → 300 s (old-app round-trip in window; recalibrate after production measurement). Remote/Inventory contract owner named: TBD with Rahul Nijhawan (A8 owner, D4, B3, E2, EDGE_10).</td><td>—</td></tr>
+    <tr><td>v0.4</td><td>2026-06-08</td><td>Jaivin Prajapati (with Claude)</td><td>B5</td><td>B5 redesigned per author: replaced the Gherkin blocks + coverage matrix with a single prioritised test-case table (30 cases, critical → non-critical), each row carrying both a plain-business statement and the exact technical condition (states, guards, fields). One row, TC-02b (partial old-app confirmation failure), left open pending the Rahul Nijhawan contract.</td><td>—</td></tr>
   </table>
 </section>
 
 <p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
-  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.3 Draft
+  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.4 Draft
 </p>
 
 </main>
