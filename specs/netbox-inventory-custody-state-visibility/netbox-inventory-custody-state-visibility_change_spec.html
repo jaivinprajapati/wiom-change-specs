@@ -207,7 +207,7 @@
     <tr><td>Change title</td><td>NetBox Inventory — custody-state visibility in summary &amp; filters</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Version</td><td>v0.2</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td>NetBox Asset Custody OS (custody lifecycle &amp; inventory view contract — <code>wiom-tech/csp-os-yaml</code>, asset-custody service spec) · CSP App NetBox module spec (<code>wiom-tech/wiom-csp-app-apr09</code>, <code>docs/features/netbox-module/</code>, incl. label registry <code>netbox_labels_v1.2_hi_en.json</code>)</td></tr>
   </table>
   <hr class="sect-end">
@@ -257,18 +257,38 @@
 
 <section class="spec" id="a5">
   <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
-  <div class="hint"><strong>A4 or A5?</strong> A4 above is the picture; this table is the itemised diff engineering builds and tests against. One change per row.</div>
-  <table class="delta">
-    <tr><th style="width:20%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:24%">Why</th></tr>
-    <tr><td><strong>R1</strong> · New category: Pending Receipt</td><td>Devices dispatched but not receipt-confirmed are counted in no category and have no chip.</td><td>New summary row + filter chip "रसीद बाकी / Pending Receipt" counting exactly these devices; chip filters to them.</td><td>CSP must see devices they are about to take responsibility for; today they vanish between dispatch and confirmation.</td></tr>
-    <tr><td><strong>R2</strong> · New category: Recovery Pending</td><td>Devices awaiting recovery from a deactivated customer are counted in no category and have no chip.</td><td>New summary row + filter chip "रिकवरी जारी / Recovery Pending" counting exactly these devices; chip filters to them.</td><td>Recovery is a CSP obligation with a deadline; an uncountable, unfilterable queue cannot be worked.</td></tr>
-    <tr><td><strong>R3</strong> · New category: To Be Handed Over</td><td>Devices recovered after being declared lost are counted in no category and have no chip.</td><td>New summary row + filter chip "जमा करना बाकी / To Be Handed Over" counting exactly these devices; chip filters to them.</td><td>These devices require a CSP action (hand the device back); invisibility stalls the handover.</td></tr>
-    <tr><td><strong>R4</strong> · Written Off split out of Damaged / Lost</td><td>Written-off devices are counted inside "खराब / गुम (Damaged / Lost)".</td><td>New summary row + filter chip "राइट-ऑफ़ / Written Off"; "Damaged / Lost" counts only damaged and lost devices.</td><td>Write-off carries a distinct financial consequence; hiding it under a name that never mentions it confuses and undercommunicates liability.</td></tr>
-    <tr><td><strong>R5</strong> · Device-row state text: pending receipt</td><td>Renders an untranslated placeholder code.</td><td>Reads "रसीद बाकी / Pending receipt" (list rows and device-detail timeline).</td><td>Raw codes are meaningless to CSPs and look broken.</td></tr>
-    <tr><td><strong>R6</strong> · Device-row state text: handover pending</td><td>Renders an untranslated placeholder code.</td><td>Reads "जमा करना बाकी / To be handed over" (list rows and device-detail timeline).</td><td>Same as R5.</td></tr>
-    <tr><td><strong>R7</strong> · Fallback state text</td><td>Any state without a display text renders the raw placeholder code.</td><td>Renders "स्थिति अपडेट हो रही है / Status updating".</td><td>Future states must degrade gracefully, never as visible codes.</td></tr>
-    <tr><td><strong>R8</strong> · Filter behaviour of the four new categories</td><td>Not possible.</td><td>Tapping a new chip (or its summary row) lists exactly the devices counted in that category — identical interaction to existing chips.</td><td>Count without drill-down is a dead end; parity with existing categories keeps the page predictable.</td></tr>
+  <div class="hint"><strong>A4 or A5?</strong> A4 above is the picture; this table is the itemised diff engineering builds and tests against. One change per row. <strong>The first column names the exact backend custody state (the <code>CustodyStatus</code> enum value) the row refers to.</strong></div>
+
+  <h3>A5.0 Complete backend-state → summary/filter display-text mapping</h3>
+  <div class="expected"><strong>What is expected:</strong> the canonical mapping engineering must implement for the summary card and the filter chips (one display text drives both). All 11 resting custody states are listed — the four changed/new rows are marked; the rest are shown for completeness and must remain as-is (see A6). On order is sourced from active device orders, not a custody state, so it has no enum value.</div>
+  <table>
+    <tr><th style="width:26%">Backend custody state</th><th>Summary row / filter chip — Hindi</th><th>— English</th><th style="width:14%">Status</th></tr>
+    <tr><td><code>DEPLOYED</code></td><td>ग्राहक के पास</td><td>With customers</td><td>Unchanged</td></tr>
+    <tr><td><code>CUSTODIED</code> + <code>IDLE</code> (merged)</td><td>मेरे पास</td><td>With me</td><td>Unchanged (G1)</td></tr>
+    <tr><td><em>(active device orders — no custody state)</em></td><td>ऑर्डर में</td><td>On order</td><td>Unchanged (G2)</td></tr>
+    <tr><td><code>PENDING_CSP_RECEIPT</code></td><td>रसीद बाकी</td><td>Pending Receipt</td><td><strong>NEW (R1)</strong></td></tr>
+    <tr><td><code>CUSTOMER_RECOVERY_PENDING</code></td><td>रिकवरी जारी</td><td>Recovery Pending</td><td><strong>NEW (R2)</strong></td></tr>
+    <tr><td><code>RETRIEVAL_PENDING</code></td><td>वापसी में</td><td>Returning</td><td>Unchanged</td></tr>
+    <tr><td><code>RECOVERY_HOLD</code></td><td>जमा करना बाकी</td><td>To Be Handed Over</td><td><strong>NEW (R3)</strong></td></tr>
+    <tr><td><code>RETURNED</code></td><td>वापस हो गया</td><td>Returned</td><td>Unchanged</td></tr>
+    <tr><td><code>DAMAGED</code> + <code>LOST</code> (merged)</td><td>खराब / गुम</td><td>Damaged / Lost</td><td><strong>CHANGED (R4)</strong> — written-off removed</td></tr>
+    <tr><td><code>WRITTEN_OFF</code></td><td>राइट-ऑफ़</td><td>Written Off</td><td><strong>NEW (R4)</strong> — split out of Damaged / Lost</td></tr>
+    <tr><td><code>REASSIGNED</code></td><td colspan="2"><em>No category — transient/non-resting state, excluded by design (A7.2 E5)</em></td><td>Excluded</td></tr>
   </table>
+
+  <h3>A5.1 Delta rows</h3>
+  <table class="delta">
+    <tr><th style="width:22%">What changes (backend state)</th><th class="before">Before</th><th class="after">After</th><th style="width:22%">Why</th></tr>
+    <tr><td><strong>R1</strong> · New category for state <code>PENDING_CSP_RECEIPT</code></td><td>Devices in <code>PENDING_CSP_RECEIPT</code> (dispatched, receipt not confirmed) are counted in no category and have no chip.</td><td>New summary row + filter chip "रसीद बाकी / Pending Receipt" counting exactly the <code>PENDING_CSP_RECEIPT</code> devices; chip filters to them.</td><td>CSP must see devices they are about to take responsibility for; today they vanish between dispatch and confirmation.</td></tr>
+    <tr><td><strong>R2</strong> · New category for state <code>CUSTOMER_RECOVERY_PENDING</code></td><td>Devices in <code>CUSTOMER_RECOVERY_PENDING</code> (awaiting recovery from a deactivated customer) are counted in no category and have no chip.</td><td>New summary row + filter chip "रिकवरी जारी / Recovery Pending" counting exactly the <code>CUSTOMER_RECOVERY_PENDING</code> devices; chip filters to them.</td><td>Recovery is a CSP obligation with a deadline; an uncountable, unfilterable queue cannot be worked.</td></tr>
+    <tr><td><strong>R3</strong> · New category for state <code>RECOVERY_HOLD</code></td><td>Devices in <code>RECOVERY_HOLD</code> (recovered after being declared lost) are counted in no category and have no chip.</td><td>New summary row + filter chip "जमा करना बाकी / To Be Handed Over" counting exactly the <code>RECOVERY_HOLD</code> devices; chip filters to them.</td><td>These devices require a CSP action (hand the device back); invisibility stalls the handover.</td></tr>
+    <tr><td><strong>R4</strong> · New category for state <code>WRITTEN_OFF</code>, split out of the Damaged / Lost group</td><td>Devices in <code>WRITTEN_OFF</code> are counted inside the "खराब / गुम (Damaged / Lost)" group (today that group = <code>DAMAGED</code> + <code>LOST</code> + <code>WRITTEN_OFF</code>).</td><td>New summary row + filter chip "राइट-ऑफ़ / Written Off" for <code>WRITTEN_OFF</code>; the Damaged / Lost group now = <code>DAMAGED</code> + <code>LOST</code> only.</td><td>Write-off carries a distinct financial consequence; hiding it under a name that never mentions it confuses and undercommunicates liability.</td></tr>
+    <tr><td><strong>R5</strong> · Device-row state text for state <code>PENDING_CSP_RECEIPT</code></td><td>Renders an untranslated placeholder code.</td><td>Reads "रसीद बाकी / Pending receipt" (list rows and device-detail timeline).</td><td>Raw codes are meaningless to CSPs and look broken.</td></tr>
+    <tr><td><strong>R6</strong> · Device-row state text for state <code>RECOVERY_HOLD</code></td><td>Renders an untranslated placeholder code.</td><td>Reads "जमा करना बाकी / To be handed over" (list rows and device-detail timeline).</td><td>Same as R5.</td></tr>
+    <tr><td><strong>R7</strong> · Fallback state text (any state with no display text)</td><td>Any state without a display text renders the raw placeholder code.</td><td>Renders "स्थिति अपडेट हो रही है / Status updating".</td><td>Future states must degrade gracefully, never as visible codes.</td></tr>
+    <tr><td><strong>R8</strong> · Filter behaviour of the four new categories (<code>PENDING_CSP_RECEIPT</code>, <code>CUSTOMER_RECOVERY_PENDING</code>, <code>RECOVERY_HOLD</code>, <code>WRITTEN_OFF</code>)</td><td>Not possible.</td><td>Tapping a new chip (or its summary row) lists exactly the devices in that state — identical interaction to existing chips.</td><td>Count without drill-down is a dead end; parity with existing categories keeps the page predictable.</td></tr>
+  </table>
+  <div class="hint"><strong>Note on <code>CUSTOMER_RECOVERY_PENDING</code> and <code>WRITTEN_OFF</code> device-row text:</strong> their device-row state texts already exist and are correct, so R5/R6 cover only the two states that render a placeholder today (<code>PENDING_CSP_RECEIPT</code>, <code>RECOVERY_HOLD</code>). All four states still get a new <em>summary/filter</em> category (R1–R4).</div>
   <hr class="sect-end">
 </section>
 
@@ -661,6 +681,7 @@ flowchart TD
   <table>
     <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:130px">Author</th><th style="width:90px">Section(s)</th><th>Change &amp; rationale</th><th style="width:110px">Approver</th></tr>
     <tr><td>v0.1</td><td>2026-06-06</td><td>Jaivin Prajapati</td><td>All</td><td>Initial change spec. Decisions baked in: keep existing six categories as-is incl. merged "With me"; add Pending Receipt / Recovery Pending / To Be Handed Over; split Written Off out of Damaged / Lost; On-order overlap accepted; in-transfer state excluded; fallback state text added. RECOVERY_HOLD display text chosen: "जमा करना बाकी / To Be Handed Over".</td><td>—</td></tr>
+    <tr><td>v0.2</td><td>2026-06-08</td><td>Jaivin Prajapati</td><td>A5</td><td>Added A5.0 complete backend-state (CustodyStatus enum) → summary/filter display-text mapping table covering all 11 resting states; rewrote A5.1 delta rows so the first column names the exact backend state each row refers to.</td><td>—</td></tr>
   </table>
 </section>
 
