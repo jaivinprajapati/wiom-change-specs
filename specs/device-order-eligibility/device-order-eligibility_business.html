@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Device Order — How We Decide</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1a1a1a; max-width: 860px; margin: 40px auto; padding: 0 24px; line-height: 1.6; }
+  h1 { font-size: 26px; margin: 0 0 8px 0; }
+  h2 { font-size: 19px; margin-top: 38px; padding-bottom: 6px; border-bottom: 2px solid #1a1a1a; }
+  h3 { font-size: 15px; margin-top: 22px; }
+  .lede { color: #555; margin-bottom: 30px; font-size: 15px; }
+  .summary { background: #e8f4f8; border-radius: 6px; padding: 16px 20px; margin: 16px 0 24px 0; }
+  .gate { background: #fff; border: 1px solid #ddd; border-left: 4px solid #1a1a1a; border-radius: 4px; padding: 14px 18px; margin: 12px 0; }
+  .gate h4 { margin: 0 0 6px 0; font-size: 15px; }
+  .gate p { margin: 6px 0; }
+  .gate .if-fails { color: #a13b3b; font-size: 13px; margin-top: 8px; }
+  .gate.hard { border-left-color: #b91c1c; }
+  .gate.number { border-left-color: #1f3c6e; }
+  .biz { background: #fff8e1; border: 1px solid #e0c46c; border-radius: 6px; padding: 16px 20px; margin: 20px 0; }
+  .biz .tag { display: inline-block; background: #d49a00; color: #fff; padding: 3px 10px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-bottom: 10px; letter-spacing: 0.3px; }
+  .conn { background: #e9f5ee; border: 1px solid #9fcfb4; border-radius: 6px; padding: 16px 20px; margin: 20px 0; }
+  .conn .tag { display: inline-block; background: #0b6b3a; color: #fff; padding: 3px 10px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-bottom: 10px; letter-spacing: 0.3px; }
+  .formula { background: #f5f5f5; border-radius: 4px; padding: 14px 18px; margin: 14px 0; font-family: ui-monospace, Consolas, monospace; font-size: 13px; line-height: 1.7; }
+  .ex { background: #fafafa; border-left: 3px solid #888; padding: 12px 16px; margin: 12px 0; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
+  th { background: #f5f5f5; font-weight: 600; }
+  .num { display: inline-block; width: 26px; height: 26px; line-height: 26px; text-align: center; background: #1a1a1a; color: #fff; border-radius: 50%; font-size: 13px; font-weight: 600; margin-right: 8px; vertical-align: middle; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .pill-g { background: #d1fae5; color: #047857; }
+  .pill-r { background: #fee2e2; color: #b91c1c; }
+  .pill-a { background: #fef3c7; color: #b45309; }
+</style>
+</head>
+<body>
+
+<h1>Device Order — How We Decide</h1>
+<p class="lede">When a CSP wants Wiom netbox devices, the ordering engine runs a sequence of checks. Some are flat yes/no gates — if any one fails, the order is blocked. Others compute a number — how many devices the CSP is entitled to. We take the smallest of those numbers, subtract what they already hold, apply a multiplier for behaviour, and round down to a valid order size. The same engine also answers a simpler question — <em>can this CSP take on new connections at all?</em> — using a subset of the same checks.</p>
+
+<div class="summary">
+  <strong>The short version.</strong>
+  <ol style="margin: 10px 0 0 0;">
+    <li><strong>Payment &amp; Settlement</strong> — the CSP's security deposit must clear a floor, and it sets how many devices the deposit money buys.</li>
+    <li><strong>Capacity &amp; Coverage</strong> — how many connections the CSP's zones can still absorb (summed across all their zones).</li>
+    <li><strong>Asset Custody</strong> — how many devices the CSP already holds (subtracted to turn a ceiling into real headroom).</li>
+    <li><strong>Absolute Custody Cap</strong> — a hard ceiling on total devices any one CSP may hold (3,000).</li>
+    <li><strong>Free Devices on Hand</strong> — if they already have enough ready-to-deploy stock, they don't need more.</li>
+    <li><strong>Enforcement</strong> — the CSP must be in good standing (yes/no).</li>
+    <li><strong>Quality</strong> — behaviour decides whether they earn their full entitlement or none of it.</li>
+    <li><strong>Prior Order Receipt</strong> — the last order must be received before a new one is placed.</li>
+  </ol>
+  We take the smallest of the device-count ceilings, subtract current holdings, multiply by the Quality factor, and round down to the nearest valid order size (5, 10, or 20). Maximum any single order is 20 devices. Any hard gate failing forces the quantity to 0.
+</div>
+
+<h2>The checks</h2>
+
+<div class="gate">
+  <h4><span class="num">1</span>Payment &amp; Settlement — does the deposit cover this?</h4>
+  <p><strong>What we ask:</strong> Does the CSP have enough security deposit on file to back the devices they want?</p>
+  <p>Two parts to this check:</p>
+  <p><strong>Part A — The hard floor.</strong> The CSP must have at least <strong>₹20,000</strong> security deposit to be eligible to hold any Wiom devices at all. Below ₹20K, no devices, no exceptions.</p>
+  <p><strong>Part B — How many devices the deposit unlocks.</strong> Above the floor, the deposit converts into a device ceiling:</p>
+  <ul>
+    <li><strong>₹20,000 (the floor)</strong> → 75 devices unlocked.</li>
+    <li>Every additional <strong>₹200</strong> on top → 1 more device unlocked.</li>
+  </ul>
+  <div class="formula">payment_ceiling = 75 + (security_deposit − ₹20,000) ÷ ₹200</div>
+  <p>So ₹22K → 85 devices, ₹30K → 125 devices, ₹50K → 225 devices, and so on. (The ₹20,000 floor, the 75-device floor allocation, and the ₹200 per-device cost are all configurable parameters.)</p>
+  <p class="if-fails"><strong>If SD is below ₹20K:</strong> hard reject — order quantity is 0.</p>
+</div>
+
+<div class="biz">
+  <span class="tag">SOFT BLOCKER — TOP-UP FLOW</span>
+  <p style="margin: 0 0 8px 0;"><strong>Special case on the Payment check.</strong> What if the CSP's deposit is above the ₹20K floor, but not enough to cover what they're trying to order?</p>
+  <p style="margin: 8px 0;">Example: CSP has ₹20K (deposit unlocks 75), is currently holding 70 devices, and wants 20 more. Their deposit covers only 5 more (75 − 70). They want 20 — short by 15.</p>
+  <p style="margin: 8px 0;">In this case, <strong>we don't reject the order</strong>. Provided every other check has passed, we treat the deposit shortfall as a <strong>soft blocker</strong>:</p>
+  <ul style="margin: 8px 0;">
+    <li>The CSP is shown the exact <strong>amount to top up</strong> — the shortfall in devices × ₹200 per device. Here: (20 − 5) × ₹200 = <strong>₹3,000</strong>.</li>
+    <li>The CSP transfers that amount from their <strong>wallet to their security deposit</strong>.</li>
+    <li>Once done, eligibility is re-evaluated. The deposit gate now clears and the order goes through at the requested quantity.</li>
+  </ul>
+  <p style="margin: 8px 0; font-size: 13px; color: #555;">Only applies when SD is <em>above</em> the ₹20K floor. If SD is below the floor, the hard reject in Part A still applies — that top-up is a separate prerequisite. The top-up target is the <strong>order quantity for this round (capped at 20)</strong>, not the CSP's full lifetime entitlement.</p>
+</div>
+
+<div class="gate number">
+  <h4><span class="num">2</span>Capacity &amp; Coverage — do the zones have room?</h4>
+  <p><strong>What we ask:</strong> A CSP operates in one or more zones (geographies). Wiom gives each CSP a <strong>capacity cap</strong> in every zone they serve, to keep coverage balanced. Is there headroom left?</p>
+  <p>How the cap works:</p>
+  <ul>
+    <li>A new CSP starts at a cap of <strong>50</strong> per zone.</li>
+    <li>The cap is <strong>not fixed</strong> — Wiom reviews it on a cycle and nudges it <em>up</em> (when the CSP is running their zone near-full and their quality is good) or <em>down</em> (when the zone is running quiet), within limits.</li>
+  </ul>
+  <p>A CSP's <strong>total capacity ceiling</strong> is the <strong>sum of their caps across all the zones assigned to them</strong>, minus the connections they already hold. Since one device = one connection, this is how many new devices Capacity will allow.</p>
+  <div class="formula">capacity_ceiling = ( Σ current_cap across all the CSP's zones ) − connections_already_held</div>
+  <p class="if-fails"><strong>If capacity is exhausted:</strong> the ceiling is 0 — no more devices until existing connections drop or the caps grow.</p>
+</div>
+
+<div class="gate number">
+  <h4><span class="num">3</span>Asset Custody — how many they already hold</h4>
+  <p><strong>What we ask:</strong> How many devices is this CSP currently on the hook for? Every device they have that hasn't been returned, lost, damaged, or written off counts as "currently held".</p>
+  <p>This number is subtracted from the smaller of the Payment and Capacity ceilings — that's how the structural "total allowed" becomes the actual "how many more they can take right now".</p>
+  <p class="if-fails"><strong>If their current holdings already match the lowest ceiling:</strong> the room available is 0 — they have to return or rotate devices before ordering more.</p>
+</div>
+
+<div class="gate hard">
+  <h4><span class="num">4</span>Absolute Custody Cap — are they within the hard ceiling?</h4>
+  <p><strong>What we ask:</strong> Regardless of deposit, zone capacity, or quality, no single CSP may hold more than <strong>3,000</strong> Wiom devices at once. This is a safety ceiling on total exposure to any one partner.</p>
+  <p>If the CSP's current holdings have already reached 3,000, ordering stops here. (The 3,000 figure is a configurable parameter; today it sits well above any real CSP's holdings.)</p>
+  <p class="if-fails"><strong>If the absolute cap is hit:</strong> hard reject — "absolute cap exhausted", order quantity is 0.</p>
+</div>
+
+<div class="gate hard">
+  <h4><span class="num">5</span>Free Devices on Hand — do they already have stock to deploy?</h4>
+  <p><strong>What we ask:</strong> Before shipping more, how many ready-to-deploy devices does the CSP already have in hand? We count devices that are <strong>idle</strong>, <strong>in custody but not yet deployed</strong>, or <strong>shipped but receipt not yet confirmed</strong>.</p>
+  <p>If they already hold <strong>5 or more</strong> such devices — a full minimum order — the order is blocked. The message is not "you can't have devices" but "you don't need them right now — deploy what you already have first." (The threshold of 5 is a configurable parameter.)</p>
+  <p class="if-fails"><strong>If free devices on hand ≥ 5:</strong> hard reject — they already hold enough stock to serve new connections.</p>
+</div>
+
+<div class="gate hard">
+  <h4><span class="num">6</span>Enforcement — are they in good standing?</h4>
+  <p><strong>What we ask:</strong> Has the CSP been put into any blocking enforcement state by Wiom?</p>
+  <p>If the CSP is in <strong>any negative enforcement state</strong> — whether on the performance side (e.g. a restriction or pre-exit lock) or the integrity side (e.g. a fraud or compliance hold) — the order is rejected outright. Only a CSP that is clear on both counts proceeds.</p>
+  <p class="if-fails"><strong>If enforcement-blocked:</strong> hard reject — order quantity is 0.</p>
+</div>
+
+<div class="gate">
+  <h4><span class="num">7</span>Quality — does behaviour earn them their entitlement?</h4>
+  <p><strong>What we ask:</strong> The ceiling checks compute how much the CSP is structurally entitled to. The Quality check decides whether they get all of it, or none of it, based on their current behaviour state.</p>
+  <table style="margin-top: 10px;">
+    <thead><tr><th>Quality state</th><th>Multiplier</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill pill-g">COMPLIANT</span></td><td>1×</td><td>Full entitlement — they get what the other gates allow.</td></tr>
+      <tr><td><span class="pill pill-a">AT RISK</span></td><td>0×</td><td>No new devices until quality recovers.</td></tr>
+      <tr><td><span class="pill pill-r">NON-COMPLIANT</span></td><td>0×</td><td>No new devices until quality recovers.</td></tr>
+    </tbody>
+  </table>
+  <p>The multiplier is applied to the structural entitlement. So a CSP that is <strong>AT RISK or NON-COMPLIANT gets 0 devices</strong> regardless of how high their structural ceiling is. Only COMPLIANT CSPs order.</p>
+</div>
+
+<div class="gate hard">
+  <h4><span class="num">8</span>Prior Order Receipt — has the last order been received?</h4>
+  <p><strong>What we ask:</strong> Does the CSP have a previous order still in transit, with its receipt (proof of delivery) not yet confirmed?</p>
+  <p>A CSP can't stack a new order on top of one they haven't acknowledged receiving. They must confirm receipt of the devices already on the way first. This is the <strong>last check</strong> on purpose — it's fully recoverable: confirm the prior receipt, then come back and order.</p>
+  <p class="if-fails"><strong>If a prior order is unreceived:</strong> hard reject — confirm receipt first.</p>
+</div>
+
+<div class="conn">
+  <span class="tag">CONNECTIONS — SAME ENGINE</span>
+  <p style="margin: 0 0 8px 0;"><strong>Can the CSP take on new customers at all?</strong> Device ordering and connection eligibility run off the same engine — there is no separate connections check.</p>
+  <p style="margin: 8px 0;">A CSP is allowed to take <strong>new connections</strong> when three of the device gates pass:</p>
+  <ul style="margin: 8px 0;">
+    <li><strong>Quality</strong> is COMPLIANT (AT RISK / NON-COMPLIANT → no new connections).</li>
+    <li><strong>Capacity</strong> has room — their total cap across zones is not yet exhausted.</li>
+    <li><strong>Absolute Custody Cap</strong> is not hit.</li>
+  </ul>
+  <p style="margin: 8px 0;">These are a <em>subset</em> of the device gates. So a CSP can be <strong>allowed new connections even when they can't order devices</strong> right now — for example, their deposit is below floor, or they already hold enough free stock. In that case we tell them: <em>you can take connections — serve them with the devices you already have.</em></p>
+</div>
+
+<h2>Putting it together — the final quantity</h2>
+
+<p>Once the checks have run, the final approved device quantity is computed like this:</p>
+
+<div class="formula">
+Hard gates (any one fails → quantity = 0)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;SD ≥ ₹20,000 floor &nbsp;·&nbsp; not enforcement-blocked &nbsp;·&nbsp; absolute cap not hit<br>
+&nbsp;&nbsp;&nbsp;&nbsp;free devices on hand &lt; 5 &nbsp;·&nbsp; no unreceived prior order<br><br>
+Step 1 — Take the smallest ceiling, then subtract what's already held<br>
+&nbsp;&nbsp;&nbsp;&nbsp;base_ceiling = MIN(payment_ceiling, capacity_ceiling) − currently_held<br><br>
+Step 2 — Apply the Quality multiplier<br>
+&nbsp;&nbsp;&nbsp;&nbsp;eligibility = base_ceiling × quality_multiplier &nbsp;&nbsp;<span style="color:#555;">(0× if AT RISK or NON-COMPLIANT)</span><br><br>
+Step 3 — Floor down to a valid order size<br>
+&nbsp;&nbsp;&nbsp;&nbsp;order_quantity = largest of {5, 10, 20} that is ≤ eligibility<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#555;">— capped at 20 (no single order larger than 20)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#555;">— if eligibility is 1–4, order quantity is 0</span>
+</div>
+
+<p>Two numbers come out of this and are shown to the CSP: <strong>(A) total devices/connections they are eligible for</strong> (the eligibility figure) and <strong>(B) the quantity they can order now</strong> (the floored, ≤20 order size).</p>
+
+<h3>Valid order sizes</h3>
+<p>To keep ordering operationally clean, only three order sizes are allowed: <strong>5, 10, or 20 devices</strong>. We round down to the largest valid size that fits the CSP's eligibility.</p>
+
+<table>
+  <thead><tr><th>If eligibility is...</th><th>Order quantity</th></tr></thead>
+  <tbody>
+    <tr><td>0</td><td>0</td></tr>
+    <tr><td>1, 2, 3, 4</td><td><strong>0</strong> — eligibility below 5 is treated as zero</td></tr>
+    <tr><td>5 to 9</td><td>5</td></tr>
+    <tr><td>10 to 19</td><td>10</td></tr>
+    <tr><td>20 to 99</td><td>20</td></tr>
+    <tr><td>100, 200, anything higher</td><td><strong>20</strong> — single-order cap</td></tr>
+  </tbody>
+</table>
+
+<p>A CSP eligible for 100 devices doesn't get 100 in one shot. They get 20 now, place another order later for 20 more, and so on. This is deliberate — it keeps ops in control of dispatch volumes.</p>
+
+<h2>Worked examples</h2>
+
+<div class="ex">
+  <strong>Example 1 — Healthy mid-tier CSP</strong>
+  <ul style="margin: 6px 0;">
+    <li>Payment ceiling (₹30K deposit → 75 + 10,000/200 = 125): 125</li>
+    <li>Capacity ceiling across zones: 80</li>
+    <li>Currently holding: 40 &nbsp; · &nbsp; free devices on hand: 2 &nbsp; · &nbsp; absolute cap: not hit</li>
+    <li>Enforcement: good standing ✓ &nbsp; · &nbsp; Quality: COMPLIANT (1×) &nbsp; · &nbsp; no unreceived prior order</li>
+  </ul>
+  <p><strong>Math:</strong> all hard gates pass → MIN(125, 80) = 80 → 80 − 40 = 40 → × 1 = 40 → floored to <strong>20 devices approved</strong>.</p>
+</div>
+
+<div class="ex">
+  <strong>Example 2 — Same CSP but AT RISK on Quality</strong>
+  <ul style="margin: 6px 0;">
+    <li>All structural numbers same as above</li>
+    <li>Quality: AT RISK (0×)</li>
+  </ul>
+  <p><strong>Math:</strong> MIN(125, 80) = 80 → 80 − 40 = 40 → × 0 = 0 → <strong>0 devices approved</strong>. (AT RISK and NON-COMPLIANT both zero out the order.)</p>
+</div>
+
+<div class="ex">
+  <strong>Example 3 — Soft-blocker top-up case</strong>
+  <ul style="margin: 6px 0;">
+    <li>Payment ceiling (₹20K at the floor): 75</li>
+    <li>Capacity ceiling: 200 (zones have plenty of room)</li>
+    <li>Currently holding: 70 &nbsp; · &nbsp; free devices on hand: 0 &nbsp; · &nbsp; all other gates pass</li>
+    <li>CSP wants to order 20 devices</li>
+  </ul>
+  <p><strong>What happens:</strong> MIN(75, 200) = 75 → 75 − 70 = 5 deployable from deposit. The CSP wants 20 — Payment is the binding constraint, short by 15. <strong>Soft blocker triggers.</strong> The CSP is asked to top up <strong>(20 − 5) × ₹200 = ₹3,000</strong> from wallet to security deposit. After topping up (₹20K → ₹23K), the payment ceiling becomes 75 + 3,000/200 = 90 → 90 − 70 = 20. Eligibility re-runs and the <strong>order is approved for 20.</strong></p>
+</div>
+
+<div class="ex">
+  <strong>Example 4 — Eligibility falls in the dead zone (1–4)</strong>
+  <ul style="margin: 6px 0;">
+    <li>All gates pass, Quality COMPLIANT</li>
+    <li>After MIN-then-subtract, base_ceiling = 3</li>
+  </ul>
+  <p><strong>Math:</strong> 3 × 1 = 3 → below the minimum order size of 5 → <strong>0 devices approved</strong>. The CSP waits until enough headroom opens up to hit 5 or more (via returns, deposit top-up, or capacity growth).</p>
+</div>
+
+<div class="ex">
+  <strong>Example 5 — Eligible, but enough stock already</strong>
+  <ul style="margin: 6px 0;">
+    <li>Structural entitlement is healthy (say eligibility = 30), Quality COMPLIANT, all ceilings fine</li>
+    <li>But the CSP already holds 6 ready-to-deploy devices (idle / in custody / receipt-pending)</li>
+  </ul>
+  <p><strong>What happens:</strong> the <strong>Free Devices on Hand</strong> gate blocks the order (6 ≥ 5). The CSP is told they're eligible for more, but should deploy what they already have first. Connection eligibility is unaffected — they can still take new customers.</p>
+</div>
+
+<h2>The full check summary</h2>
+
+<table>
+  <thead><tr><th>#</th><th>Check</th><th>What it produces</th><th>If it fails</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Payment &amp; Settlement — SD floor</td><td>Pass / Fail</td><td>Hard reject (0 devices)</td></tr>
+    <tr><td>1</td><td>Payment &amp; Settlement — SD-backed ceiling</td><td>A number of devices</td><td>Becomes the binding ceiling if smallest. Soft top-up flow if it's the limiter.</td></tr>
+    <tr><td>2</td><td>Capacity &amp; Coverage — zone ceiling (sum of caps across all zones)</td><td>A number of devices</td><td>Becomes binding if smallest.</td></tr>
+    <tr><td>3</td><td>Asset Custody — devices currently held</td><td>A number, subtracted from the smallest ceiling</td><td>If holdings match the smallest ceiling → 0 room.</td></tr>
+    <tr><td>4</td><td>Absolute Custody Cap (3,000)</td><td>Pass / Fail</td><td>Hard reject — "absolute cap exhausted"</td></tr>
+    <tr><td>5</td><td>Free Devices on Hand (≥ 5 idle / custodied / receipt-pending)</td><td>Pass / Fail</td><td>Hard reject — enough stock already</td></tr>
+    <tr><td>6</td><td>Enforcement — good standing</td><td>Pass / Fail</td><td>Hard reject (0 devices)</td></tr>
+    <tr><td>7</td><td>Quality — behaviour multiplier</td><td>1× (Compliant) or 0× (At Risk / Non-Compliant)</td><td>If 0×, order quantity is 0 regardless of ceilings.</td></tr>
+    <tr><td>8</td><td>Prior Order Receipt</td><td>Pass / Fail</td><td>Hard reject — confirm prior receipt first (recoverable)</td></tr>
+    <tr><td>—</td><td>Order-size floor</td><td>Floor to {5, 10, 20}</td><td>If eligibility is 1–4, order quantity is 0.</td></tr>
+    <tr><td>—</td><td>Per-order maximum</td><td>Capped at 20</td><td>No single order exceeds 20 devices.</td></tr>
+  </tbody>
+</table>
+
+<p style="font-size: 13px; color: #555;">When more than one check fails, the CSP is shown the <strong>most critical</strong> reason first, in this order: Quality → Enforcement → Capacity → SD floor → Absolute cap → Free devices → Prior order receipt.</p>
+
+<h2>Glossary</h2>
+
+<table>
+  <thead><tr><th>Term</th><th>What it means here</th></tr></thead>
+  <tbody>
+    <tr><td>Security deposit (SD)</td><td>Refundable money the CSP keeps with Wiom as collateral for the devices they hold.</td></tr>
+    <tr><td>SD floor (₹20,000)</td><td>The minimum security deposit a CSP must maintain to be allowed to hold any Wiom devices at all.</td></tr>
+    <tr><td>SD-backed device ceiling</td><td>The number of devices the current deposit entitles the CSP to hold. ₹20K = 75 devices; every additional ₹200 = 1 more device.</td></tr>
+    <tr><td>Per-device deposit (₹200)</td><td>The deposit cost of one device above the floor. Configurable.</td></tr>
+    <tr><td>Zone capacity cap</td><td>The per-zone limit on how many connections a CSP may hold. Starts at 50 for a new CSP and is reviewed and adjusted on a cycle.</td></tr>
+    <tr><td>Capacity ceiling</td><td>The sum of the CSP's capacity caps across all their zones, minus the connections they already hold.</td></tr>
+    <tr><td>Devices currently held</td><td>Every device assigned to the CSP that hasn't been returned, lost, damaged, or written off.</td></tr>
+    <tr><td>Absolute custody cap (3,000)</td><td>The hard maximum number of devices any one CSP may hold at once. Configurable.</td></tr>
+    <tr><td>Free devices on hand</td><td>Ready-to-deploy devices the CSP already holds — idle, in custody but not yet deployed, or shipped-but-receipt-pending.</td></tr>
+    <tr><td>Enforcement posture</td><td>The CSP's standing. Any negative state (performance or integrity) blocks new device orders.</td></tr>
+    <tr><td>Quality state</td><td>The CSP's behavioural compliance status. COMPLIANT = 1×; AT RISK / NON-COMPLIANT = 0×.</td></tr>
+    <tr><td>Prior order receipt</td><td>Confirmation (proof of delivery) that a previous order has been received. A new order can't be placed while one is pending.</td></tr>
+    <tr><td>Valid order size</td><td>One of 5, 10, or 20 devices. No other quantity is allowed in a single order.</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>
