@@ -462,6 +462,49 @@ flowchart TD
     <tr><td>Ordering screen — SD soft-blocker</td><td>A (total eligible / orderable), devices the current SD covers, and a CTA showing the exact <strong>top-up amount</strong> to add to security deposit.</td></tr>
     <tr><td>Soft-blocker CTA pressed</td><td>FE calls the existing wallet→security-deposit transfer and shows its result. <strong>Success</strong> → order-placed screen for B. <strong>Insufficient wallet</strong> → distinct "wait for wallet to build up" message. <strong>Other failure</strong> → retry toast.</td></tr>
   </table>
+
+  <h3>B4.1 Front-end flow — screens, information shown, actions</h3>
+  <div class="hint"><strong>Read:</strong> rectangles are <strong>screens</strong> (with the backend-computed info they display), diamonds are <strong>decisions</strong> driven by the backend response, and edge labels are <strong>user actions</strong> or backend outcomes. Every number/text shown is from the eligibility / transfer API — the FE performs no arithmetic.</div>
+  <div class="diff-legend">
+    <strong>Colour key</strong>
+    <span class="chip unchanged">Screen</span>
+    <span class="chip added">Success / proceed path</span>
+    <span class="chip changed">Soft-block / recoverable</span>
+    <span class="chip removed">Hard block / dead-end</span>
+  </div>
+  <div class="mermaid">
+flowchart TD
+    Home["Home · Assurance strip<br/><i>shows: 'New Work' CTA</i>"] -->|tap New Work| CallElig["Call ordering-eligibility API<br/><i>one call → connection verdict + device verdict</i>"]
+    CallElig --> ConnQ{Connection eligible?<br/><i>Quality COMPLIANT · capacity-held&gt;0 · abs-cap not hit</i>}
+    ConnQ -- No --> ConnBlock["Screen: Cannot take new connections<br/><i>shows: single reason (Quality / Capacity / Absolute cap)</i>"]
+    ConnBlock -->|back| Home
+    ConnQ -- Yes --> DevQ{Device order verdict?}
+
+    DevQ -- Hard blocked --> DevBlock["Screen: Eligible for connections, cannot order devices now<br/><i>shows: highest-priority reason + next step</i><br/><i>(free-stock → 'deploy what you hold'; POD → 'confirm prior receipt')</i>"]
+    DevBlock -->|back| Home
+
+    DevQ -- Eligible --> OrderScreen["Screen: Place order<br/><i>shows: A = total eligible · B = orderable quantity (≤20)</i>"]
+    OrderScreen -->|place order for B| Placed["Screen: Order placed for B<br/><i>shows: confirmation</i>"]
+
+    DevQ -- Soft-blocked (SD short) --> SoftScreen["Screen: Top up to order<br/><i>shows: A · devices SD covers · top-up amount = (B − covered) × ₹200</i>"]
+    SoftScreen -->|tap 'Top up ₹X'| Transfer["Call wallet → security-deposit transfer<br/><i>amount = top-up amount</i>"]
+    Transfer --> TransQ{Transfer result?}
+    TransQ -- Success --> Reelig["Re-call eligibility<br/><i>SD gate now clears</i>"]
+    Reelig --> OrderScreen
+    TransQ -- Insufficient wallet --> WaitPop["Pop-up: wallet too low<br/><i>shows: 'wait for wallet to build up'</i>"]
+    WaitPop -->|back| Home
+    TransQ -- Other failure --> Toast["Toast: try again<br/><i>stays on Top-up screen</i>"]
+    Toast --> SoftScreen
+
+    classDef screen fill:#f4f4f2,stroke:#cfcfca,color:#1a1a1a;
+    classDef ok fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef soft fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    classDef dead fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    class Home,CallElig,OrderScreen,Reelig,Transfer screen;
+    class Placed ok;
+    class SoftScreen,WaitPop,Toast soft;
+    class ConnBlock,DevBlock dead;
+  </div>
   <hr class="sect-end">
 </section>
 
@@ -612,6 +655,77 @@ flowchart TD
     <tr><td class="cls">Regression</td><td>A6 guard lines (8)</td><td>8</td><td>6 (REGRESSION_01–06; remaining guards covered by COMPUTE_06 &amp; LOGIC_01)</td><td>Yes</td></tr>
   </table>
   <p style="font-size:13px;color:var(--muted);">Bias is intentionally negative/edge/regression-heavy (≈ 1 happy : 3). Every computation carries a boundary block; every A6 guard maps to a REGRESSION block (the tier/cap guard maps to COMPUTE_06, the compliant-1× guard to LOGIC_01/REGRESSION_01).</p>
+
+  <h3>B5.2 Prioritised test cases — exhaustive (FE + BE + E2E)</h3>
+  <div class="hint"><strong>Ordered by criticality.</strong> <strong>P0</strong> = wrong device grant / money / over-exposure / the headline At-Risk fix; <strong>P1</strong> = every gate, verdict, boundary &amp; FE state; <strong>P2</strong> = edges &amp; config; <strong>P3</strong> = regression on untouched paths. Layer: <strong>BE</strong> = engine/API, <strong>FE</strong> = screen behaviour, <strong>E2E</strong> = end-to-end. Money assumptions: ₹20,000 floor, ₹200/device, keep-75; soft-blocker B = sd_ceiling − held; free-stock blocks at ≥5; absolute cap 3,000.</div>
+  <table>
+    <tr><th style="width:7%">TC</th><th style="width:6%">Pri</th><th style="width:6%">Layer</th><th style="width:16%">Area</th><th style="width:33%">Scenario (Given / When)</th><th>Expected</th></tr>
+
+    <tr><td>TC-01</td><td>P0</td><td>BE</td><td>Quality multiplier</td><td>CSP is AT_RISK with high SD &amp; capacity ceilings</td><td>eligibility × 0× → B = 0; device verdict = blocked, reason = <strong>Quality</strong> (not ceiling). <em>This is the corrected 0.5→0 bug.</em></td></tr>
+    <tr><td>TC-02</td><td>P0</td><td>BE</td><td>Quality multiplier</td><td>CSP is NON_COMPLIANT</td><td>B = 0, reason = Quality; connection verdict = not eligible.</td></tr>
+    <tr><td>TC-03</td><td>P0</td><td>BE</td><td>Quality multiplier</td><td>CSP is COMPLIANT, all gates pass</td><td>multiplier 1× applied → full structural entitlement.</td></tr>
+    <tr><td>TC-04</td><td>P0</td><td>BE</td><td>SD ceiling parity</td><td>Balance ₹30,000</td><td>sd_ceiling = 75 + (30,000−20,000)/200 = <strong>125</strong> (identical to old formula).</td></tr>
+    <tr><td>TC-05</td><td>P0</td><td>BE</td><td>SD ceiling parity</td><td>Balance ₹22,000 and ₹50,000</td><td>ceilings = <strong>85</strong> and <strong>225</strong> — unchanged from before the formula change.</td></tr>
+    <tr><td>TC-06</td><td>P0</td><td>BE</td><td>SD ceiling boundary</td><td>Balance exactly ₹20,000</td><td>sd_ceiling = 75 (the floor allocation is granted; no discontinuity).</td></tr>
+    <tr><td>TC-07</td><td>P0</td><td>BE</td><td>SD floor gate</td><td>Balance ₹19,999.99 (just below floor)</td><td>hard reject; B = 0; reason = SD floor.</td></tr>
+    <tr><td>TC-08</td><td>P0</td><td>BE</td><td>Top-up amount</td><td>Balance ₹20,000 (covers 75), held 70, orderable B = 20</td><td>devices_SD_covers_free = 5; top_up_amount = (20−5)×₹200 = <strong>₹3,000</strong>.</td></tr>
+    <tr><td>TC-09</td><td>P0</td><td>E2E</td><td>Top-up recovery</td><td>TC-08 CSP transfers ₹3,000 wallet→SD, FE re-requests eligibility</td><td>sd_ceiling → 90, free 20, B = 20, no soft-blocker; order clears at 20.</td></tr>
+    <tr><td>TC-10</td><td>P0</td><td>BE</td><td>Absolute cap</td><td>currently_held = 3,000</td><td>hard reject, reason = "absolute cap exhausted"; B = 0.</td></tr>
+    <tr><td>TC-11</td><td>P0</td><td>BE</td><td>Absolute cap</td><td>currently_held = 2,999</td><td>not blocked by cap; evaluation continues.</td></tr>
+    <tr><td>TC-12</td><td>P0</td><td>BE</td><td>Reason priority</td><td>SD-floor fails AND quality AT_RISK AND enforcement-blocked simultaneously</td><td>exactly one reason returned = <strong>Quality</strong> (highest priority).</td></tr>
+    <tr><td>TC-13</td><td>P0</td><td>E2E</td><td>Money — transfer</td><td>Soft-blocker shown, wallet covers it, CSP taps "Top up ₹X"</td><td>wallet→SD transfer succeeds; re-eval; order-placed screen for B.</td></tr>
+    <tr><td>TC-14</td><td>P0</td><td>E2E</td><td>Money — transfer</td><td>Soft-blocker shown but wallet balance &lt; required transfer</td><td>transfer fails on insufficient funds; distinct "wait for wallet to build up" message; <strong>no order placed</strong>.</td></tr>
+    <tr><td>TC-15</td><td>P0</td><td>BE</td><td>Money — regression</td><td>Any wallet→security-deposit transfer (via soft-blocker)</td><td>amount, atomicity and ledger entries are exactly as today — transfer logic untouched.</td></tr>
+
+    <tr><td>TC-16</td><td>P1</td><td>BE</td><td>Enforcement gate</td><td>CSP in any negative enforcement state (performance or integrity)</td><td>hard reject, reason = Enforcement.</td></tr>
+    <tr><td>TC-17</td><td>P1</td><td>BE</td><td>Enforcement gate</td><td>CSP clear on both performance &amp; integrity</td><td>gate passes; evaluation continues.</td></tr>
+    <tr><td>TC-18</td><td>P1</td><td>BE</td><td>Capacity ceiling</td><td>Σ current_cap across zones − held &gt; 0, and is the smallest ceiling</td><td>capacity is the binding ceiling in MIN(...).</td></tr>
+    <tr><td>TC-19</td><td>P1</td><td>BE</td><td>Capacity ceiling</td><td>Σ current_cap − held = 0</td><td>device blocked, reason = Capacity; connection also blocked (Capacity).</td></tr>
+    <tr><td>TC-20</td><td>P1</td><td>BE</td><td>Free-stock gate</td><td>IDLE+CUSTODIED+PENDING_CSP_RECEIPT = 5 (= threshold)</td><td>blocked, reason = Free devices. <em>(boundary: ≥5)</em></td></tr>
+    <tr><td>TC-21</td><td>P1</td><td>BE</td><td>Free-stock gate</td><td>Free-stock count = 4</td><td>not blocked; evaluation continues.</td></tr>
+    <tr><td>TC-22</td><td>P1</td><td>BE</td><td>Free-stock gate</td><td>Free-stock count = 6</td><td>blocked, reason = Free devices.</td></tr>
+    <tr><td>TC-23</td><td>P1</td><td>BE</td><td>Free-stock gate</td><td>Devices spread across the three counted states only</td><td>count includes IDLE, CUSTODIED, PENDING_CSP_RECEIPT — and no other state.</td></tr>
+    <tr><td>TC-24</td><td>P1</td><td>BE</td><td>Prior-receipt gate</td><td>CSP has a prior order pending receipt (POD unsigned)</td><td>blocked, reason = Prior receipt (lowest priority); recoverable.</td></tr>
+    <tr><td>TC-25</td><td>P1</td><td>BE</td><td>Base ceiling</td><td>SD ceiling 125, capacity 80, held 40</td><td>base = MIN(125,80) − 40 = 40 (capacity binding).</td></tr>
+    <tr><td>TC-26</td><td>P1</td><td>BE</td><td>Base ceiling</td><td>Holdings already equal the smallest ceiling</td><td>base ≤ 0 → blocked.</td></tr>
+    <tr><td>TC-27</td><td>P1</td><td>BE</td><td>Tier floor</td><td>eligibility = 7, 14, 25</td><td>B = 5, 10, 20 respectively.</td></tr>
+    <tr><td>TC-28</td><td>P1</td><td>BE</td><td>Tier dead-zone</td><td>eligibility = 1, 2, 3, 4</td><td>B = 0 (below minimum order size).</td></tr>
+    <tr><td>TC-29</td><td>P1</td><td>BE</td><td>Per-order cap</td><td>eligibility = 60</td><td>B = 20 (single-order cap); A = 60.</td></tr>
+    <tr><td>TC-30</td><td>P1</td><td>BE</td><td>Invariant A/B</td><td>Any eligible response</td><td>A ≥ B and B ∈ {0,5,10,20}.</td></tr>
+    <tr><td>TC-31</td><td>P1</td><td>BE</td><td>Surfaced numbers</td><td>Eligible CSP</td><td>response returns both A = total eligible (pre-floor) and B = orderable.</td></tr>
+    <tr><td>TC-32</td><td>P1</td><td>BE</td><td>Connection vs device</td><td>COMPLIANT, capacity room, held &lt; cap, but SD below floor</td><td>connection = eligible; device = blocked (SD floor).</td></tr>
+    <tr><td>TC-33</td><td>P1</td><td>BE</td><td>Connection vs device</td><td>COMPLIANT, capacity room, held &lt; cap, but free-stock ≥ 5</td><td>connection = eligible; device = blocked (Free devices).</td></tr>
+    <tr><td>TC-34</td><td>P1</td><td>BE</td><td>Connection verdict</td><td>SD below floor and free-stock ≥ 5 but Quality/Capacity/AbsCap all fine</td><td>connection = eligible (verdict ignores SD floor &amp; free-stock).</td></tr>
+    <tr><td>TC-35</td><td>P1</td><td>BE</td><td>Connection verdict</td><td>Quality AT_RISK</td><td>connection = not eligible, reason = Quality.</td></tr>
+    <tr><td>TC-36</td><td>P1</td><td>BE</td><td>Connection verdict</td><td>Capacity exhausted</td><td>connection = not eligible, reason = Capacity.</td></tr>
+    <tr><td>TC-37</td><td>P1</td><td>BE</td><td>Connection verdict</td><td>Absolute cap hit (held ≥ 3,000)</td><td>connection = not eligible, reason = Absolute cap.</td></tr>
+    <tr><td>TC-38</td><td>P1</td><td>BE</td><td>Soft-blocker trigger</td><td>All gates pass; SD is the binding limit and B not fully covered by SD</td><td>soft-blocker returned with top-up payload.</td></tr>
+    <tr><td>TC-39</td><td>P1</td><td>BE</td><td>Soft-blocker trigger</td><td>SD already covers B (shortfall ≤ 0)</td><td>no soft-blocker; order proceeds normally.</td></tr>
+    <tr><td>TC-40</td><td>P1</td><td>BE</td><td>Invariant — verdict</td><td>Any eligibility response</td><td>exactly one of eligible / soft-blocked / hard-blocked.</td></tr>
+    <tr><td>TC-41</td><td>P1</td><td>BE</td><td>Quality mapping</td><td>Quality composite = RECOVERY / INSUFFICIENT_DATA / null</td><td>maps to AT_RISK → 0× → B = 0, reason Quality.</td></tr>
+    <tr><td>TC-42</td><td>P1</td><td>FE</td><td>Screen — connection</td><td>CSP taps "New Work"</td><td>connection-eligibility screen shows the backend verdict; if blocked, the reason.</td></tr>
+    <tr><td>TC-43</td><td>P1</td><td>FE</td><td>Screen — order</td><td>All gates pass</td><td>order screen shows A and B exactly as returned; CTA to place order for B.</td></tr>
+    <tr><td>TC-44</td><td>P1</td><td>FE</td><td>Screen — blocked</td><td>Device hard-blocked (multiple gates failed)</td><td>shows the single highest-priority reason + next step.</td></tr>
+    <tr><td>TC-45</td><td>P1</td><td>FE</td><td>Screen — soft-blocker</td><td>SD soft-blocker returned</td><td>shows A, devices SD covers, and the exact top-up amount.</td></tr>
+    <tr><td>TC-46</td><td>P1</td><td>FE</td><td>Soft-blocker action</td><td>CSP taps "Top up ₹X"</td><td>FE calls wallet→SD transfer with exactly the returned top-up amount.</td></tr>
+    <tr><td>TC-47</td><td>P1</td><td>FE</td><td>Soft-blocker action</td><td>Transfer succeeds</td><td>FE re-requests eligibility then shows order-placed screen for B.</td></tr>
+    <tr><td>TC-48</td><td>P1</td><td>FE</td><td>Soft-blocker action</td><td>Transfer fails for a non-balance reason</td><td>retry toast; CSP stays on the top-up screen; no order placed.</td></tr>
+    <tr><td>TC-49</td><td>P1</td><td>FE</td><td>Soft-blocker action</td><td>After a successful top-up</td><td>FE re-evaluates eligibility before allowing the order (does not assume success).</td></tr>
+    <tr><td>TC-50</td><td>P1</td><td>FE</td><td>Invariant — no FE calc</td><td>Any screen showing A, B, devices-covered, top-up amount</td><td>every number came from the API response; FE performs no arithmetic.</td></tr>
+    <tr><td>TC-51</td><td>P1</td><td>FE</td><td>Screen — free-stock</td><td>Device blocked on free-stock, connection eligible</td><td>shows "deploy what you already hold" and that new connections are still allowed.</td></tr>
+    <tr><td>TC-52</td><td>P1</td><td>FE</td><td>Screen — connection blocked</td><td>Connection not eligible</td><td>shows reason; back returns to home; no order path offered.</td></tr>
+
+    <tr><td>TC-53</td><td>P2</td><td>BE</td><td>Config — fail-fast</td><td>per_device_deposit / floor / absolute_cap / free_threshold missing from Parameter Store</td><td>service fails fast; eligibility is not served with a guessed default.</td></tr>
+    <tr><td>TC-54</td><td>P2</td><td>BE</td><td>Gate interaction</td><td>CSP has a PENDING_CSP_RECEIPT device</td><td>it both triggers the prior-receipt block AND counts toward free-stock; confirming receipt frees it for use.</td></tr>
+    <tr><td>TC-55</td><td>P2</td><td>BE</td><td>Hard beats soft</td><td>A hard gate fails AND SD would also be short</td><td>hard block is returned (with its ranked reason); no soft-blocker shown.</td></tr>
+    <tr><td>TC-56</td><td>P2</td><td>E2E</td><td>Freshness</td><td>CSP lands on the assurance strip, then orders ~1 min later</td><td>eligibility is recomputed on strip load; the order uses that fresh result.</td></tr>
+    <tr><td>TC-57</td><td>P2</td><td>BE</td><td>Read safety</td><td>Eligibility requested repeatedly</td><td>read is idempotent; no state mutation, no order side-effects.</td></tr>
+
+    <tr><td>TC-58</td><td>P3</td><td>BE</td><td>Regression — held count</td><td>CSP has RETURNED / LOST / DAMAGED / WRITTEN_OFF devices</td><td>excluded from "currently held"; definition unchanged.</td></tr>
+    <tr><td>TC-59</td><td>P3</td><td>BE</td><td>Regression — create</td><td>Order create with an off-tier quantity (e.g. 7)</td><td>rejected exactly as before ("off-tier"); no eligibility re-check added.</td></tr>
+    <tr><td>TC-60</td><td>P3</td><td>BE</td><td>Regression — create</td><td>Order create while an active order exists</td><td>rejected exactly as before.</td></tr>
+    <tr><td>TC-61</td><td>P3</td><td>BE</td><td>Regression — approve</td><td>Approve an order</td><td>quantity_approved = quantity_requested; no eligibility re-check; behaviour unchanged.</td></tr>
+  </table>
   <hr class="sect-end">
 </section>
 
