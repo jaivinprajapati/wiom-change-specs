@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — Change Spec · Rescue-Intent Transition (T_RESCUE)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{--bg:#fafaf9;--surface:#fff;--ink:#1a1a1a;--muted:#6b6b6b;--rule:#e5e5e2;
+    --core:#0b6b3a;--core-bg:#e9f5ee;--cond:#8a5a00;--cond-bg:#fbf1dd;--what:#1f3c6e;--what-bg:#e8eef8;
+    --how:#5b2a86;--how-bg:#efe6f7;--guard:#b91c1c;--guard-bg:#fee2e2;--quickcheck-bg:#fef9c3;
+    --quickcheck-rule:#ca8a04;--quickcheck-ink:#713f12;--hint-bg:#ecfeff;--hint-rule:#0e7490;--hint-ink:#155e75;
+    --delta-bg:#eef6ff;--delta-rule:#1f3c6e;--code-bg:#f3f4f6;}
+  *{box-sizing:border-box;}html{scroll-behavior:smooth;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.55;color:var(--ink);background:var(--bg);}
+  .layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh;}
+  nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:24px 18px;border-right:1px solid var(--rule);background:var(--surface);font-size:13px;}
+  nav.toc h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 6px;}
+  nav.toc h2:first-of-type{margin-top:0;}
+  nav.toc h2.qc{color:var(--quickcheck-ink);border-left:3px solid var(--quickcheck-rule);padding-left:8px;}
+  nav.toc h2.what{color:var(--what);border-left:3px solid var(--what);padding-left:8px;}
+  nav.toc h2.how{color:var(--how);border-left:3px solid var(--how);padding-left:8px;}
+  nav.toc h2.close{color:var(--muted);border-left:3px solid var(--muted);padding-left:8px;}
+  nav.toc ol{list-style:none;padding:0;margin:0;}nav.toc li{margin:4px 0;}
+  nav.toc li a{text-decoration:none;color:var(--ink);display:flex;gap:8px;align-items:baseline;padding:4px 6px;border-radius:4px;font-size:12.5px;}
+  nav.toc li a:hover{background:var(--bg);}nav.toc li a .ix{color:var(--muted);font-variant-numeric:tabular-nums;min-width:32px;font-weight:600;}
+  main{padding:40px 56px 120px;max-width:980px;}
+  header.doc{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:32px;}
+  header.doc .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+  header.doc h1{font-size:30px;margin:6px 0 8px;line-height:1.2;}
+  header.doc p.lede{color:var(--muted);font-size:15px;margin:0;max-width:74ch;}
+  header.doc .meta-row{display:flex;gap:24px;margin-top:14px;font-size:13px;color:var(--muted);flex-wrap:wrap;}
+  .quickcheck{margin:28px 0 40px;background:var(--quickcheck-bg);border:1px solid var(--quickcheck-rule);border-left:5px solid var(--quickcheck-rule);border-radius:6px;padding:18px 22px;}
+  .quickcheck h2{margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--quickcheck-ink);}
+  .quickcheck dl{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;font-size:14px;}
+  .quickcheck dt{font-weight:600;color:var(--quickcheck-ink);}.quickcheck dd{margin:0;color:var(--ink);}
+  .part-divider{margin:56px 0 32px;padding:24px 30px;border-radius:8px;color:#fff;}
+  .part-divider.what{background:var(--what);}.part-divider.how{background:var(--how);}
+  .part-divider .label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.8;}
+  .part-divider h2{font-size:26px;margin:4px 0 6px;}.part-divider p{margin:0;font-size:14px;opacity:.92;max-width:74ch;}
+  section.spec{margin:38px 0;scroll-margin-top:24px;}
+  section.spec h2{font-size:21px;margin:0 0 6px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  section.spec h2 .num{color:var(--muted);font-weight:600;}section.spec h3{font-size:15px;margin:16px 0 4px;}
+  .tier{font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:3px;font-weight:600;}
+  .tier.what{background:var(--what-bg);color:var(--what);}.tier.how{background:var(--how-bg);color:var(--how);}
+  .tier.guard{background:var(--guard-bg);color:var(--guard);}.tier.cond{background:var(--cond-bg);color:var(--cond);}
+  .expected{background:#f4f4f2;border-left:3px solid var(--ink);padding:9px 14px;font-size:13px;margin:8px 0 14px;color:#333;}
+  .feedback{background:var(--hint-bg);border-left:3px solid var(--hint-rule);padding:9px 14px;font-size:13.5px;margin:8px 0 14px;color:var(--hint-ink);border-radius:4px;}
+  .feedback strong{color:var(--hint-ink);}
+  table{width:100%;border-collapse:collapse;margin:8px 0 14px;font-size:13.5px;}
+  th,td{text-align:left;padding:7px 10px;border:1px solid var(--rule);vertical-align:top;}
+  th{background:var(--bg);font-weight:600;}
+  table.delta th.before{background:#f3f4f6;}table.delta th.after{background:var(--delta-bg);color:var(--delta-rule);}
+  code{background:var(--code-bg);padding:1px 5px;border-radius:3px;font-size:12.5px;font-family:"SF Mono",Consolas,monospace;}
+  .mermaid{background:var(--surface);border:1px solid var(--rule);border-radius:5px;padding:14px;margin:14px 0;text-align:center;}
+  .flow-label{font-size:13px;font-weight:700;margin:18px 0 0;}.flow-label.before{color:#7f1d1d;}.flow-label.after{color:#064e2b;}
+  .diff-legend{font-size:12.5px;margin:14px 0 6px;color:var(--muted);}
+  .diff-legend .chip{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;margin-left:6px;border:1px solid;}
+  .chip.unchanged{background:#f4f4f2;color:#444;border-color:#cfcfca;}.chip.added{background:#e9f5ee;color:#064e2b;border-color:#0b6b3a;}
+  .chip.changed{background:#fbf1dd;color:#5b3a00;border-color:#8a5a00;}.chip.removed{background:#fee2e2;color:#7f1d1d;border-color:#b91c1c;}
+  td.crit{font-weight:700;color:#b91c1c;}td.high{font-weight:600;color:#8a5a00;}td.med{color:#1f3c6e;}
+  .cls-b{font-weight:600;}
+  hr.sect-end{border:none;border-top:1px dashed var(--rule);margin:30px 0 0;}
+  footer.checklist{margin-top:56px;padding-top:28px;border-top:2px solid var(--ink);}
+  footer.checklist h2{font-size:20px;margin-top:0;}
+  @media (max-width:900px){.layout{grid-template-columns:1fr;}nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--rule);}main{padding:24px;}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>Triage</a></li></ol>
+  <h2 class="what">Part A — WHAT</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired behaviour</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflow</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameters</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol><li><a href="#changelog"><span class="ix">—</span>Changelog</a></li></ol>
+</nav>
+<main>
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 template · PM → Engineering</div>
+  <h1>Rescue-Intent Transition (T_RESCUE) — resolve to ACTIVE or PAUSED by ISP window</h1>
+  <p class="lede">On <code>CAEO_RESCUE_INTENT</code>, CLOS today always moves a <code>PENDING_DEACTIVATION</code> connection to <code>PAUSED</code>. This change makes the target state depend on the connection's live ISP window. Code-derived; no inference. Business behaviour only — engineering owns implementation.</p>
+  <div class="meta-row"><span><strong>Author:</strong> Jaivin Prajapati &nbsp;·&nbsp; <strong>Reviewers:</strong> Varun, Dhruv (Engineering) &nbsp;·&nbsp; <strong>Tier:</strong> Full (touches a state machine)</span></div>
+</header>
+
+<aside class="quickcheck" id="quickcheck">
+  <h2>Quick Check</h2>
+  <dl>
+    <dt>What is changing?</dt><dd>T_RESCUE target state: unconditional <code>PAUSED</code> → conditional <code>ACTIVE</code> (window in future) / <code>PAUSED</code> (else).</dd>
+    <dt>What triggered it?</dt><dd>Bug — post-deactivation recharge leaves connection <code>PAUSED</code> with a live future ISP window; renewal claim blocked.</dd>
+    <dt>Blast radius</dt><dd>CLOS <code>handleCaeoRescueIntent</code> + <code>ConnectionStateMachine</code>; outbound <code>ClConnectionRescued</code>. RV gates read but unchanged.</dd>
+    <dt>Reversible?</dt><dd>Yes — revert the handler + state-machine entry; no data migration.</dd>
+    <dt>Money / PII / migration?</dt><dd>Money: indirect (unblocks recharge commission claim) · PII: No · Migration: No.</dd>
+    <dt>OS impact / sign-off?</dt><dd>CL state-machine amendment — Pending (Varun, Dhruv). RV: No change.</dd>
+    <dt>Tier</dt><dd>Full.</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what"><div class="label">Part A</div><h2>WHAT — The Change</h2><p>Why, current, desired, the precise delta, and what must not change.</p></div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Rescue-intent transition target state (T_RESCUE)</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft</td></tr>
+    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Baseline (code)</td><td><code>csp-connection-lifecycle-service</code>: <code>ConnectionStateMachine.java</code>, <code>InboundEventProcessingServiceImpl#handleCaeoRescueIntent</code>. <code>csp-rv-service</code>: <code>RechargeGuards.java</code>, <code>RechargeValidationServiceImpl.java</code>, <code>ErrorCodes.java</code>.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="feedback"><strong>Why (from feedback):</strong> The block surfaces at <strong>RV Gate 2</strong> (<code>GUARD-RV-04</code> / <code>guardNoActiveWindow</code>), which rejects a recharge confirmation when a recharge_gate with <code>expired_emitted=false AND window_end &gt; now</code> already exists — error <code>RV_GATE2_DUPLICATE_WINDOW</code>. After rescue the connection is <code>PAUSED</code> yet its ISP <code>window_end</code> is already in the future, so the only RV exit from PAUSED is blocked as a duplicate window. <strong>We do not modify or relax Gate 2.</strong> Correcting the rescue transition to <code>ACTIVE</code> makes CLOS emit <code>CL_CONNECTION_ACTIVATED</code>, which TAS's <em>race-window fallback resolver</em> (<code>process(ClConnectionActivated)</code>) consumes to resolve the recharge candidate (reason <code>CONNECTION_REACTIVATED</code>) and disburse commission — a path that <strong>does not go through RV at all</strong>. Gate 2 keeps its exact logic; it simply stops being the only exit.</div>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong?</td><td>Customer requests deactivation, then pays post-facto to save the connection. CLOS fires <code>CAEO_RESCUE_INTENT</code>; <code>handleCaeoRescueIntent</code> always moves <code>PENDING_DEACTIVATION → PAUSED</code>. The recharge has already set <code>latest_recharge_window_end</code> in the future, so CL sits <code>PAUSED</code> while the ISP window is live — a conflicting state. RV Gate 2 then rejects the renewal as a duplicate window until <code>window_end</code> passes.</td></tr>
+    <tr><td>Who experiences it?</td><td>Customers who pay to save the connection; CSPs whose recharge commission claim is stuck until the window boundary.</td></tr>
+    <tr><td>Cost of leaving it?</td><td>Claim blocked for days (until <code>window_end</code> / next expiry sweep); connection state inconsistent with supply. Observed live (e.g. <code>ca34d571-…</code>, <code>ec59cc21-…</code>).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:34%">Trigger / condition</th><th>Observable behaviour today (per code)</th></tr>
+    <tr><td><code>CAEO_RESCUE_INTENT</code> on a <code>PENDING_DEACTIVATION</code> connection</td><td><code>handleCaeoRescueIntent</code> passes 4 gates, calls <code>validateTransition(PENDING_DEACTIVATION, PAUSED)</code>, sets state <code>PAUSED</code>, <code>pause_reason=RESCUE</code>, resets P76 timer, increments <code>pause_count</code>, emits <code>ClConnectionRescued</code> (new state <code>PAUSED</code>). <code>latest_recharge_window_end</code> is never read.</td></tr>
+    <tr><td>Allowed targets from <code>PENDING_DEACTIVATION</code></td><td><code>ConnectionStateMachine.VALID_TRANSITIONS</code> = <code>{DEACTIVATED (T8), PAUSED (T_RESCUE)}</code>. <code>ACTIVE</code> is not permitted.</td></tr>
+    <tr><td>Renewal arrives while connection is <code>PAUSED</code> with future window</td><td>RV Gate 1 (<code>guardConnectionPausedOrActive</code>) passes. RV Gate 2 (<code>guardNoActiveWindow</code>) finds the existing gate (<code>expired_emitted=false</code>, <code>window_end &gt; now</code>) and rejects → <code>RV_GATE2_DUPLICATE_WINDOW</code>. No <code>RechargeConfirmed</code>; pause never clears until <code>window_end</code> elapses.</td></tr>
+    <tr><td>TAS recharge candidate while connection is <code>PAUSED</code></td><td>Stuck <code>ACTION_REQUIRED</code> / <code>UNCLAIMED</code>. Its two resolvers cannot fire: the RV path (<code>process(SupplyRechargeResolved)</code>) needs a <code>RechargeConfirmed</code> that Gate 2 blocks; the CL path (<code>process(ClConnectionActivated)</code>) needs the connection to be <code>ACTIVE</code>, which rescue-to-PAUSED never produces. (Live: <code>ec59cc21-…</code>.)</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:34%">Trigger / condition</th><th>Desired observable behaviour</th></tr>
+    <tr><td><code>CAEO_RESCUE_INTENT</code> &amp; <code>latest_recharge_window_end &gt; now</code></td><td>Connection moves <code>PENDING_DEACTIVATION → ACTIVE</code>. No pause fields set. <code>ClConnectionRescued</code> carries new state <code>ACTIVE</code>. State matches the live ISP window; no duplicate-window renewal is needed.</td></tr>
+    <tr><td><code>CAEO_RESCUE_INTENT</code> &amp; <code>latest_recharge_window_end ≤ now</code> or null</td><td>Connection moves <code>PENDING_DEACTIVATION → PAUSED</code> (current behaviour, unchanged): <code>pause_reason=RESCUE</code>, P76 reset, <code>pause_count++</code>.</td></tr>
+    <tr><td>The 4 rescue gates &amp; RV gates</td><td>Unchanged — same guards, same RV Gate 1 / Gate 2 logic.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <table class="delta">
+    <tr><th style="width:22%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:26%">Why</th></tr>
+    <tr><td>T_RESCUE target state in <code>handleCaeoRescueIntent</code></td><td>Always <code>PAUSED</code>; <code>latest_recharge_window_end</code> not read.</td><td>Read <code>latest_recharge_window_end</code> before mutating: <code>&gt; clockService.now()</code> → <code>ACTIVE</code>; else (≤ now or null) → <code>PAUSED</code>.</td><td>Align CL state with the live ISP window; remove the PAUSED-with-future-window conflict.</td></tr>
+    <tr><td><code>VALID_TRANSITIONS</code> for <code>PENDING_DEACTIVATION</code></td><td><code>{DEACTIVATED, PAUSED}</code></td><td><code>{DEACTIVATED, PAUSED, ACTIVE}</code></td><td>Permit the rescue-to-ACTIVE transition through the state machine.</td></tr>
+    <tr><td>Pause-only field writes (ACTIVE branch)</td><td><code>pause_reason=RESCUE</code>, P76 reset, <code>pause_count++</code> always applied.</td><td>Applied only on the PAUSED branch. ACTIVE branch sets none of them.</td><td>ACTIVE is not a pause; pause metadata must not be written.</td></tr>
+    <tr><td><code>ClConnectionRescued</code> new-state field</td><td>Always <code>PAUSED</code>.</td><td>Resolved target (<code>ACTIVE</code> or <code>PAUSED</code>).</td><td>Downstream consumers must see the true resting state.</td></tr>
+    <tr><td>Activation signal on the ACTIVE branch</td><td>Only <code>ClConnectionRescued</code> (→PAUSED) is emitted; TAS does not consume it.</td><td>On the ACTIVE branch, also emit <code>CL_CONNECTION_ACTIVATED</code> (the event TAS's <code>process(ClConnectionActivated)</code> resolver consumes).</td><td>Triggers TAS to resolve the stuck recharge candidate via the CL path (no RV / no Gate 2), so commission disburses.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="feedback"><strong>Explicit:</strong> RV Gate 2 is <strong>not relaxed</strong>. The fix corrects the rescue transition only.</div>
+  <table>
+    <tr><th style="width:52%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr><td>RV Gate 2 (<code>guardNoActiveWindow</code>, <code>GUARD-RV-04</code>) logic is <strong>unchanged</strong> — still rejects a genuine duplicate recharge confirmation (active future window) → <code>RV_GATE2_DUPLICATE_WINDOW</code>. The fix touches no RV code; the rescue resolution routes through the CL-activation path, not RV.</td><td>"Do not relax the gate." Duplicate-window protection must stay; the fix must not depend on weakening it.</td></tr>
+    <tr><td>RV Gate 1 (<code>guardConnectionPausedOrActive</code>, <code>GUARD-RV-03</code>) still accepts <code>PAUSED</code> or <code>ACTIVE</code>.</td><td>The new ACTIVE resting state must remain acceptable to Gate 1.</td></tr>
+    <tr><td>The 4 rescue gates a–d (<code>guardConnectionInState</code>, <code>guardP77NotExpired</code>, <code>guardDeactivationReasonRescueEligible</code>, <code>guardPriorCaeoStateValid</code>) unchanged.</td><td>Same handler; easy to disturb. Eligibility must be byte-for-byte.</td></tr>
+    <tr><td><code>PENDING_DEACTIVATION → PAUSED</code> path when window is past/null is byte-for-byte unchanged.</td><td>Only the future-window case is added; the existing branch must be preserved.</td></tr>
+    <tr><td><code>PENDING_DEACTIVATION → DEACTIVATED</code> (T8) and DEACTIVATED-as-terminal unchanged.</td><td>Shares the same state-machine entry being edited.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases <span class="tier what">WHAT</span></h2>
+  <h3>A7.1 Rules &amp; invariants</h3>
+  <table>
+    <tr><th style="width:34%">Rule / invariant</th><th>Statement (single checkable condition)</th></tr>
+    <tr><td>INV — rescue state matches window</td><td>Immediately after T_RESCUE, state = <code>ACTIVE</code> iff <code>latest_recharge_window_end &gt; now</code>, otherwise <code>PAUSED</code>.</td></tr>
+    <tr><td>INV — no false-ACTIVE</td><td>T_RESCUE never resolves to <code>ACTIVE</code> when <code>latest_recharge_window_end ≤ now</code> or null.</td></tr>
+    <tr><td>INV — pause metadata only when PAUSED</td><td><code>pause_reason</code>, P76 reset and <code>pause_count++</code> are written iff the resolved target is <code>PAUSED</code>.</td></tr>
+    <tr><td>RULE — single read, pre-mutation</td><td>The target is decided by one read of <code>latest_recharge_window_end</code> at processing time, before any state write.</td></tr>
+  </table>
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:34%">Edge / condition</th><th>Intended outcome</th></tr>
+    <tr><td><code>latest_recharge_window_end == now</code> exactly</td><td>Not "future" → <code>PAUSED</code> (strict <code>&gt;</code>).</td></tr>
+    <tr><td><code>latest_recharge_window_end</code> is null</td><td><code>PAUSED</code>.</td></tr>
+    <tr><td>Window in future but P77 timer expired (gate b fails)</td><td>No transition; rescue rejected as today (gate unchanged).</td></tr>
+    <tr><td>Duplicate <code>CAEO_RESCUE_INTENT</code> (same eventId)</td><td>Idempotent skip as today; no second transition.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <table>
+    <tr><th>OS / owner area</th><th>Impacted?</th><th>Amendment (one line)</th><th>Type</th><th>Owner (consulted)</th><th>Sign-off</th></tr>
+    <tr><td>Connection Lifecycle (CLOS state machine)</td><td>Yes</td><td>Add <code>PENDING_DEACTIVATION → ACTIVE</code> (T_RESCUE_ACTIVE); rescue target conditional on window.</td><td>Behaviour change</td><td>Varun, Dhruv</td><td>Pending</td></tr>
+    <tr><td>Recharge Validator (RV gates)</td><td>No</td><td>Gate 1 / Gate 2 logic unchanged; ACTIVE already accepted by Gate 1.</td><td>None</td><td>—</td><td>—</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how"><div class="label">Part B</div><h2>HOW — Detailing</h2><p>Flow, state machine, data, and the verification layer.</p></div>
+
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflow — Before &amp; After <span class="tier cond">Conditional</span></h2>
+  <div class="diff-legend"><strong>Colour key</strong><span class="chip unchanged">Unchanged</span><span class="chip added">Added</span><span class="chip changed">Changed</span><span class="chip removed">Removed / replaced</span></div>
+  <p class="flow-label before">Before — current logic</p>
+  <div class="mermaid">
+flowchart TD
+    S([CAEO_RESCUE_INTENT · connection PENDING_DEACTIVATION]) --> G{4 gates pass?}
+    G -- No --> R[Reject · no transition]
+    G -- Yes --> P[Set PAUSED · pause_reason=RESCUE · P76 reset]
+    P --> EM[Emit ClConnectionRescued newState=PAUSED]
+    EM --> WAIT{Renewal arrives · window_end in future}
+    WAIT --> GATE2[RV Gate 2: active window exists]
+    GATE2 --> BLK([RV_GATE2_DUPLICATE_WINDOW · claim blocked until window_end])
+    classDef removed fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class P changed;
+    class WAIT,GATE2,BLK removed;
+  </div>
+  <p class="flow-label after">After — changed logic</p>
+  <div class="mermaid">
+flowchart TD
+    S([CAEO_RESCUE_INTENT · connection PENDING_DEACTIVATION]) --> G{4 gates pass?}
+    G -- No --> R[Reject · no transition]
+    G -- Yes --> W{"latest_recharge_window_end &gt; now?"}
+    W -- Yes --> A[Set ACTIVE · no pause fields]
+    W -- No / null --> P[Set PAUSED · pause_reason=RESCUE · P76 reset]
+    A --> EMA[Emit ClConnectionRescued newState=ACTIVE]
+    P --> EMP[Emit ClConnectionRescued newState=PAUSED]
+    EMA --> OK([State matches live window · no duplicate-window renewal needed])
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class W,A,EMA,OK added;
+    class P changed;
+  </div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> State Changes <span class="tier cond">State machine touched</span></h2>
+  <p class="flow-label before">Before — <code>PENDING_DEACTIVATION</code> targets</p>
+  <div class="mermaid">
+stateDiagram-v2
+    PENDING_DEACTIVATION --> DEACTIVATED: T8 DEACTIVATION_COMPLETE
+    PENDING_DEACTIVATION --> PAUSED: T_RESCUE (CAEO_RESCUE_INTENT) — always
+    PAUSED --> ACTIVE: T5 RECHARGE_CONFIRMED
+    PAUSED --> PENDING_DEACTIVATION: T7
+  </div>
+  <p class="flow-label after">After — adds <code>PENDING_DEACTIVATION → ACTIVE</code></p>
+  <div class="mermaid">
+stateDiagram-v2
+    PENDING_DEACTIVATION --> DEACTIVATED: T8 DEACTIVATION_COMPLETE
+    PENDING_DEACTIVATION --> PAUSED: T_RESCUE · window_end ≤ now / null
+    PENDING_DEACTIVATION --> ACTIVE: T_RESCUE_ACTIVE · window_end &gt; now (NEW)
+    PAUSED --> ACTIVE: T5 RECHARGE_CONFIRMED
+    PAUSED --> PENDING_DEACTIVATION: T7
+  </div>
+  <div class="feedback"><strong>Pre/Post (as requested):</strong> Pre — <code>VALID_TRANSITIONS.get(PENDING_DEACTIVATION) = {DEACTIVATED, PAUSED}</code>. Post — <code>{DEACTIVATED, PAUSED, ACTIVE}</code>. Only the <code>ACTIVE</code> target is added; <code>DEACTIVATED</code> and <code>PAUSED</code> targets are untouched.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
+  <table>
+    <tr><th>Parameter / data</th><th>Old</th><th>New</th><th>Valid range / scope</th><th>Reason</th></tr>
+    <tr><td>New config parameter</td><td>—</td><td>None added</td><td>—</td><td>No new tunable; decision uses existing data + clock.</td></tr>
+    <tr><td><code>latest_recharge_window_end</code> (existing connection field)</td><td>Not read in rescue</td><td>Read at rescue to decide target</td><td>Per connection · existing field</td><td>Drives ACTIVE-vs-PAUSED resolution.</td></tr>
+    <tr><td>P76 / P77 timers</td><td>P76 reset, P77 checked</td><td>P77 checked (unchanged); P76 reset only on PAUSED branch</td><td>Per connection</td><td>P76 is a pause timer — not applicable to ACTIVE.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> UI Impact <span class="tier cond">Conditional</span></h2>
+  <p>N/A — backend state/transition change only. No new screen state is authored here. (Downstream effect: the CSP's recharge claim is no longer held by the conflicting state; surfaced by existing flows, no new UI.)</p>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>Test cases, ordered by criticality (most critical first).</strong> Class: LOGIC = business logic · COMP = computation/boundary · INV = invariant · EDGE = edge/branch · REG = regression (A6).</div>
+  <table>
+    <tr><th style="width:5%">#</th><th style="width:9%">ID</th><th style="width:8%">Class</th><th style="width:9%">Priority</th><th>Given → When → Then</th></tr>
+    <tr><td>1</td><td>LOGIC_01</td><td class="cls-b">LOGIC</td><td class="crit">Critical</td><td><strong>Given</strong> a <code>PENDING_DEACTIVATION</code> connection with <code>latest_recharge_window_end &gt; now</code> <strong>When</strong> <code>CAEO_RESCUE_INTENT</code> passes the 4 gates <strong>Then</strong> state becomes <code>ACTIVE</code> <strong>And</strong> <code>ClConnectionRescued.newState = ACTIVE</code>.</td></tr>
+    <tr><td>2</td><td>LOGIC_03</td><td class="cls-b">LOGIC</td><td class="crit">Critical</td><td><strong>Given</strong> a rescue that resolves to <code>ACTIVE</code> with a stuck <code>ACTION_REQUIRED</code> recharge candidate <strong>When</strong> CLOS emits <code>CL_CONNECTION_ACTIVATED</code> <strong>Then</strong> TAS <code>process(ClConnectionActivated)</code> resolves the candidate (reason <code>CONNECTION_REACTIVATED</code>) and commission disburses <strong>And</strong> no RV recharge confirmation (no Gate 2 evaluation) is required.</td></tr>
+    <tr><td>3</td><td>REG_01</td><td class="cls-b">REG</td><td class="crit">Critical</td><td><strong>Given</strong> any connection with a recharge_gate where <code>expired_emitted=false AND window_end &gt; now</code> <strong>When</strong> an RV recharge confirmation is validated <strong>Then</strong> RV Gate 2 still rejects with <code>RV_GATE2_DUPLICATE_WINDOW</code> (gate logic unchanged).</td></tr>
+    <tr><td>4</td><td>COMP_01</td><td class="cls-b">COMP</td><td class="crit">Critical</td><td><strong>Given</strong> <code>latest_recharge_window_end == now</code> exactly <strong>When</strong> rescue is processed <strong>Then</strong> target is <code>PAUSED</code> (strict <code>&gt;</code>; equality is not future).</td></tr>
+    <tr><td>5</td><td>LOGIC_02</td><td class="cls-b">LOGIC</td><td class="high">High</td><td><strong>Given</strong> <code>latest_recharge_window_end ≤ now</code> <strong>When</strong> rescue is processed <strong>Then</strong> state becomes <code>PAUSED</code> with <code>pause_reason=RESCUE</code>, P76 reset, <code>pause_count++</code> (unchanged path).</td></tr>
+    <tr><td>6</td><td>COMP_02</td><td class="cls-b">COMP</td><td class="high">High</td><td><strong>Given</strong> <code>latest_recharge_window_end</code> is null <strong>When</strong> rescue is processed <strong>Then</strong> target is <code>PAUSED</code> (null treated as not-future).</td></tr>
+    <tr><td>7</td><td>EDGE_01</td><td class="cls-b">EDGE</td><td class="high">High</td><td><strong>Given</strong> a future window <strong>When</strong> the state-machine validates <code>PENDING_DEACTIVATION → ACTIVE</code> <strong>Then</strong> it is permitted (no <code>InvalidTransitionException</code>).</td></tr>
+    <tr><td>8</td><td>REG_02</td><td class="cls-b">REG</td><td class="high">High</td><td><strong>Given</strong> a connection rescued to <code>ACTIVE</code> <strong>When</strong> a renewal hits RV Gate 1 (<code>guardConnectionPausedOrActive</code>) <strong>Then</strong> Gate 1 accepts it (PAUSED or ACTIVE), as before.</td></tr>
+    <tr><td>9</td><td>INV_01</td><td class="cls-b">INV</td><td class="high">High</td><td><strong>Given</strong> any rescued connection at the moment after T_RESCUE <strong>Then</strong> state = <code>ACTIVE</code> iff <code>latest_recharge_window_end &gt; now</code>, else <code>PAUSED</code> — never the inverse.</td></tr>
+    <tr><td>10</td><td>INV_02</td><td class="cls-b">INV</td><td class="med">Medium</td><td><strong>Given</strong> a rescue resolving to <code>ACTIVE</code> <strong>Then</strong> <code>pause_reason</code>, P76 reset and <code>pause_count++</code> are <em>not</em> written.</td></tr>
+    <tr><td>11</td><td>EDGE_02</td><td class="cls-b">EDGE</td><td class="med">Medium</td><td><strong>Given</strong> a future window but P77 timer expired <strong>When</strong> rescue is processed <strong>Then</strong> gate (b) fails, no transition occurs (unchanged).</td></tr>
+    <tr><td>12</td><td>EDGE_03</td><td class="cls-b">EDGE</td><td class="med">Medium</td><td><strong>Given</strong> a duplicate <code>CAEO_RESCUE_INTENT</code> (same eventId) <strong>When</strong> processed <strong>Then</strong> idempotent skip; no second transition (unchanged).</td></tr>
+    <tr><td>13</td><td>REG_03</td><td class="cls-b">REG</td><td class="med">Medium</td><td><strong>Given</strong> a <code>PENDING_DEACTIVATION</code> connection <strong>When</strong> <code>DEACTIVATION_COMPLETE</code> fires <strong>Then</strong> <code>PENDING_DEACTIVATION → DEACTIVATED</code> (T8) still works; DEACTIVATED remains terminal.</td></tr>
+    <tr><td>14</td><td>EDGE_04</td><td class="cls-b">EDGE</td><td class="med">Medium</td><td><strong>Given</strong> a rescue resolving to <code>PAUSED</code> <strong>Then</strong> <code>ClConnectionRescued.newState = PAUSED</code> (resolved target carried correctly on both branches).</td></tr>
+  </table>
+  <h3>B5.1 Coverage matrix</h3>
+  <table>
+    <tr><th style="width:24%">Coverage class</th><th>Source</th><th style="width:12%">Items</th><th style="width:12%">Blocks</th><th style="width:16%">All covered?</th></tr>
+    <tr><td class="cls-b">Business logic</td><td>A5 rows 1–5 · A7.1 rules</td><td>3</td><td>LOGIC_01, LOGIC_02, LOGIC_03</td><td>Yes</td></tr>
+    <tr><td class="cls-b">Computation</td><td>window comparison boundary</td><td>2</td><td>COMP_01, COMP_02</td><td>Yes</td></tr>
+    <tr><td class="cls-b">Invariants</td><td>A7.1 INV-1/2/3</td><td>3</td><td>INV_01, INV_02 (+ COMP_01 boundary)</td><td>Yes</td></tr>
+    <tr><td class="cls-b">Use &amp; edge / branches</td><td>A7.2 edges · B1/B2 new branch</td><td>5</td><td>EDGE_01–04, LOGIC_01</td><td>Yes</td></tr>
+    <tr><td class="cls-b">Regression</td><td>A6 guard lines</td><td>5</td><td>REG_01, REG_02, REG_03 (+ EDGE_04)</td><td>Yes</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="changelog" style="margin-top:48px;">
+  <h2>Changelog</h2>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:120px">Date</th><th style="width:150px">Author</th><th>Change &amp; rationale</th></tr>
+    <tr><td>v0.1</td><td>2026-06-11</td><td>Jaivin Prajapati</td><td>Initial Change Spec from the approved OS amendment. Adds RV Gate 2 "why" and pre/post state machine per review feedback.</td></tr>
+  </table>
+</section>
+</main>
+</div>
+<script>mermaid.initialize({startOnLoad:true,theme:'default',flowchart:{curve:'basis'}});</script>
+</body>
+</html>
