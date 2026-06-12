@@ -171,7 +171,7 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v0.10 · PM deliverable</div>
+  <div class="eyebrow">Wiom · Change Spec · v0.11 · PM deliverable</div>
   <h1>CSP Netbox Swap — Diagnosis-Driven Device Replacement</h1>
   <p class="lede">Backend specification for the netbox swap flow, described through the CSP's journey. The CSP enters old + new device on a ticket; gate checks return pass/fail (nothing executes); the CSP physically swaps the hardware and confirms, which creates the swap record and starts a 20-minute timer. <strong>ACS then owns the swap end-to-end</strong> — a provisional swap via the Remote API, then verification by the common Validation Layer (first check automatic at 10 min, then CSP-driven retries 2 min apart). On confirmation ACS commits the final custody change and tells SRS to resolve the ticket; otherwise the swap expires or is cancelled and the provisional shift is reversed. A device can be in only one swap at a time; the ticket's Resolve CTA is blocked while a swap is in progress; state is server-authoritative. SRS fundamentals are a separate amendment, <strong>not</strong> part of this spec. Per author directive, exact technical references are carried inline — a deliberate deviation from the template's default scope fence.</p>
   <div class="meta-row">
@@ -207,7 +207,7 @@
     <tr><td>Change title</td><td>CSP Netbox Swap — Diagnosis-Driven Device Replacement (swap initiation contract, execution sequencing, post-swap ticket behaviour)</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.10</td></tr>
+    <tr><td>Version</td><td>v0.11</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td>Support &amp; Resolution OS v1.6.1 LOCKED (<code>csp-os-yaml/os/Support_Resolution_OS_v1_6_1_LOCKED.md</code> §4.4, §7.9, §12.5) · Asset Custody OS v1.11.1 LOCKED (<code>csp-os-yaml/os/Asset_Custody_OS_v1_11_1_LOCKED.md</code> §4.4) · ESR v2.27 (DEVICE_SWAP / DEVICE_SWAP_COMPLETED entries)</td></tr>
     <tr><td>Companion documents</td><td>Swap OS amendments: <code>Desktop/Netbox_Swap_Spec/Netbox_Swap_OS_Amendments.md</code>. Out of this spec's scope: the SRS-fundamentals amendment (ticket-creation gate / complaint lifecycle automatics) — tracked separately.</td></tr>
   </table>
@@ -486,6 +486,42 @@ stateDiagram-v2
     <tr><td>Swap — expired / cancelled <span style="color:#0b6b3a">(design ask: copy)</span></td><td>Return to the SRS page; <em>"We couldn't verify the swap. If you've found another problem, fix it and retry; otherwise swap the devices back (old → customer, new → CSP)."</em> The ticket stays open for a fresh swap.</td></tr>
     <tr><td>Swap — history</td><td>Per-ticket attempts from the swap table: device pair, state, timestamps, validation outcome.</td></tr>
   </table>
+
+  <h3>FE journey — screen flow (incl. back-navigation)</h3>
+  <div class="expected">Screen-level navigation from opening the ticket to a terminal swap state. The dashed arrows are the <strong>back button</strong>. Key rule: once the swap is in progress (after "physical swap done"), leaving any screen does <strong>not</strong> stop it — the swap runs on the backend and the CSP is dropped back to whatever state it's in when they return.</div>
+  <div class="mermaid">
+flowchart TD
+    T[Ticket detail<br/>Netbox Swap CTA · Resolve CTA blocked if a swap is in progress] -->|tap Netbox Swap| D[Enter old + new device + diagnosis]
+    D -->|submit| G{Gate check}
+    G -->|fail| Gf[Show reason]
+    G -->|pass| P[Physically swap the devices, then confirm]
+    P -->|tap 'physical swap done'<br/>record + 20-min timer start| W[Verifying… countdown<br/>swap now in progress]
+    W -->|provisional failed / connection deactivated| A[Aborted — try again]
+    W -->|first check auto at 10 min: CONFIRMED| S([Success — ticket resolved])
+    W -->|not confirmed| N[Error — Retry in 2 min · Cancel]
+    N -->|tap Retry| W
+    N -->|tap Cancel| X([Cancelled — swap-back message])
+    W -->|20-min cap| E([Expired — swap-back message])
+    N -->|20-min cap| E
+    A -->|retry| P
+
+    D -.back.-> T
+    Gf -.back.-> T
+    P -.back · nothing started.-> T
+    W -.back · swap keeps running.-> T
+    N -.back · swap keeps running.-> T
+    S -.-> T
+    X -.-> T
+    E -.-> T
+    A -.-> T
+    T -.reopen ticket while swap in progress.-> W
+
+    classDef good fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef warn fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class S good;
+    class X,E,A warn;
+  </div>
+  <div class="hint"><strong>Back-navigation, every case:</strong> before "physical swap done" (screens D, gate result, P) there is no record — going back just drops the journey. After it (W, N) the swap is live: back returns to the ticket while the swap continues; re-opening the ticket resumes the verifying screen. If it finished while away → the ticket shows resolved (success); if it expired/cancelled/aborted while away → the ticket is open for a fresh swap.</div>
   <hr class="sect-end">
 </section>
 
@@ -649,11 +685,12 @@ stateDiagram-v2
     <tr><td>v0.8</td><td>2026-06-11</td><td>Jaivin Prajapati (with Claude)</td><td>A4–A8, B1–B5, F</td><td>Ownership redesign per author: <strong>ACS now owns the swap end-to-end</strong> (orchestration moved back from SRS). After gates pass and SRS emits DEVICE_SWAP, ACS does a <strong>provisional</strong> swap via the Remote API (D4), calls the VL (D5), and only on CONFIRMED commits the <strong>final</strong> custody change and tells SRS to close (D7); non-confirmation reverses the provisional swap (D6). NEW: a dedicated ACS <strong>swap-log table</strong> (D8) and <strong>swap state machine</strong> REQUESTED→PROVISIONAL→COMMITTED / REVERSED / REVERSAL_FAILED / ABORTED (D9, B2). NEW: the ticket is <strong>locked</strong> for all actions while a swap is in progress (D10, I9). B1 redrawn (SRS gates → ACS provisional → VL → commit → SRS close). B5 = 34 cases. Provisional/abort/lock/crash-recovery edges added. Remote "API" used for the provisional call; Inventory kept in the broader old-app contract.</td><td>—</td></tr>
     <tr><td>v0.9</td><td>2026-06-12</td><td>Jaivin Prajapati (with Claude)</td><td>A4–A8, B1–B5, F</td><td>Frontend-journey + timer redesign per author. Two-phase entry: <strong>gate-check (no execution) → CSP confirms physical swap</strong>, which creates the swap record + starts a <strong>20-min exhaust timer</strong> (D3/D4). New timer model: <strong>first VL check automatic at 10 min, then CSP-driven Retry 2 min apart</strong> until the cap (D6, replaces the v0.7 internal 5-min retries). Terminal model COMPLETED / EXPIRED / CANCELLED / ABORTED; EXPIRED &amp; CANCELLED reverse the provisional (D7). NEW <strong>one-swap-per-device</strong> gate + device reservation (D8, I11). Resolve-CTA block sharpened (D9). Server-authoritative state; FE reconciles on back/close (D11). Separate Netbox-Swap CTA (D2). Full FE journey in B4; B1 redrawn with the gate→physical→provisional→VL-loop→commit/expire/cancel branches; B5 = 35 cases. Per later author note, the re-validation-at-physical-confirm step was dropped (negligible time gap).</td><td>—</td></tr>
     <tr><td>v0.10</td><td>2026-06-12</td><td>Jaivin Prajapati (with Claude)</td><td>A5, A7, B2, B5</td><td>Author decisions on open edges. <strong>Ticket lock narrowed</strong> to CSP actions + one-swap-per-device only — it no longer blocks <strong>system-driven</strong> transitions (escalation/takeover/CL-deactivation), which proceed (D9/I9/E13). <strong>Commit-failure</strong> after a confirmed check → <code>COMMIT_FAILED</code> + ops escalation, ticket not resolved (E10). <strong>Connection deactivated mid-swap</strong> → swap <code>ABORTED</code> + reverse (E14, new). Cap-vs-check (E8) and cancel-vs-confirm (E12) precedence made definite. State machine gained COMMIT_FAILED + the deactivation→ABORTED transition. B5 → 38 cases (TC-26b/c/d added). Old-down strictness confirmed intentional. Still pending: reverse-on-expire/cancel confirm + the Rahul reversal-failure contract (TC-25).</td><td>—</td></tr>
+    <tr><td>v0.11</td><td>2026-06-12</td><td>Jaivin Prajapati (with Claude)</td><td>B4</td><td>Added the <strong>FE journey screen-flow diagram</strong> to B4 — ticket → Netbox Swap → device details → gate check → physical-swap confirm → verifying (timer) → success / expired / cancelled / aborted, with explicit <strong>back-navigation</strong> on every screen. Captures the rule that once a swap is in progress, leaving a screen doesn't stop it; re-opening the ticket resumes the live state.</td><td>—</td></tr>
   </table>
 </section>
 
 <p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
-  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.10 Draft
+  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.11 Draft
 </p>
 
 </main>
