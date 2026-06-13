@@ -171,9 +171,9 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v0.12 · PM deliverable</div>
+  <div class="eyebrow">Wiom · Change Spec · v0.13 · PM deliverable</div>
   <h1>CSP Netbox Swap — Diagnosis-Driven Device Replacement</h1>
-  <p class="lede">Backend specification for the netbox swap flow, described through the CSP's journey. The CSP enters old + new device on a ticket; gate checks return pass/fail (nothing executes); the CSP physically swaps the hardware and confirms, which creates the swap record and starts a 20-minute timer. <strong>ACS then owns the swap end-to-end</strong> — a provisional swap via the Remote API, then verification by the common Validation Layer (first check automatic at 10 min, then CSP-driven retries 2 min apart). On confirmation ACS commits the final custody change and tells SRS to resolve the ticket; otherwise the swap expires or is cancelled and the provisional shift is reversed. A device can be in only one swap at a time; the ticket's Resolve CTA is blocked while a swap is in progress; state is server-authoritative. SRS fundamentals are a separate amendment, <strong>not</strong> part of this spec. Per author directive, exact technical references are carried inline — a deliberate deviation from the template's default scope fence.</p>
+  <p class="lede">Backend specification for the netbox swap flow, described through the CSP's journey. Gate checks return pass/fail (nothing executes); the CSP physically swaps the hardware <em>and configures the new device on the ISP portal</em>, then confirms — creating the swap record and a 20-minute timer. <strong>ACS owns the swap, forward-only:</strong> a connectivity swap via the Remote API, then verification by the common Validation Layer (first check automatic at 10 min, then immediate CSP retries; a self-confirm appears after 3 failed retries). The swap always completes — validated, self-confirmed, or auto-confirmed at the 20-minute cap — and ACS commits custody and resolves the ticket. <strong>There is no reversal or cancel.</strong> A device/ticket can be in only one swap at a time; Resolve is replaced by "continue swap" during a swap; state is server-authoritative and resumable. SRS fundamentals are a separate amendment, <strong>not</strong> part of this spec. Exact technical references are carried inline per author directive.</p>
   <div class="meta-row">
     <span><strong>Author:</strong> Jaivin Prajapati &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Full</span>
   </div>
@@ -183,12 +183,12 @@
   <h2>Quick Check</h2>
   <div class="qc-tag">7-line triage. Filled last, after the body.</div>
   <dl>
-    <dt>What is changing?</dt><dd>A net-new CSP swap journey owned by ACS: gate-check → physical-swap confirmation (creates the record + a 20-min timer) → ACS provisional swap (Remote API) → Validation Layer (auto check at 10 min, then CSP retries 2 min apart) → commit + resolve on confirm, else expire/cancel + reverse. One swap per device; Resolve CTA blocked during a swap; swap table + state machine; G6 removed.</dd>
+    <dt>What is changing?</dt><dd>A net-new, <strong>forward-only</strong> CSP swap journey owned by ACS: gate-check → physical-handoff (swap + ISP-config link) confirm (creates record + 20-min timer) → Remote connectivity swap → Validation Layer (auto check at 10 min, then immediate retries; self-confirm after 3 fails) → commit + resolve. Always completes (validated / self-confirmed / auto-confirmed at 20 min); no reversal or cancel. One swap per device & per ticket; Resolve → "continue swap" during a swap; swap table + state machine; G6 removed.</dd>
     <dt>What triggered it?</dt><dd>Product decision: today's swaps run outside the OS with no verifiable record; the OS-governed flow is unreachable (no diagnosis path) and, even if it ran, internet would not actually shift to the new device.</dd>
-    <dt>Blast radius</dt><dd>Swap entry, gate checks &amp; ticket lock (SRS), the provisional shift + reversal (Remote API), swap verification (common Validation Layer), the whole orchestration + custody commit + swap table + state machine + timer (ACS).</dd>
-    <dt>Reversible?</dt><dd>Feature: Yes — disabling the swap CTA stops all swaps. A committed swap: No un-swap. A pre-commit (provisional) swap: reversed on expire/cancel.</dd>
+    <dt>Blast radius</dt><dd>Swap entry, gate checks &amp; ticket lock (SRS), the Remote connectivity swap (old app), swap verification (common Validation Layer), the whole orchestration + custody commit + swap table + state machine + timer (ACS), the CSP-app resume/self-attest contract.</dd>
+    <dt>Reversible?</dt><dd>Feature: Yes — disabling the swap CTA stops all swaps. An individual swap: No — forward-only by design; once the physical handoff is confirmed it always completes.</dd>
     <dt>Money / PII / migration?</dt><dd>N / N / N.</dd>
-    <dt>OS impact / sign-off?</dt><dd>Asset Custody OS (ACS owns swap + table + state machine + timer — Dhruv) · SR OS (gate-check, physical-confirm, Resolve-CTA lock, resolve-on-commit — Varun) · ESR (contract — Dhruv) · Remote/Inventory (forward+reverse — Rahul Nijhawan) · Validation Layer (swap rules — VL-owning PM TBD). All Pending.</dd>
+    <dt>OS impact / sign-off?</dt><dd>Asset Custody OS (forward-only swap + table + state machine + timer — Dhruv) · SR OS (gate-check, physical-confirm, Resolve→continue-swap, resolve-on-commit — Varun) · ESR (Dhruv) · Remote API (forward-only — Rahul Nijhawan) · Validation Layer (swap rules — VL PM TBD) · CSP App (resume/self-attest contract — FE/Design PR #381). All Pending.</dd>
     <dt>Tier</dt><dd>Full — lead PM: Jaivin Prajapati.</dd>
   </dl>
 </aside>
@@ -207,7 +207,7 @@
     <tr><td>Change title</td><td>CSP Netbox Swap — Diagnosis-Driven Device Replacement (swap initiation contract, execution sequencing, post-swap ticket behaviour)</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.12</td></tr>
+    <tr><td>Version</td><td>v0.13</td></tr>
     <tr><td>Baseline (original PRD / OS)</td><td>Support &amp; Resolution OS v1.6.1 LOCKED (<code>csp-os-yaml/os/Support_Resolution_OS_v1_6_1_LOCKED.md</code> §4.4, §7.9, §12.5) · Asset Custody OS v1.11.1 LOCKED (<code>csp-os-yaml/os/Asset_Custody_OS_v1_11_1_LOCKED.md</code> §4.4) · ESR v2.27 (DEVICE_SWAP / DEVICE_SWAP_COMPLETED entries)</td></tr>
     <tr><td>Companion documents</td><td>Swap OS amendments: <code>Desktop/Netbox_Swap_Spec/Netbox_Swap_OS_Amendments.md</code>. Out of this spec's scope: the SRS-fundamentals amendment (ticket-creation gate / complaint lifecycle automatics) — tracked separately.</td></tr>
   </table>
@@ -242,42 +242,45 @@
 
 <section class="spec" id="a4">
   <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
-  <div class="expected">The flow described as the CSP experiences it, end to end. The backend behaviour behind each step is in A5; the screen-level detail is in B4.</div>
+  <div class="expected">The CSP journey, end to end. The swap is <strong>forward-only</strong> — once the physical swap is confirmed it always completes (validated, self-confirmed, or auto-confirmed); there is no reversal or cancel. Backend behaviour is in A5; screens in B4.</div>
   <table>
     <tr><th style="width:26%">Step / trigger</th><th>Desired observable behaviour</th></tr>
-    <tr><td>1–2. CSP opens an SRS ticket and taps <strong>Netbox Swap</strong> (a CTA separate from <strong>Resolve Ticket</strong>)</td><td>The swap journey opens. The Resolve CTA and the swap CTA are distinct actions.</td></tr>
-    <tr><td>3. CSP enters old + new netbox details (and the device-fault diagnosis + resolution type)</td><td>SRS persists the diagnosis on the task. The request carries <code>old_device_id</code>, <code>new_device_id</code>, <code>diagnosis_fault_type</code>, <code>diagnosis_outcome</code>, <code>resolution_type = DEVICE_REPLACED</code>.</td></tr>
-    <tr><td>4. Backend runs <strong>gate checks</strong> — only the pre-swap "is this allowed?" validation</td><td>SRS guards (G7–G11) + device eligibility (G1–G5, read-only via ACS) + the new <strong>one-swap-per-device</strong> check run and return a single <strong>pass/fail</strong>. Nothing is executed and no swap record exists yet. On fail, the CSP sees the specific reason.</td></tr>
-    <tr><td>5. On pass, CSP is told <em>"swapping is allowed — now physically swap the devices"</em> and taps <strong>"physical swap done"</strong></td><td>This is the trigger to begin. ACS creates a <strong>swap record</strong> (old device, new device, csp id, SRS id, time) and a <strong>20-minute exhaust timer</strong> starts. Both devices are reserved (no other swap can use them).</td></tr>
-    <tr><td>6. Swap moves to ACS, which owns it end-to-end</td><td>The FE shows a <strong>countdown</strong> and asks the CSP to wait. From here ACS runs provisional → validate → commit and reports only the outcome to SRS.</td></tr>
-    <tr><td>7A. Provisional swap (ACS → Remote API)</td><td><strong>Success:</strong> nothing shown; proceed to validation. <strong>Failure (any reason):</strong> the swap is <code>ABORTED</code>, the CSP sees an error and is asked to try again — restarting from step 5 (a fresh record + timer; gates already passed).</td></tr>
-    <tr><td>7B. Validation — first check automatic, retries UI-driven</td><td>The <strong>first VL check fires automatically at T0 + 10 min</strong> (giving the new device time to come up). VL confirms = new device pinged ≥1 in the last 10 min AND old device not pinging. <strong>Confirmed on a check →</strong> ACS commits the custody swap, shows the success screen, and tells SRS to resolve the ticket. <strong>Not confirmed →</strong> error shown; after a <strong>2-minute</strong> cooldown a <strong>Retry</strong> CTA appears; on tap, ACS calls VL again. The CSP may keep retrying until the <strong>20-minute</strong> exhaust cap. They may also <strong>cancel</strong> at any time.</td></tr>
-    <tr><td>7B (terminal). Cap hit or cancelled</td><td>On the 20-min cap → <code>EXPIRED</code>; on cancel → <code>CANCELLED</code>. In both, the provisional swap is <strong>reversed</strong>, the CSP is returned to the SRS page and shown the swap-back message, and they can start a fresh swap on the same ticket from scratch.</td></tr>
-    <tr><td>7C. CSP navigates away (back button / app close) during the wait</td><td>The backend keeps running. If the swap <strong>completes</strong> while they're elsewhere, the ticket is resolved (no real-time FE removal needed). If it <strong>expires</strong>, the ticket is unchanged and they can restart fresh. If it's <strong>still in progress</strong>, returning to the ticket shows the live timer.</td></tr>
-    <tr><td>8. While a swap is in progress</td><td>Both devices are locked out of any other swap. The ticket's <strong>Resolve CTA is blocked</strong> — the ticket cannot be resolved any other way until the swap reaches a terminal state. A COMPLETED swap resolves it; EXPIRED/CANCELLED/ABORTED leave it open.</td></tr>
+    <tr><td>1–2. CSP opens an SRS ticket and taps <strong>Netbox Swap</strong> (separate from <strong>Resolve</strong>)</td><td>The swap journey opens. While a swap is in progress, the ticket's Resolve action is replaced by a <strong>"continue swap"</strong> entry.</td></tr>
+    <tr><td>3. CSP records the diagnosis and the new device (scan/enter)</td><td>SRS persists the diagnosis. Request carries <code>old_device_id</code>, <code>new_device_id</code>, <code>diagnosis_fault_type</code>, <code>diagnosis_outcome</code>, <code>resolution_type = DEVICE_REPLACED</code>.</td></tr>
+    <tr><td>4. Gate check (pre-swap "is this allowed?")</td><td>SRS guards (G7–G11) + device eligibility (G1–G5) + one-swap-per-device + one-swap-per-ticket → single <strong>pass/fail</strong>. Nothing executes, no record yet. Fail → specific reason.</td></tr>
+    <tr><td>5. On pass → <strong>physical-handoff</strong> screen, three items</td><td><strong>(A)</strong> complete the physical swap + plug in the new device · <strong>(B)</strong> open the <strong>[config link]</strong> to configure the new device on the ISP network · <strong>(C)</strong> confirm on the app once both are done. The config link is task-scoped (backend-supplied).</td></tr>
+    <tr><td>6. CSP taps <strong>"I've swapped the device"</strong> (A + B done)</td><td>ACS creates the <strong>swap record</strong> (old, new, csp id, srs id, time) + reserves both devices + starts the <strong>20-min timer</strong>. ACS performs the connectivity swap via the Remote API. The FE shows a countdown to the first verification.</td></tr>
+    <tr><td>7. Verification — first check automatic at 10 min</td><td>At T0 + 10 min ACS runs the first VL check (new device up in last 10 min AND old device down). <strong>Confirmed →</strong> swap completes (<code>VL_VALIDATED</code>), success screen, ticket resolved, "return the old box" reminder.</td></tr>
+    <tr><td>7-fail. Not verified → <strong>Retry</strong> (immediate)</td><td>The CSP sees a not-verified screen with a <strong>Retry</strong> CTA (tappable immediately — no wait). Each retry re-runs the VL check on the same device. Retries are counted.</td></tr>
+    <tr><td>7-escalate. After <strong>3 failed retries</strong> → <strong>self-confirm</strong></td><td>Once <code>P_SWAP_MAX_RETRIES</code> (3) retries have failed, a <strong>self-confirm</strong> CTA appears: <em>"I confirm the customer's internet is working even though Wiom can't validate it."</em> Tapping it completes the swap (<code>CSP_OVERRIDE</code>) → ticket resolved.</td></tr>
+    <tr><td>7-cap. <strong>20-min exhaust</strong> → backend auto-confirms</td><td>If the swap hasn't completed by <code>P_SWAP_EXHAUST_CAP</code> (20 min), the <strong>backend auto-confirms</strong> it (<code>AUTO_OVERRIDE</code>): ACS commits custody and SRS resolves the ticket — server-side, regardless of which screen the CSP is on. (Prevents an in-progress swap drifting the device state between Remote and ACS indefinitely.)</td></tr>
+    <tr><td>8. Navigate away during the swap</td><td>The backend keeps running. The ticket shows <strong>"continue swap"</strong> to resume at the exact step (durable, survives app kill). If it completed/auto-completed while away → the ticket is resolved; the CSP just sees it resolved on return.</td></tr>
+    <tr><td>9. Locking</td><td>Both devices are locked out of any other swap; the ticket can't be resolved any other way while a swap is in progress. The lock covers CSP actions + concurrent swaps only — system-driven transitions are not blocked.</td></tr>
   </table>
   <hr class="sect-end">
 </section>
 
 <section class="spec" id="a5">
   <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
-  <div class="expected">One atomic change per row. Engineering builds against this; B5 verifies every row. Technical identifiers inline per author directive. SRS fundamentals (ticket-creation gating, complaint lifecycle automatics) are a separate amendment, out of scope here.</div>
+  <div class="expected">One atomic change per row. Engineering builds against this; B5 verifies every row. Technical identifiers inline per author directive. SRS fundamentals are a separate amendment, out of scope.</div>
   <table class="delta">
     <tr><th style="width:5%">#</th><th style="width:18%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:20%">Why</th></tr>
-    <tr><td><strong>D1</strong></td><td>Swap guard G6 + FM-SR-SWAP-01</td><td>SRS queries CL OS; connection must be ACTIVE before the swap.</td><td>G6 removed; FM-SR-SWAP-01 obsolete. Custody binding guards G4/G5 protect.</td><td>A swap on an unbound connection fails at custody anyway.</td></tr>
-    <tr><td><strong>D2</strong></td><td>Initiation contract + separate <strong>Netbox Swap</strong> CTA</td><td>No diagnosis path; no distinct swap entry point.</td><td>A <strong>Netbox Swap</strong> CTA, distinct from <strong>Resolve Ticket</strong>, opens the journey. The request carries <code>old_device_id</code>, <code>new_device_id</code>, <code>diagnosis_fault_type</code>, <code>diagnosis_outcome</code>, <code>resolution_type = DEVICE_REPLACED</code>; SRS persists the diagnosis before guards. Latest diagnosis governs.</td><td>Clean, separate entry; audit "why" recorded up front.</td></tr>
-    <tr><td><strong>D3</strong></td><td>Two-phase entry: gate-check → physical confirmation</td><td>One submission would execute the swap.</td><td>Phase 1 — <strong>gate checks only</strong> (G7–G11 + device eligibility G1–G5 + one-swap-per-device), returning pass/fail. <strong>Nothing executes and no record is created.</strong> Phase 2 — the CSP physically swaps the hardware and taps <strong>"physical swap done"</strong>, which begins the swap. Provisioning is gated on the human confirmation that the hardware is actually swapped.</td><td>You can't validate (ping the new device) until it's physically connected.</td></tr>
-    <tr><td><strong>D4</strong></td><td>Swap record + 20-min timer created at physical-confirm</td><td>(v0.8) the record was created when gates passed / on hand-off.</td><td>ACS creates the <strong>swap record</strong> (<code>old_device_id</code>, <code>new_device_id</code>, <code>csp_id</code>, <code>srs_id</code>/<code>complaint_id</code>, <code>started_at</code>) and starts the <strong>20-minute exhaust timer</strong> only when the CSP confirms the physical swap. Both devices are atomically reserved at this moment.</td><td>The timer should measure real swap time (from physical swap), not idle gate-check time.</td></tr>
-    <tr><td><strong>D5</strong></td><td>ACS owns execution: provisional → validate → commit</td><td>(v0.8 retained) custody committed immediately on guard pass historically.</td><td>ACS calls the <strong>Remote API</strong> for a <strong>provisional</strong> swap (network shifted, custody untouched), then the VL, and only on confirmation commits the <strong>final</strong> custody transition and tells SRS to resolve. Provisional failure → <code>ABORTED</code>, restart from physical-confirm.</td><td>Verify and roll back before touching the device ledger.</td></tr>
-    <tr><td><strong>D6</strong></td><td>Validation timing — first auto, then UI-driven retries</td><td>(v0.7/v0.8) VL ran internal 5-min-spaced retries, ~10 min, all automatic.</td><td>The <strong>first VL check is automatic at T0 + 10 min</strong>. If not confirmed, after a <strong>2-minute</strong> cooldown a <strong>Retry</strong> CTA lets the CSP trigger the next VL check; repeat until the 20-min cap. Confirm condition unchanged (new up in last 10 min AND old down). Exact model in B3.</td><td>Give the new device 10 min to come up; then put control in the CSP's hands rather than burning automatic retries on a device that needs a fix.</td></tr>
-    <tr><td><strong>D7</strong></td><td>Swap terminal model + exhaust cap</td><td>(v0.8) terminal states were COMMITTED / REVERSED / REVERSAL_FAILED / ABORTED.</td><td>A swap request is <code>COMPLETED</code> (confirmed + committed → ticket resolved), <code>EXPIRED</code> (20-min cap with no confirmation), or <code>CANCELLED</code> (CSP cancels); plus <code>ABORTED</code> (provisional failed). <strong>EXPIRED and CANCELLED reverse the provisional swap</strong> and return the CSP to the SRS page; the ticket stays open for a fresh swap. <em>[Reverse-on-expire/cancel pending author confirm.]</em></td><td>A swap request must always reach a bounded, defined terminal state.</td></tr>
-    <tr><td><strong>D8</strong></td><td>One swap per device at a time (NEW gate)</td><td>No concurrency guard between swaps.</td><td>A new gate check rejects a swap if <strong>either device is part of an in-progress swap</strong> (a swap record in REQUESTED/PROVISIONAL). COMPLETED/EXPIRED/CANCELLED/ABORTED don't block. Record creation reserves both devices atomically so two confirmations can't claim the same device.</td><td>Prevents two swaps fighting over one device.</td></tr>
-    <tr><td><strong>D9</strong></td><td>Ticket lock — CSP-action scope only</td><td>(v0.8) the ticket was locked generically.</td><td>While a swap is in progress, the ticket's <strong>Resolve CTA and other CSP-initiated mutating actions are blocked</strong> — the CSP cannot resolve it any other way. The lock does <strong>not</strong> block <strong>system-driven</strong> transitions (escalation timer, platform takeover, CL deactivation), which proceed normally. A COMPLETED swap resolves the ticket; other terminals leave it open and unlocked.</td><td>Stop the CSP resolving out from under the swap, without freezing the system's own lifecycle machinery.</td></tr>
-    <tr><td><strong>D10</strong></td><td>ACS swap-log table + swap state machine</td><td>(v0.8 retained, extended)</td><td>The <strong>swap table</strong> logs every attempt with its lifecycle and the new terminal states. ACS runs a <strong>swap state machine</strong>: <code>REQUESTED → PROVISIONAL → COMMITTED</code>, with <code>PROVISIONAL → CANCELLED / EXPIRED / REVERSAL_FAILED</code> and <code>REQUESTED → ABORTED</code>. See B2.</td><td>Durable, recoverable lifecycle + full reconciliation.</td></tr>
-    <tr><td><strong>D11</strong></td><td>Server-authoritative state; FE reconciles on return</td><td>—</td><td>Swap state lives on the backend; the timer is server-authoritative. The FE renders whatever state the swap is in when the CSP returns (completed → ticket resolved; expired → fresh start; in-progress → live timer). Navigating away never affects the swap.</td><td>Back-button / app-close safety; no reliance on the app staying open.</td></tr>
-    <tr><td><strong>D12</strong></td><td><code>swap_reason = UPGRADE</code></td><td>In the enum, unreachable.</td><td>Declared placeholder, out of v1. All v1 swaps carry <code>swap_reason = FAULTY_DEVICE</code>; UPGRADE rejected.</td><td>Future-proofing without scope creep.</td></tr>
+    <tr><td><strong>D1</strong></td><td>Swap guard G6 + FM-SR-SWAP-01</td><td>SRS queries CL OS; connection must be ACTIVE.</td><td>G6 removed; FM-SR-SWAP-01 obsolete. Custody binding guards G4/G5 protect.</td><td>A swap on an unbound connection fails at custody anyway.</td></tr>
+    <tr><td><strong>D2</strong></td><td>Netbox-Swap CTA + diagnosis with initiation</td><td>No diagnosis path; no distinct swap entry.</td><td>A <strong>Netbox Swap</strong> CTA, distinct from Resolve; request carries diagnosis + resolution type + new device; SRS persists diagnosis before guards.</td><td>Clean entry; audit recorded up front.</td></tr>
+    <tr><td><strong>D3</strong></td><td>Two-phase entry: gate-check → <strong>physical-handoff confirm</strong></td><td>One submission would execute.</td><td>Phase 1 — gate checks only (pass/fail, no record). Phase 2 — a <strong>physical-handoff screen</strong> with three items (physical swap · open <strong>config/ISP-portal link</strong> · confirm); provisioning starts only on the CSP's confirm.</td><td>The new device must be physically swapped <em>and</em> ISP-configured before it can come online to be validated.</td></tr>
+    <tr><td><strong>D4</strong></td><td>Config / ISP-portal link (NEW)</td><td>—</td><td>The physical-handoff screen shows a <strong>task-scoped config link</strong> the CSP opens to configure the new device on the ISP network. Backend supplies the URL per task (e.g., from <code>GET /tasks/{taskId}</code>).</td><td>Step B of the handoff — the device can't serve internet until configured.</td></tr>
+    <tr><td><strong>D5</strong></td><td>Swap record + 20-min timer at physical-confirm</td><td>(earlier) created at gate-pass.</td><td>ACS creates the record (<code>old/new/csp/srs/started_at</code>) + reserves both devices + starts the 20-min timer at the confirm.</td><td>Timer measures real swap time, not idle gate time.</td></tr>
+    <tr><td><strong>D6</strong></td><td>ACS owns: Remote swap → VL → commit; <strong>commit only after VL-pass or override</strong></td><td>(v0.8) ACS provisional → VL → commit.</td><td>ACS calls the Remote API for the connectivity swap, then VL, and commits custody <strong>only after</strong> a VL check passes <em>or</em> an override (self / auto). Remote-call failure → <code>ABORTED</code> (retry from confirm).</td><td>Custody reflects a real, attested swap.</td></tr>
+    <tr><td><strong>D7</strong></td><td>Validation timing — first auto, immediate retries, self-confirm after 3</td><td>(v0.7) internal 5-min retries; (v0.9) 2-min cooldown.</td><td><strong>First VL check automatic at 10 min</strong> (<code>P_VL_FIRST_CHECK_DELAY</code>). On fail, <strong>Retry is immediate</strong> (no wait). After <strong>3 failed retries</strong> (<code>P_SWAP_MAX_RETRIES</code>), a <strong>self-confirm</strong> CTA appears.</td><td>Give the device 10 min to come up; then let the CSP retry freely; offer attestation once retries are clearly not helping.</td></tr>
+    <tr><td><strong>D8</strong></td><td>Forward-only completion — no reversal</td><td>(v0.10) EXPIRED/CANCELLED reverse the provisional; REVERSAL_FAILED.</td><td><strong>Reversal, cancel, and expire-with-reverse are removed.</strong> A swap always completes: <code>VL_VALIDATED</code> (a check passed), <code>CSP_OVERRIDE</code> (self-confirm after 3 retries), or <code>AUTO_OVERRIDE</code> (20-min cap auto-confirm). <code>commit_reason</code> records which; override stores who/when + attestation.</td><td>The physical swap already happened; the system records it forward. No software un-swap in v1.</td></tr>
+    <tr><td><strong>D9</strong></td><td>Auto-confirm at the 20-min cap</td><td>(v0.9) 20-min cap → EXPIRED + reverse.</td><td>At <code>P_SWAP_EXHAUST_CAP</code> (20 min) the <strong>backend auto-confirms + closes</strong> the ticket (<code>AUTO_OVERRIDE</code>) — server-side, no CSP action needed.</td><td>An in-progress swap must never drift the device state between Remote and ACS indefinitely (your Q2 call).</td></tr>
+    <tr><td><strong>D10</strong></td><td>One swap per device <strong>and</strong> per ticket (explicit)</td><td>(v0.9) one swap per device.</td><td>A swap is rejected if either device is in an in-progress swap, <strong>or</strong> if the ticket already has one. A fresh swap may run on the same device/ticket once none is in progress. (Our flow never lets a ticket start a second concurrent swap, but the rule is stated explicitly.)</td><td>Matches the design's per-ticket session; no concurrent swaps on a device or a ticket.</td></tr>
+    <tr><td><strong>D11</strong></td><td>Resolve blocked / "continue swap"; CSP-scope lock</td><td>(v0.10)</td><td>While a swap is in progress, the ticket's Resolve is replaced by <strong>"continue swap"</strong>; no other CSP action resolves it. The lock does <strong>not</strong> block system-driven transitions (escalation/takeover/CL-deactivation).</td><td>Honest action: a ticket whose swap isn't done can't be resolved another way.</td></tr>
+    <tr><td><strong>D12</strong></td><td>Server-authoritative, durable resume (NEW contract)</td><td>(v0.9) server-authoritative.</td><td>State lives on the backend; the app caches per ticket and resumes on return / after process kill. Backend exposes: <code>GET /netbox/swap?status=in_progress</code>, <code>PUT /netbox/swap/{taskId}</code>, <code>DELETE /netbox/swap/{taskId}</code>, and a self-attested-completion <code>POST</code> (= the override).</td><td>The app needs to hydrate/resume an in-progress swap; the API is authoritative.</td></tr>
+    <tr><td><strong>D13</strong></td><td>Swap table + state machine (updated)</td><td>(v0.8)</td><td>States: <code>REQUESTED → PROVISIONAL → COMMITTED</code> (with <code>commit_reason</code>), plus <code>REQUESTED → ABORTED</code> and <code>PROVISIONAL → COMMIT_FAILED / ABORTED</code>. <strong>EXPIRED, CANCELLED, REVERSAL_FAILED removed.</strong> Record adds <code>retry_count</code>, <code>commit_reason</code>, override fields.</td><td>Reflects the forward-only model + retry/override capture.</td></tr>
+    <tr><td><strong>D14</strong></td><td><code>swap_reason = UPGRADE</code></td><td>In the enum, unreachable.</td><td>Declared placeholder, out of v1. All v1 swaps carry <code>FAULTY_DEVICE</code>; UPGRADE rejected.</td><td>Future-proofing.</td></tr>
   </table>
-  <div class="pending">⚠ Pending: the Remote API forward(provisional)+reverse contract (D5/D7 — TBD Rahul Nijhawan), incl. reverse-on-expire/cancel + reverse-failure; the VL core (another PM — swap rules only here, D6); and author confirm on reverse-on-expire/cancel.</div>
+  <div class="pending">⚠ Pending: the Remote API <strong>forward-only</strong> connectivity-swap contract (D6 — TBD Rahul Nijhawan; the reverse call is now dropped); the task-scoped config-link URL (D4); the resume + self-attest endpoints (D12); the VL core (another PM — swap rules only here, D7).</div>
   <hr class="sect-end">
 </section>
 
@@ -285,14 +288,14 @@
   <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
   <table>
     <tr><th style="width:6%">#</th><th style="width:48%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
-    <tr><td><strong>G-A</strong></td><td>Non-swap resolutions on a RESTORE task behave exactly as before. Diagnosis is not mandatory for them; the Resolve CTA works normally on tickets with no in-progress swap.</td><td>D2/D9 add a swap entry + a lock; they must not gate or block ordinary resolutions.</td></tr>
-    <tr><td><strong>G-B</strong></td><td>The atomic custody transition itself (old → RETRIEVAL_PENDING, new → DEPLOYED), guards G1–G5, the <code>DEVICE_SWAP_COMPLETED</code> payload, and event idempotency are unchanged. The commit is byte-identical; only its trigger (VL-confirmed, post-provisional) moves.</td><td>Wrapping the commit in orchestration could tempt a behaviour change — forbidden.</td></tr>
+    <tr><td><strong>G-A</strong></td><td>Non-swap resolutions on a RESTORE task behave exactly as before; Resolve works normally on a ticket with no in-progress swap.</td><td>D2/D11 add a swap entry + a lock; they must not gate ordinary resolutions.</td></tr>
+    <tr><td><strong>G-B</strong></td><td>The atomic custody transition (old → RETRIEVAL_PENDING, new → DEPLOYED), guards G1–G5, the <code>DEVICE_SWAP_COMPLETED</code> payload, and idempotency are unchanged — only the commit's trigger moves (after VL-pass/override).</td><td>Wrapping the commit in orchestration must not change the commit itself.</td></tr>
     <tr><td><strong>G-C</strong></td><td>A swap never changes connection state and emits no signal to CL OS, Compensation OS, or Quality OS by itself.</td><td>D1 removes the only CL interaction; nothing must replace it.</td></tr>
-    <tr><td><strong>G-D</strong></td><td><code>COMPLAINT_RESOLUTION_SIGNAL</code> keeps its schema and semantics. A swap-resolved ticket emits the same signal as any other closure.</td><td>D7 makes a committed swap resolve the ticket; the signal must stay byte-identical.</td></tr>
-    <tr><td><strong>G-E</strong></td><td>Reclassification-to-platform (router fault, evidence-gated, time-bounded) unchanged.</td><td>Sibling device-fault path; the swap diagnosis must not substitute for its evidence.</td></tr>
-    <tr><td><strong>G-F</strong></td><td>Normal installation binding (<code>CUSTODIED → DEPLOYED</code>) unchanged. The provisional swap, VL gate, reversal, swap table, state machine, device-reservation, and lock apply only to swaps.</td><td>Shares the custody machine; the new machinery must not leak into installs.</td></tr>
-    <tr><td><strong>G-G</strong></td><td>Verification is the <strong>common verification layer's</strong> responsibility. This change feeds it swap-specific inputs but does not fork it.</td><td>D6 routes swaps through the common layer; a parallel verifier would split the truth.</td></tr>
-    <tr><td><strong>G-H</strong></td><td>A timed-out swap never auto-resolves the ticket. (Its meaning sharpens — the 20-min cap now drives EXPIRED + reverse — but a timeout must never close a ticket.)</td><td>D6/D7 change the timeout's effect; the "no auto-resolve on timeout" guarantee must survive.</td></tr>
+    <tr><td><strong>G-D</strong></td><td><code>COMPLAINT_RESOLUTION_SIGNAL</code> keeps its schema/semantics; a swap-resolved ticket emits the same signal as any closure.</td><td>D8/D9 resolve the ticket on a committed swap; the signal must stay byte-identical.</td></tr>
+    <tr><td><strong>G-E</strong></td><td>Reclassification-to-platform (evidence-gated, time-bounded) unchanged.</td><td>Sibling device-fault path; the swap diagnosis must not substitute for its evidence.</td></tr>
+    <tr><td><strong>G-F</strong></td><td>Normal installation binding unchanged. The physical-handoff, provisional swap, VL, swap table, state machine, reservation, and lock apply only to swaps.</td><td>Shares the custody machine; the new machinery must not leak into installs.</td></tr>
+    <tr><td><strong>G-G</strong></td><td>Verification is the common verification layer's job; this change feeds it swap-specific inputs but does not fork it.</td><td>A parallel verifier would split the verification truth.</td></tr>
+    <tr><td><strong>G-H</strong></td><td>A swap never <em>silently</em> closes a ticket: closure is always recorded with a <code>commit_reason</code> (validated / self-override / auto-override).</td><td>Auto-confirm (D9) closes tickets without a CSP tap — that path must stay auditable.</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -302,43 +305,41 @@
   <h3>A7.1 Rules &amp; invariants (must always hold)</h3>
   <table>
     <tr><th style="width:6%">#</th><th style="width:30%">Rule / invariant</th><th>Statement</th></tr>
-    <tr><td><strong>I1</strong></td><td>INV — complaint anchoring</td><td>Every swap carries a <code>complaint_id</code> in ASSIGNED or ESCALATED at initiation. A swap without an open ticket is impossible.</td></tr>
-    <tr><td><strong>I2</strong></td><td>INV — custody atomicity</td><td>On commit, both devices transition or neither. No partial custody outcome is ever observable.</td></tr>
-    <tr><td><strong>I3</strong></td><td>INV — single binding</td><td>At most one device bound to a connection at any moment; after a committed swap, exactly the new device is bound.</td></tr>
-    <tr><td><strong>I4</strong></td><td>INV — diagnosis gate</td><td>No swap proceeds without a persisted device fault type {DEVICE_HARDWARE, DEVICE_SOFTWARE, DEVICE_CONNECTIVITY}. Latest diagnosis governs.</td></tr>
-    <tr><td><strong>I5</strong></td><td>INV — physical-confirm before provisioning</td><td>No swap record is created and no provisioning starts until the CSP confirms the physical swap.</td></tr>
-    <tr><td><strong>I6</strong></td><td>INV — verify-before-commit</td><td>ACS commits custody only after a VL check returns CONFIRMED. No confirmation → no custody change; the provisional swap is reversed on a terminal non-confirmation.</td></tr>
-    <tr><td><strong>I7</strong></td><td>INV — resolution-type consistency</td><td>Every swap carries and every committed swap records <code>resolution_type = DEVICE_REPLACED</code>.</td></tr>
-    <tr><td><strong>I8</strong></td><td>INV — no false closure</td><td>Only a <code>COMPLETED</code> swap resolves the ticket. EXPIRED, CANCELLED, and ABORTED never resolve it.</td></tr>
-    <tr><td><strong>I9</strong></td><td>INV — ticket lock (CSP scope)</td><td>While a swap is in progress (REQUESTED/PROVISIONAL), the ticket's Resolve CTA and other CSP-initiated mutating actions are blocked. System-driven transitions are not blocked. The lock releases only on a terminal swap state.</td></tr>
-    <tr><td><strong>I10</strong></td><td>INV — swap-log completeness</td><td>Every swap attempt has a swap-table record carrying its lifecycle to a terminal state (COMPLETED/EXPIRED/CANCELLED/ABORTED/REVERSAL_FAILED). No Remote or custody action without a log entry.</td></tr>
-    <tr><td><strong>I11</strong></td><td>INV — one swap per device</td><td>A device is part of at most one in-progress swap. Both devices are atomically reserved at record creation; a device in an in-progress swap fails the gate for any other swap.</td></tr>
-    <tr><td><strong>I12</strong></td><td>INV — bounded lifetime</td><td>Every swap request reaches a terminal state within the 20-minute exhaust cap. No swap stays in progress indefinitely.</td></tr>
-    <tr><td><strong>R1</strong></td><td>RULE — unlimited repeat swaps</td><td>After any terminal state, the CSP may start a fresh swap on the same ticket; each is a new record. No cap on attempts in v1.</td></tr>
-    <tr><td><strong>R2</strong></td><td>RULE — swap-as-closure</td><td>A COMPLETED swap resolves the ticket; there is no separate resolution submission for a swap-resolved ticket.</td></tr>
-    <tr><td><strong>R3</strong></td><td>RULE — duplicate-submission safety</td><td>Duplicate physical-confirm taps create one record (idempotent). A duplicate custody commit produces no second transition.</td></tr>
-    <tr><td><strong>R4</strong></td><td>RULE — no un-swap of a committed swap</td><td>Once committed and the ticket resolved, custody is never reversed. Any later need is a fresh forward swap on a reopened ticket.</td></tr>
+    <tr><td><strong>I1</strong></td><td>INV — complaint anchoring</td><td>Every swap carries a <code>complaint_id</code> in ASSIGNED or ESCALATED at initiation.</td></tr>
+    <tr><td><strong>I2</strong></td><td>INV — custody atomicity</td><td>On commit, both devices transition or neither; no partial outcome is observable.</td></tr>
+    <tr><td><strong>I3</strong></td><td>INV — single binding</td><td>At most one device bound to a connection; after a committed swap, exactly the new device.</td></tr>
+    <tr><td><strong>I4</strong></td><td>INV — diagnosis gate</td><td>No swap proceeds without a persisted device fault type. Latest diagnosis governs.</td></tr>
+    <tr><td><strong>I5</strong></td><td>INV — physical-confirm before provisioning</td><td>No record and no provisioning until the CSP confirms the physical handoff (swap + config done).</td></tr>
+    <tr><td><strong>I6</strong></td><td>INV — commit only after validate-or-override</td><td>ACS commits custody only after a VL check passes, a CSP self-confirm, or the auto-confirm at the cap. No commit without one of these.</td></tr>
+    <tr><td><strong>I7</strong></td><td>INV — forward-only</td><td>There is no reversal, cancel, or expire-with-undo. A swap, once the physical handoff is confirmed, always reaches <code>COMMITTED</code> (or an ops terminal). The Remote connectivity swap is never rolled back by the system.</td></tr>
+    <tr><td><strong>I8</strong></td><td>INV — completion is recorded</td><td>Every <code>COMMITTED</code> swap records <code>commit_reason ∈ {VL_VALIDATED, CSP_OVERRIDE, AUTO_OVERRIDE}</code>; an override also records actor + time + attestation.</td></tr>
+    <tr><td><strong>I9</strong></td><td>INV — ticket lock (CSP scope)</td><td>While a swap is in progress, the ticket's Resolve and other CSP-initiated actions are blocked; system-driven transitions are not blocked. The lock releases on a terminal swap state.</td></tr>
+    <tr><td><strong>I10</strong></td><td>INV — swap-log completeness</td><td>Every attempt has a swap-table record to a terminal state (COMMITTED / ABORTED / COMMIT_FAILED). No Remote or custody action without a record.</td></tr>
+    <tr><td><strong>I11</strong></td><td>INV — one swap per device and per ticket</td><td>A device is in at most one in-progress swap; a ticket has at most one in-progress swap. Devices reserved atomically at record creation. After a terminal state, a fresh swap on the same device/ticket is allowed.</td></tr>
+    <tr><td><strong>I12</strong></td><td>INV — bounded lifetime</td><td>Every swap completes within <code>P_SWAP_EXHAUST_CAP</code> (auto-confirm backstop). No swap stays in progress indefinitely.</td></tr>
+    <tr><td><strong>R1</strong></td><td>RULE — self-confirm gate</td><td>The self-confirm CTA is offered only after <code>P_SWAP_MAX_RETRIES</code> (3) failed retries.</td></tr>
+    <tr><td><strong>R2</strong></td><td>RULE — swap-as-closure</td><td>A committed swap resolves the ticket; no separate resolution submission for a swap-resolved ticket.</td></tr>
+    <tr><td><strong>R3</strong></td><td>RULE — duplicate-submission safety</td><td>Duplicate physical-confirm taps create one record; a duplicate custody commit produces no second transition.</td></tr>
+    <tr><td><strong>R4</strong></td><td>RULE — no un-swap of a committed swap</td><td>Once committed and the ticket resolved, custody is never reversed; any later need is a fresh forward swap on a reopened ticket.</td></tr>
   </table>
   <h3>A7.2 Edge cases</h3>
   <table>
     <tr><th style="width:6%">#</th><th style="width:38%">Edge / condition</th><th>Intended business outcome</th></tr>
-    <tr><td><strong>E1</strong></td><td>Old device unbound / new == old / wrong CSP / new not CUSTODIED-IDLE</td><td>Gate check fails (G1–G5); CSP shown the specific reason; no record, no execution.</td></tr>
-    <tr><td><strong>E2</strong></td><td>Either device already in an in-progress swap</td><td>Gate check fails on the one-swap-per-device rule (I11); CSP told the device is busy.</td></tr>
-    <tr><td><strong>E3</strong></td><td>Gate check passes but the CSP abandons before confirming the physical swap</td><td>Nothing happens — no swap record, no timer, no device reservation, no ticket lock. The gate result simply lapses; the CSP can re-enter the journey later from the start.</td></tr>
-    <tr><td><strong>E4</strong></td><td>Provisional (Remote) swap fails</td><td><code>ABORTED</code>; CSP shown an error and asked to retry from physical-confirm (fresh record + timer).</td></tr>
-    <tr><td><strong>E5</strong></td><td>New device never pings (offline / not booted)</td><td>Checks never confirm → retries exhaust → <code>EXPIRED</code> at 20 min → reverse → swap-back message.</td></tr>
-    <tr><td><strong>E6</strong></td><td>Old device still pinging (CSP didn't actually disconnect it, though they confirmed physical swap)</td><td>old_down never true → never confirms → EXPIRED. The physical-confirm is self-attested; VL is the real check.</td></tr>
-    <tr><td><strong>E7</strong></td><td>CSP cancels before the cap</td><td><code>CANCELLED</code> → reverse provisional → returned to SRS with the swap-back message.</td></tr>
-    <tr><td><strong>E8</strong></td><td>The 20-min cap hits during an in-flight VL check or just after a retry</td><td><strong>Decided:</strong> a CONFIRM that lands before the custody commit starts still completes; otherwise EXPIRED wins and a result landing after expiry is ignored.</td></tr>
-    <tr><td><strong>E9</strong></td><td>CSP navigates away / closes the app during the wait</td><td>Backend continues; on return the FE shows the current state (completed → resolved; expired → fresh start; in-progress → live timer).</td></tr>
-    <tr><td><strong>E10</strong></td><td>VL returns CONFIRMED but the final custody commit fails</td><td><strong>Decided:</strong> the swap is not COMPLETED and is <strong>escalated to ops</strong>; the provisional remains in place until ops resolves it. The ticket is not auto-resolved.</td></tr>
-    <tr><td><strong>E11</strong></td><td>The reverse (on expire/cancel) call itself fails</td><td><code>REVERSAL_FAILED</code> + ops escalation — never silently half-shifted.</td></tr>
-    <tr><td><strong>E12</strong></td><td>Cancel arrives at the same instant a check confirms</td><td><strong>Decided:</strong> if the custody commit has started, the swap completes; otherwise cancel wins.</td></tr>
-    <tr><td><strong>E13</strong></td><td>The system terminal-transitions the ticket (escalation timer, platform takeover) while a swap is in progress</td><td><strong>Decided:</strong> the lock does <strong>not</strong> block these — they proceed; the swap continues independently and, if it commits, resolves whatever the current ticket state allows. (The lock's scope is CSP actions + one-swap-per-device only.)</td></tr>
-    <tr><td><strong>E14</strong></td><td>The customer's connection is deactivated (<code>CL_CONNECTION_DEACTIVATED</code>) while a swap is in progress</td><td>The swap is <strong>aborted</strong> (the connection is going away): any provisional shift is reversed and the swap-table state is set to ABORTED (reason CONNECTION_DEACTIVATED); the ticket is not resolved.</td></tr>
-    <tr><td><strong>E15</strong></td><td>Non-device diagnosis on initiation</td><td>Diagnosis persisted; swap rejected on G9; non-swap resolutions remain available.</td></tr>
-    <tr><td><strong>E16</strong></td><td>Same issue reported again after a committed+resolved swap</td><td>Within reopen window → same lineage, runs on the new device; outside → new ticket, also new device.</td></tr>
-    <tr><td><strong>E17</strong></td><td><code>swap_reason = UPGRADE</code> / non-DEVICE_REPLACED resolution type</td><td>Rejected as out of scope / invalid for v1.</td></tr>
+    <tr><td><strong>E1</strong></td><td>Old unbound / new==old / wrong CSP / new not CUSTODIED-IDLE</td><td>Gate fails (G1–G5); reason shown; no record.</td></tr>
+    <tr><td><strong>E2</strong></td><td>Either device, or the ticket, already in an in-progress swap</td><td>Gate fails on one-swap-per-device/ticket (I11).</td></tr>
+    <tr><td><strong>E3</strong></td><td>Gate passes but the CSP abandons before confirming the physical handoff</td><td>No record, no timer, no reservation, no lock; the gate result lapses; re-enter later.</td></tr>
+    <tr><td><strong>E4</strong></td><td>The Remote connectivity-swap call fails</td><td><code>ABORTED</code>; error shown; retry from the physical-confirm step (fresh record + timer).</td></tr>
+    <tr><td><strong>E5</strong></td><td>New device never comes up (not booted / not configured)</td><td>Checks keep failing → CSP retries → self-confirm after 3, or auto-confirm at 20 min. The swap completes; the customer is on the new device per the physical swap. (See F4 — faulty new device.)</td></tr>
+    <tr><td><strong>E6</strong></td><td>Old device still pinging (not actually disconnected)</td><td>old_down never true → no VL pass → self-confirm / auto-confirm completes it.</td></tr>
+    <tr><td><strong>E7</strong></td><td>CSP self-confirms before 3 retries</td><td>Not offered — the self-confirm CTA is gated on 3 failed retries (R1).</td></tr>
+    <tr><td><strong>E8</strong></td><td>A VL check confirms after the CSP has self-confirmed / after auto-confirm</td><td>The swap is already COMMITTED; the later confirm is a no-op (idempotent).</td></tr>
+    <tr><td><strong>E9</strong></td><td>Custody commit fails after a go (VL/override)</td><td><code>COMMIT_FAILED</code> + ops escalation; ticket not resolved; the connectivity swap remains until ops resolves it.</td></tr>
+    <tr><td><strong>E10</strong></td><td>Connection deactivated (<code>CL_CONNECTION_DEACTIVATED</code>) mid-swap</td><td>Swap <code>ABORTED</code> (connection is going away); ticket not resolved. No reversal (the connection is gone).</td></tr>
+    <tr><td><strong>E11</strong></td><td>CSP navigates away / app killed during the swap</td><td>Backend continues; the ticket shows "continue swap" (durable, per ticket); on return the FE shows the live state, or a resolved ticket if it completed/auto-completed.</td></tr>
+    <tr><td><strong>E12</strong></td><td>System terminal-transitions the ticket (escalation/takeover) while a swap runs</td><td>Not blocked — proceeds; the swap continues independently (lock is CSP-scope + one-swap-per-device only).</td></tr>
+    <tr><td><strong>E13</strong></td><td>Non-device diagnosis on initiation</td><td>Diagnosis persisted; swap rejected on G9; non-swap resolutions remain available.</td></tr>
+    <tr><td><strong>E14</strong></td><td>Same issue reported again after a committed swap</td><td>Reopen within window → same lineage, new device; outside → new ticket, new device.</td></tr>
+    <tr><td><strong>E15</strong></td><td><code>swap_reason = UPGRADE</code> / non-DEVICE_REPLACED resolution type</td><td>Rejected as out of scope for v1.</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -347,14 +348,14 @@
   <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
   <table>
     <tr><th>OS / system</th><th>Impacted?</th><th>Amendment (one line)</th><th>Amendment type</th><th>Owner (consulted)</th><th>Sign-off</th></tr>
-    <tr><td>Asset Custody OS v1.11.1</td><td>Yes</td><td>ACS owns the swap: provisional (Remote API) → VL → commit (D5); swap record + 20-min timer at physical-confirm (D4); one-swap-per-device reservation (D8); terminal model COMPLETED/EXPIRED/CANCELLED/ABORTED + reverse-on-expire/cancel (D7); swap table + state machine (D10). Draft: <code>Netbox_Swap_OS_Amendments.md</code> §2.</td><td>Behaviour change</td><td>Dhruv</td><td>Pending</td></tr>
-    <tr><td>Support &amp; Resolution OS v1.6.1</td><td>Yes</td><td>Remove G6 (D1); separate Netbox-Swap CTA + diagnosis-with-initiation (D2); two-phase gate→physical-confirm (D3); Resolve-CTA block + ticket lock while a swap is in progress (D9); resolve-on-committed-swap (D7). Draft: <code>Netbox_Swap_OS_Amendments.md</code> §1.</td><td>Behaviour change</td><td>Varun</td><td>Pending</td></tr>
-    <tr><td>ESR v2.27/v2.28</td><td>Yes</td><td>G6 removed from preconditions; register <code>DEVICE_SWAP_REJECTED</code> + the provisional/VL/resolve signals once defined.</td><td>Cross-OS contract</td><td>Dhruv</td><td>Pending</td></tr>
-    <tr><td>Remote API + Inventory service (old app)</td><td>Yes</td><td>Provisional-swap contract with ACS: forward (provisional shift) + reverse (restore), with abort, partial-failure, and reverse-failure semantics. [TBD Rahul Nijhawan.]</td><td>Cross-system contract</td><td>Rahul Nijhawan</td><td>Pending</td></tr>
-    <tr><td>Validation Layer (common verification layer)</td><td>Yes</td><td>Swap rules: new up (≥1 ping in 10 min) AND old down; first check auto at +10 min, then UI-driven retries 2-min apart until the 20-min cap; called per-check by ACS. Core VL owned by another PM.</td><td>Cross-system contract</td><td>TBD (VL-owning PM)</td><td>Pending</td></tr>
-    <tr><td>Connection Lifecycle OS · Quality OS · Compensation/Payment OS</td><td>No</td><td>— (no owned behaviour changes; see G-C/G-D.)</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Asset Custody OS v1.11.1</td><td>Yes</td><td>ACS owns the swap: Remote connectivity swap (D6), commit only after VL-pass/override (I6), forward-only — no reversal (D8/I7), auto-confirm at the cap (D9), one-swap-per-device/ticket reservation (D10), swap table + state machine with <code>commit_reason</code> (D13). Draft: <code>Netbox_Swap_OS_Amendments.md</code> §2.</td><td>Behaviour change</td><td>Dhruv</td><td>Pending</td></tr>
+    <tr><td>Support &amp; Resolution OS v1.6.1</td><td>Yes</td><td>Remove G6 (D1); Netbox-Swap CTA + diagnosis (D2); two-phase gate→physical-handoff with config link (D3/D4); Resolve→"continue swap" lock, CSP-scope (D11); resolve-on-committed-swap (D8). Draft: §1.</td><td>Behaviour change</td><td>Varun</td><td>Pending</td></tr>
+    <tr><td>ESR v2.27/v2.28</td><td>Yes</td><td>G6 removed; register the swap signals once defined.</td><td>Cross-OS contract</td><td>Dhruv</td><td>Pending</td></tr>
+    <tr><td>Remote API + Inventory (old app)</td><td>Yes</td><td><strong>Forward-only</strong> connectivity-swap contract with ACS (the reverse call is dropped). [TBD Rahul Nijhawan.]</td><td>Cross-system contract</td><td>Rahul Nijhawan</td><td>Pending</td></tr>
+    <tr><td>Validation Layer (common verification layer)</td><td>Yes</td><td>Swap rules: new up (≥1 ping/10 min) AND old down; first check auto at 10 min, then immediate CSP retries, self-confirm after 3; called per-check by ACS. Core VL owned by another PM.</td><td>Cross-system contract</td><td>TBD (VL-owning PM)</td><td>Pending</td></tr>
+    <tr><td>CSP App (FE) contract</td><td>Yes</td><td>Resume/self-attest endpoints (D12): <code>GET /netbox/swap?status=in_progress</code>, <code>PUT/DELETE /netbox/swap/{taskId}</code>, self-attest <code>POST</code>; task-scoped config URL (D4); reason/replacement label keys; escalation params (<code>P_SWAP_MAX_RETRIES</code>, <code>P_SWAP_EXHAUST_CAP</code>). Per design PR #381 backend audit.</td><td>Cross-system contract</td><td>FE/Design (PR #381)</td><td>Pending</td></tr>
+    <tr><td>CL OS · Quality OS · Compensation/Payment OS</td><td>No</td><td>— (no owned behaviour changes; see G-C/G-D.)</td><td>None</td><td>—</td><td>—</td></tr>
   </table>
-  <div class="hint"><strong>Out of this spec:</strong> the SRS-fundamentals amendment (ticket-creation gating; complaint lifecycle automatics) — separate change.</div>
   <hr class="sect-end">
 </section>
 
@@ -367,7 +368,7 @@
 
 <section class="spec" id="b1">
   <h2><span class="num">B1.</span> Changed Workflow — Before &amp; After <span class="tier cond">Conditional</span></h2>
-  <div class="expected">The full journey: SRS gate-check → physical-confirm → ACS (provisional → VL loop → commit) → SRS resolve, with the cancel / expire / abort branches.</div>
+  <div class="expected">Backend flow: gate-check → physical-handoff confirm → ACS (Remote swap → VL loop → commit) → SRS resolve. Forward-only — no reversal/cancel.</div>
   <div class="diff-legend">
     <strong>Colour key</strong>
     <span class="chip unchanged">Unchanged</span>
@@ -379,68 +380,64 @@
   <p class="flow-label before">Before — current state</p>
   <div class="expected"><strong>No swap flow exists as of now — not even a manual one.</strong> There is no path, system or manual, by which a CSP/technician can swap a faulty netbox for a customer.</div>
 
-  <p class="flow-label after">After — the swap flow</p>
+  <p class="flow-label after">After — the swap flow (forward-only)</p>
   <div class="mermaid">
 flowchart TD
-    Start([CSP opens ticket, taps Netbox Swap]) --> Details[Enter old + new device + diagnosis]
-    Details --> Gate{Gate checks pass? G7-G11 + G1-G5 + one-swap-per-device}
+    Start([CSP opens ticket, taps Netbox Swap]) --> Details[Diagnosis + new device]
+    Details --> Gate{Gate checks pass? G7-G11 + G1-G5 + one-per-device + one-per-ticket}
     Gate -- No --> Rej[Show reason - no record]
-    Gate -- Yes --> Physical[Tell CSP: physically swap, then confirm]
-    Physical --> Confirm([CSP taps 'physical swap done'])
-    Confirm --> Record[ACS creates swap record + starts 20-min timer + reserves devices]
-    Record --> Prov{Provisional swap via Remote API ok?}
-    Prov -- No --> Abort[ABORTED - error, retry from physical-confirm]
-    Prov -- Yes --> Wait[Wait - first VL check auto at T0+10 min]
+    Gate -- Yes --> Phys[Physical-handoff: swap + open config link, then confirm]
+    Phys --> Confirm([CSP taps 'I have swapped the device'])
+    Confirm --> Record[ACS: record + 20-min timer + reserve devices]
+    Record --> Prov{Remote connectivity swap ok?}
+    Prov -- No --> Abort[ABORTED - retry from confirm]
+    Prov -- Yes --> Wait[Wait - first VL check auto at 10 min]
     Wait --> Check{VL: new up in 10 min AND old down?}
-    Check -- "CONFIRMED" --> Commit[ACS commits custody, tells SRS]
+    Check -- "CONFIRMED" --> Commit[ACS commits custody - commit_reason VL_VALIDATED]
+    Check -- "not confirmed" --> Retry{Retry now / after 3 fails: self-confirm}
+    Retry -- "Retry tapped" --> Check
+    Retry -- "self-confirm after 3 retries" --> Commit2[ACS commits - CSP_OVERRIDE]
+    Wait -. "20-min cap" .-> Auto[Backend auto-confirms - AUTO_OVERRIDE]
+    Retry -. "20-min cap" .-> Auto
     Commit --> Resolve[SRS resolves the ticket]
-    Check -- "not confirmed" --> Cool[Error - 2-min cooldown, then Retry CTA]
-    Cool --> Cap{20-min cap or cancel?}
-    Cap -- "Retry tapped" --> Check
-    Cap -- "Cap hit" --> Expire[EXPIRED - reverse provisional]
-    Cap -- "CSP cancels" --> Cancel[CANCELLED - reverse provisional]
-    Expire --> Back[Back to SRS - swap-back message - ticket open for fresh swap]
-    Cancel --> Back
+    Commit2 --> Resolve
+    Auto --> Resolve
     classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
     classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
-    class Physical,Confirm,Record,Prov,Abort,Wait,Check,Cool,Cap,Expire,Cancel,Back added;
+    class Phys,Confirm,Record,Prov,Abort,Wait,Check,Retry,Commit2,Auto added;
     class Gate,Commit,Resolve changed;
   </div>
-  <div class="hint"><strong>Server-authoritative:</strong> the 20-min timer and all states live on the backend. If the CSP navigates away, the swap keeps running; the FE shows the live state on return.</div>
+  <div class="hint"><strong>No reversal:</strong> there is no cancel and no expire-with-undo. Every confirmed swap completes — validated, self-confirmed (after 3 retries), or auto-confirmed at 20 min. The Remote connectivity swap is never rolled back.</div>
   <hr class="sect-end">
 </section>
 
 <section class="spec" id="b2">
   <h2><span class="num">B2.</span> State Changes <span class="tier cond">Strict conditional</span></h2>
-  <div class="expected">Two machines: (1) the NEW ACS swap state machine (the swap-record lifecycle, from physical-confirm); (2) the complaint machine, which gains a lock + auto-resolution on a committed swap (no new complaint state).</div>
+  <div class="expected">Two machines: the NEW ACS swap state machine (forward-only), and the complaint machine (lock + auto-resolution on a committed swap; no new complaint state).</div>
 
-  <h3>New — ACS swap state machine (record lifecycle)</h3>
+  <h3>New — ACS swap state machine (forward-only)</h3>
   <div class="mermaid">
 stateDiagram-v2
-    [*] --> REQUESTED: CSP confirms physical swap (record + 20-min timer; devices reserved)
-    REQUESTED --> PROVISIONAL: Remote provisional swap ok
-    REQUESTED --> ABORTED: Remote provisional failed
-    PROVISIONAL --> COMMITTED: a VL check CONFIRMED -> custody committed -> SRS resolves
-    PROVISIONAL --> EXPIRED: 20-min cap, no confirmation -> reverse provisional
-    PROVISIONAL --> CANCELLED: CSP cancels -> reverse provisional
-    PROVISIONAL --> ABORTED: CL_CONNECTION_DEACTIVATED -> reverse provisional
-    PROVISIONAL --> COMMIT_FAILED: VL CONFIRMED but custody commit failed (ops)
-    PROVISIONAL --> REVERSAL_FAILED: reverse on expire/cancel failed (ops)
+    [*] --> REQUESTED: CSP confirms physical handoff (record + 20-min timer; devices reserved)
+    REQUESTED --> PROVISIONAL: Remote connectivity swap ok
+    REQUESTED --> ABORTED: Remote swap failed
+    PROVISIONAL --> COMMITTED: VL check CONFIRMED (commit_reason VL_VALIDATED)
+    PROVISIONAL --> COMMITTED: CSP self-confirm after 3 retries (CSP_OVERRIDE)
+    PROVISIONAL --> COMMITTED: 20-min cap auto-confirm (AUTO_OVERRIDE)
+    PROVISIONAL --> COMMIT_FAILED: custody commit failed (ops)
+    PROVISIONAL --> ABORTED: connection deactivated mid-swap
     COMMITTED --> [*]
     ABORTED --> [*]
-    EXPIRED --> [*]
-    CANCELLED --> [*]
     COMMIT_FAILED --> [*]
-    REVERSAL_FAILED --> [*]
   </div>
-  <p style="font-size:13px;color:var(--muted);">VL checks happen while in PROVISIONAL: one automatic at T0+10 min, then UI-driven retries ≥2 min apart until the 20-min cap. A failed check keeps the swap in PROVISIONAL. <code>COMMIT_FAILED</code> and <code>REVERSAL_FAILED</code> are ops-escalation terminals. <code>ABORTED</code> covers both a failed provisional and a connection deactivated mid-swap.</p>
+  <p style="font-size:13px;color:var(--muted);">Within PROVISIONAL: first VL check automatic at T0+10 min; on fail the CSP retries immediately; after 3 failed retries the self-confirm CTA appears. Removed vs earlier versions: <code>EXPIRED</code>, <code>CANCELLED</code>, <code>REVERSAL_FAILED</code> (no reversal). <code>COMMIT_FAILED</code> is an ops terminal.</p>
 
   <h3>Complaint machine (SRS)</h3>
   <table>
     <tr><th style="width:30%">Aspect</th><th>Change</th></tr>
-    <tr><td>Resolution</td><td>A COMMITTED swap (ACS signal) resolves the ticket automatically. EXPIRED/CANCELLED/ABORTED cause no closure (ticket stays in ASSIGNED/ESCALATED). No new complaint state.</td></tr>
-    <tr><td>Lock</td><td>From physical-confirm until a terminal swap state, the Resolve CTA and all other mutating actions are blocked (I9).</td></tr>
-    <tr><td>Custody states</td><td>Unchanged; only the commit's trigger moves behind the swap state machine reaching COMMITTED.</td></tr>
+    <tr><td>Resolution</td><td>A COMMITTED swap (any <code>commit_reason</code>) resolves the ticket automatically. ABORTED/COMMIT_FAILED do not. No new complaint state.</td></tr>
+    <tr><td>Lock</td><td>From physical-confirm until a terminal swap state, the Resolve CTA (and other CSP actions) are blocked / shown as "continue swap" (I9).</td></tr>
+    <tr><td>Custody states</td><td>Unchanged; the commit's trigger sits behind the swap reaching COMMITTED.</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -449,60 +446,62 @@ stateDiagram-v2
   <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
   <table>
     <tr><th>Parameter / data</th><th>Old</th><th>New</th><th>Valid range / scope</th><th>Reason</th></tr>
-    <tr><td>Diagnosis on a task (<code>complaint_tasks.diagnosis_outcome</code>, <code>diagnosis_fault_type</code>)</td><td>Columns exist, never written</td><td>Written by SRS from the initiation payload, before guards; latest governs</td><td>fault ∈ registry (3 device types pass G9) · per task</td><td>D2.</td></tr>
-    <tr><td><strong>ACS swap table</strong> (NEW)</td><td>—</td><td>One record per attempt: <code>swap_id</code>, <code>complaint_id</code>/<code>srs_id</code>, <code>old_device_id</code>, <code>new_device_id</code>, <code>csp_id</code>, <code>state</code> (REQUESTED/PROVISIONAL/COMMITTED/EXPIRED/CANCELLED/ABORTED/REVERSAL_FAILED), <code>started_at</code> (timer anchor), <code>provisional_at</code>, <code>last_check_at</code>, <code>validation_outcome</code>, <code>committed_at</code>, <code>terminal_at</code>, <code>failure_reason</code>. Created at physical-confirm; both devices reserved.</td><td>Per attempt, unbounded per complaint</td><td>D4/D8/D10 — reconcile every attempt; enforce one-swap-per-device.</td></tr>
-    <tr><td>Swap exhaust cap (timer)</td><td>—</td><td><strong>20 min</strong> from <code>started_at</code> → EXPIRED if not COMPLETED</td><td>Operational · per swap request · server-authoritative</td><td>D4/D7 — bounded lifetime (I12).</td></tr>
-    <tr><td>First VL check delay</td><td>—</td><td><strong>10 min</strong> after <code>started_at</code> (automatic)</td><td>Operational</td><td>D6 — give the new device time to come up.</td></tr>
-    <tr><td>Retry cooldown</td><td>—</td><td><strong>2 min</strong> minimum between checks (UI-driven retries after the first)</td><td>Operational</td><td>D6 — avoid re-checking into the same transient.</td></tr>
-    <tr><td>VL ping-lookback / cadence</td><td>—</td><td>10-min lookback (≥1 ping = up) · ~5-min per-device cadence (scheduled)</td><td>Operational</td><td>D6.</td></tr>
-    <tr><td>Repeat-swap cap</td><td>—</td><td>None in v1 (fresh request after any terminal)</td><td>—</td><td>R1.</td></tr>
-    <tr><td>Remote (+ Inventory) forward + reverse contract</td><td>—</td><td><strong>[PLACEHOLDER — TBD Rahul Nijhawan]</strong></td><td>—</td><td>D5/D7.</td></tr>
+    <tr><td>Diagnosis on a task</td><td>Columns exist, never written</td><td>Written by SRS from the initiation payload, before guards</td><td>fault ∈ registry · per task</td><td>D2.</td></tr>
+    <tr><td><strong>ACS swap table</strong></td><td>—</td><td><code>swap_id</code>, <code>complaint_id</code>/<code>srs_id</code>, <code>old_device_id</code>, <code>new_device_id</code>, <code>csp_id</code>, <code>state</code>, <code>started_at</code>, <code>provisional_at</code>, <code>retry_count</code>, <code>last_check_at</code>, <code>commit_reason</code> (VL_VALIDATED/CSP_OVERRIDE/AUTO_OVERRIDE), <code>override_by</code>, <code>override_at</code>, <code>committed_at</code>, <code>terminal_at</code>, <code>failure_reason</code></td><td>Per attempt</td><td>D13 — full lifecycle + retry/override capture; backs one-swap-per-device/ticket.</td></tr>
+    <tr><td><code>P_VL_FIRST_CHECK_DELAY</code></td><td>—</td><td><strong>10 min</strong></td><td>Operational · per swap</td><td>Delay from physical-confirm to the first automatic VL check.</td></tr>
+    <tr><td><code>P_SWAP_MAX_RETRIES</code> (NEW)</td><td>—</td><td><strong>3</strong></td><td>Operational · per swap</td><td>Failed retries after which the self-confirm CTA is offered.</td></tr>
+    <tr><td><code>P_SWAP_EXHAUST_CAP</code></td><td>—</td><td><strong>20 min</strong></td><td>Operational · per swap · server-authoritative</td><td>Backend auto-confirms + closes at this point (AUTO_OVERRIDE).</td></tr>
+    <tr><td><code>P_VL_PING_LOOKBACK</code></td><td>—</td><td><strong>10 min</strong></td><td>Operational</td><td>A device counts as "up" if it pinged within this window.</td></tr>
+    <tr><td><code>P_VL_PING_CADENCE</code></td><td>—</td><td><strong>~5 min</strong>, per-device</td><td>Telemetry/VL</td><td>Per-device ping schedule (may be VL-owned).</td></tr>
+    <tr><td>Retry cooldown</td><td>(v0.9) 2 min</td><td><strong>Removed — retry is immediate</strong></td><td>—</td><td>Author call: no suggested wait.</td></tr>
+    <tr><td>Task config-link URL</td><td>—</td><td>Task-scoped URL the CSP opens to configure the new device on the ISP network</td><td>Per task</td><td>D4 — step B of the handoff.</td></tr>
+    <tr><td>Remote connectivity-swap contract</td><td>—</td><td><strong>[PLACEHOLDER — forward-only; TBD Rahul Nijhawan]</strong></td><td>—</td><td>D6 (reverse call dropped).</td></tr>
   </table>
+  <div class="hint"><strong>All swap timers are parameters</strong> so they can be tuned without a code change: <code>P_VL_FIRST_CHECK_DELAY</code> (10 min), <code>P_SWAP_MAX_RETRIES</code> (3), <code>P_SWAP_EXHAUST_CAP</code> (20 min), <code>P_VL_PING_LOOKBACK</code> (10 min), <code>P_VL_PING_CADENCE</code> (~5 min). The FE countdown and CTA gating derive from these (the app should read them, not hardcode).</div>
 
-  <h3>Exact validation &amp; timer model (D6/D7)</h3>
-  <div class="expected">Let <strong>T₀</strong> = physical-swap confirmed (record created, timer starts). Provisional swap runs immediately after.
-    <br><br><strong>Per-check condition</strong> at evaluation time <em>t</em>, over the trailing 10-min window (<em>t</em> − 10 min, <em>t</em>]: <code>new_up</code> = new device ≥ 1 ping; <code>old_down</code> = old device 0 pings; <code>CONFIRM</code> = both.
-    <br><br><strong>Check schedule:</strong>
-    <br>· <strong>Check 1 — automatic at T₀ + 10 min.</strong>
-    <br>· If not CONFIRM → error; after a 2-min cooldown the <strong>Retry</strong> CTA is enabled.
-    <br>· Each subsequent check is <strong>CSP-triggered (Retry)</strong>, at least 2 min after the previous check.
-    <br>· The CSP may cancel at any time.
-    <br><br><strong>Terminal:</strong> <code>COMPLETED</code> on the first CONFIRM (→ custody commit → ticket resolved); <code>EXPIRED</code> at T₀ + 20 min with no CONFIRM (→ reverse); <code>CANCELLED</code> on cancel (→ reverse). EXPIRED/CANCELLED reverse the provisional swap; a failed reverse → <code>REVERSAL_FAILED</code> + ops.</div>
+  <h3>Validation &amp; completion model</h3>
+  <div class="expected">Let <strong>T₀</strong> = physical-confirm (record + timer start; Remote swap runs immediately after). Per VL check at time <em>t</em>, over the trailing <code>P_VL_PING_LOOKBACK</code> window: <code>new_up</code> = new device ≥1 ping; <code>old_down</code> = old device 0 pings; <code>CONFIRM</code> = both.
+    <br>· <strong>Check 1 automatic</strong> at T₀ + <code>P_VL_FIRST_CHECK_DELAY</code> (10 min).
+    <br>· On fail → <strong>Retry immediately</strong> (CSP-driven); each retry re-runs the check; <code>retry_count++</code>.
+    <br>· After <code>P_SWAP_MAX_RETRIES</code> (3) fails → <strong>self-confirm</strong> CTA available → COMMITTED (<code>CSP_OVERRIDE</code>).
+    <br>· At T₀ + <code>P_SWAP_EXHAUST_CAP</code> (20 min) with no completion → <strong>backend auto-confirms</strong> → COMMITTED (<code>AUTO_OVERRIDE</code>).
+    <br>· Any CONFIRM → COMMITTED (<code>VL_VALIDATED</code>). First terminal wins; later signals are idempotent no-ops.</div>
   <hr class="sect-end">
 </section>
 
 <section class="spec" id="b4">
   <h2><span class="num">B4.</span> UI Impact <span class="tier cond">Conditional</span></h2>
-  <div class="expected">Backend spec — the frontend owns layout/copy. Listed: the screens the journey requires and the backend state behind each. Design asks marked.</div>
+  <div class="expected">Backend spec — the frontend (design PR #381) owns layout/copy. Listed: the screens the journey needs and the backend behind each.</div>
   <table>
     <tr><th>Surface / screen</th><th>What the backend requires / makes available</th></tr>
-    <tr><td>Ticket — <strong>Netbox Swap</strong> CTA (separate from Resolve)</td><td>Distinct entry to the swap journey. The Resolve CTA is <strong>disabled</strong> whenever the ticket has an in-progress swap.</td></tr>
-    <tr><td>Swap — device details</td><td>Capture old + new device, diagnosis fault type + outcome, resolution type.</td></tr>
-    <tr><td>Swap — gate-check result</td><td>Pass → proceed to the physical-swap prompt. Fail → the specific reason (ticket not actionable, invalid fault, device not linked, replacement invalid, device busy in another swap).</td></tr>
-    <tr><td>Swap — physical-swap prompt + confirm <span style="color:#0b6b3a">(design ask)</span></td><td>"Swapping is allowed — physically swap the devices, then confirm." A <strong>"physical swap done"</strong> CTA triggers the record + timer.</td></tr>
-    <tr><td>Swap — verifying / wait <span style="color:#0b6b3a">(design ask)</span></td><td>A countdown to the first auto-check (~10 min) and on to the 20-min cap. The state is server-authoritative — re-rendered correctly if the CSP returns later.</td></tr>
-    <tr><td>Swap — not-confirmed + Retry <span style="color:#0b6b3a">(design ask: copy)</span></td><td>Error message; a <strong>Retry</strong> CTA enabled after the 2-min cooldown; a <strong>Cancel</strong> action available throughout.</td></tr>
-    <tr><td>Swap — success</td><td>"Swap verified — done." The ticket is resolved automatically.</td></tr>
-    <tr><td>Swap — expired / cancelled <span style="color:#0b6b3a">(design ask: copy)</span></td><td>Return to the SRS page; <em>"We couldn't verify the swap. If you've found another problem, fix it and retry; otherwise swap the devices back (old → customer, new → CSP)."</em> The ticket stays open for a fresh swap.</td></tr>
+    <tr><td>Ticket — Netbox Swap CTA</td><td>Distinct from Resolve; while a swap is in progress the ticket shows <strong>"continue swap"</strong> instead of Resolve.</td></tr>
+    <tr><td>Diagnosis + new device</td><td>Capture fault type + outcome + new device (scan/enter); resolution type DEVICE_REPLACED.</td></tr>
+    <tr><td>Gate-check result</td><td>Pass → physical-handoff. Fail → the specific reason (incl. device/ticket busy in another swap).</td></tr>
+    <tr><td>Physical-handoff <span style="color:#0b6b3a">(design ask)</span></td><td>Three items — physical swap · open the <strong>task config link</strong> · confirm. The "I've swapped the device" CTA triggers the record + timer.</td></tr>
+    <tr><td>Verifying / wait <span style="color:#0b6b3a">(design ask)</span></td><td>Countdown to the first auto-check (10 min) and on to the 20-min cap; server-authoritative; resumable.</td></tr>
+    <tr><td>Not-verified + Retry / self-confirm <span style="color:#0b6b3a">(design ask: copy)</span></td><td>Error copy; <strong>Retry</strong> immediately; after 3 failed retries a <strong>self-confirm</strong> CTA ("I confirm internet works").</td></tr>
+    <tr><td>Success</td><td>"Swap verified — done"; ticket resolved; <strong>return-old-box reminder</strong> (old device → RETRIEVAL_PENDING).</td></tr>
+    <tr><td>Continue-swap / resume</td><td>The app resumes an in-progress swap per ticket (durable, survives app kill) via the resume endpoints.</td></tr>
   </table>
-  <div class="hint"><strong>Not in the UI:</strong> the per-attempt swap history (the ACS swap table) is a <strong>backend reconciliation</strong> artifact only — it is not surfaced to the CSP.</div>
+  <div class="hint"><strong>Backend contract the app needs (design PR #381 audit):</strong> <code>GET /netbox/swap?status=in_progress</code> · <code>PUT /netbox/swap/{taskId}</code> · <code>DELETE /netbox/swap/{taskId}</code> · self-attested-completion <code>POST</code> (= override) · task config URL from <code>GET /tasks/{taskId}</code> · reason/label keys · the swap params (<code>P_SWAP_MAX_RETRIES</code>, <code>P_SWAP_EXHAUST_CAP</code>, …). The swap-table state is authoritative; the app's local copy is an offline cache.</div>
 
   <h3>FE journey — screen flow (incl. back-navigation)</h3>
-  <div class="expected">Screen-level navigation from opening the ticket to a terminal swap state. The dashed arrows are the <strong>back button</strong>. Key rule: once the swap is in progress (after "physical swap done"), leaving any screen does <strong>not</strong> stop it — the swap runs on the backend and the CSP is dropped back to whatever state it's in when they return.</div>
+  <div class="expected">Screen-level navigation, ticket to terminal. Dashed arrows are the <strong>back button</strong>. Once the physical handoff is confirmed the swap is <strong>forward-only</strong> — leaving a screen never stops it; the ticket shows "continue swap" to resume, and the swap completes (validated / self-confirmed / auto-confirmed) regardless.</div>
   <div class="mermaid">
 flowchart TD
-    T[Ticket detail<br/>Netbox Swap CTA · Resolve CTA blocked if a swap is in progress] -->|tap Netbox Swap| D[Enter old + new device + diagnosis]
+    T[Ticket detail<br/>Netbox Swap · Resolve replaced by 'continue swap' during a swap] -->|tap Netbox Swap| D[Diagnosis + scan/enter new device]
     D -->|submit| G{Gate check}
     G -->|fail| Gf[Show reason]
-    G -->|pass| P[Physically swap the devices, then confirm]
-    P -->|tap 'physical swap done'<br/>record + 20-min timer start| W[Verifying… countdown<br/>swap now in progress]
-    W -->|provisional failed / connection deactivated| A[Aborted — try again]
-    W -->|first check auto at 10 min: CONFIRMED| S([Success — ticket resolved])
-    W -->|not confirmed| N[Error — Retry in 2 min · Cancel]
+    G -->|pass| P[Physical handoff: swap device · open config link · then confirm]
+    P -->|tap 'I have swapped the device'<br/>record + 20-min timer start| W[Verifying… countdown<br/>first auto check at 10 min]
+    W -->|provisional/Remote failed| A[Aborted — try again]
+    W -->|CONFIRMED| S([Success — ticket resolved · return old box])
+    W -->|not verified| N[Retry now]
     N -->|tap Retry| W
-    N -->|tap Cancel| X([Cancelled — swap-back message])
-    W -->|20-min cap| E([Expired — swap-back message])
-    N -->|20-min cap| E
+    N -->|after 3 failed retries| SC[Self-confirm CTA available]
+    SC -->|tap 'internet works'| S
+    W -.->|20-min cap: backend auto-confirms| S
+    N -.->|20-min cap: backend auto-confirms| S
     A -->|retry| P
 
     D -.back.-> T
@@ -511,105 +510,58 @@ flowchart TD
     W -.back · swap keeps running.-> T
     N -.back · swap keeps running.-> T
     S -.-> T
-    X -.-> T
-    E -.-> T
     A -.-> T
-    T -.reopen ticket while swap in progress.-> W
+    T -.continue swap while in progress.-> W
 
     classDef good fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
     classDef warn fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
     class S good;
-    class X,E,A warn;
+    class A warn;
   </div>
-  <div class="hint"><strong>Back-navigation, every case:</strong> before "physical swap done" (screens D, gate result, P) there is no record — going back just drops the journey. After it (W, N) the swap is live: back returns to the ticket while the swap continues; re-opening the ticket resumes the verifying screen. If it finished while away → the ticket shows resolved (success); if it expired/cancelled/aborted while away → the ticket is open for a fresh swap.</div>
+  <div class="hint"><strong>Forward-only, no cancel:</strong> there is no Cancel and no expire-with-undo. Before "I've swapped the device" there is no record (back just drops the journey). After it the swap is live and always reaches a resolved ticket — by a VL pass, a self-confirm after 3 retries, or the backend auto-confirm at 20 min. Re-opening the ticket resumes the verifying screen.</div>
   <hr class="sect-end">
 </section>
 
 <section class="spec" id="b5">
   <h2><span class="num">B5.</span> Acceptance Criteria — Test Cases <span class="tier how">HOW</span></h2>
-  <div class="expected"><strong>Backend test cases, derived from the required behaviour (A5 / A6 / A7), not from existing code.</strong> Listed critical → non-critical. Each row carries a plain-business statement <em>and</em> the exact technical condition. "Ref" points to the delta / guard / invariant it proves.</div>
+  <div class="expected"><strong>Backend test cases, derived from the required behaviour (A5 / A6 / A7).</strong> Critical → non-critical. Each row carries a plain-business statement <em>and</em> the exact technical condition. "Ref" points to the delta / guard / invariant.</div>
   <table>
-    <tr>
-      <th style="width:4%">#</th><th style="width:8%">Priority</th><th style="width:26%">Test case — in plain terms</th><th style="width:30%">Technical condition / check</th><th style="width:24%">Expected result</th><th style="width:8%">Ref</th>
-    </tr>
+    <tr><th style="width:4%">#</th><th style="width:8%">Priority</th><th style="width:26%">Test case — in plain terms</th><th style="width:30%">Technical condition / check</th><th style="width:24%">Expected result</th><th style="width:8%">Ref</th></tr>
 
-    <tr><td>TC-01</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>Custody changes only on a verified swap, never before.</td><td>ACS commits custody only after a VL check = CONFIRMED. DECLINED/expired/cancelled → no custody write (no <code>CUSTODY_STATE_CHANGED</code>, no <code>DEVICE_SWAP_COMPLETED</code>).</td><td>No custody change without a CONFIRMED check.</td><td>I6 · D5</td></tr>
-
-    <tr><td>TC-02</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>Provisioning only starts after the CSP confirms the physical swap.</td><td>No swap record and no Remote call exist until the "physical swap done" CTA. Before that, only gate checks have run.</td><td>Record + provisioning gated on physical-confirm.</td><td>I5 · D3/D4</td></tr>
-
-    <tr><td>TC-03</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A device can only be in one swap at a time.</td><td>Gate check rejects a swap if either device has a swap record in REQUESTED/PROVISIONAL. Record creation atomically reserves both devices; a race between two confirmations lets only one win.</td><td>No device in two in-progress swaps.</td><td>I11 · D8</td></tr>
-
-    <tr><td>TC-04</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A ticket with a running swap can't be resolved any other way.</td><td>While the swap is REQUESTED/PROVISIONAL, the Resolve CTA is blocked and all other mutating actions are rejected. Only a COMMITTED swap resolves it.</td><td>Resolve + all actions blocked during a swap.</td><td>I9 · D9</td></tr>
-
-    <tr><td>TC-05</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A swap is "verified" only when the new device is up and the old one has gone quiet.</td><td>CONFIRM requires new device ≥1 ping in last 10 min AND old device 0 pings in last 10 min.</td><td>new-up + old-down → confirm; else not.</td><td>D6 · E6</td></tr>
-
-    <tr><td>TC-06</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>An unverified swap is rolled back cleanly on expire or cancel.</td><td>EXPIRED (20-min cap) or CANCELLED → ACS re-calls Remote to restore pre-swap state; no custody change; ticket open; swap-table state recorded.</td><td>Provisional reversed; ticket open; logged.</td><td>I8 · D7</td></tr>
-
-    <tr><td>TC-07</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>The custody change moves both devices together or neither.</td><td>On commit: old <code>DEPLOYED → RETRIEVAL_PENDING</code> AND new <code>CUSTODIED/IDLE → DEPLOYED</code> in one transaction; failure rolls both back.</td><td>Both transition or neither.</td><td>I2</td></tr>
-
-    <tr><td>TC-08</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A ticket is resolved only by a verified, committed swap.</td><td>COMMITTED → ticket resolved. EXPIRED/CANCELLED/ABORTED → ticket stays open (no resolution signal).</td><td>Resolution only on commit.</td><td>I8 · D7</td></tr>
-
-    <tr><td>TC-09</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>Only eligible devices can be swapped.</td><td>Old must be DEPLOYED + bound to this connection (G1/G4/G5); new must be CUSTODIED/IDLE (G2); same CSP (G3); new ≠ old. Validated at the gate-check stage.</td><td>Ineligible device → rejected before any record.</td><td>G1–G5 · E1</td></tr>
-
-    <tr><td>TC-10</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A connection always has exactly one device on it.</td><td>At most one device bound at any moment; after a committed swap, exactly the new device.</td><td>Single binding across all paths.</td><td>I3</td></tr>
-
-    <tr><td>TC-11</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The first verification runs automatically; later ones are the CSP's choice.</td><td>Check 1 fires automatically at T₀ + 10 min. After a non-confirm, the Retry CTA is enabled only after a 2-min cooldown; each subsequent check is CSP-triggered.</td><td>One auto check, then UI-driven 2-min-spaced retries.</td><td>D6</td></tr>
-
-    <tr><td>TC-12</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>A swap can't run forever — it ends within 20 minutes.</td><td>If no CONFIRM by T₀ + 20 min, the swap → EXPIRED. No swap stays in progress past the cap.</td><td>Bounded lifetime; EXPIRED at the cap.</td><td>I12 · D7</td></tr>
-
-    <tr><td>TC-13</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>If the provisional shift can't be done, the swap aborts and the CSP can retry.</td><td>Remote provisional call fails → swap-table state <code>ABORTED</code>; no custody change; CSP retries from physical-confirm (fresh record + timer).</td><td>Abort on provisional failure; clean restart.</td><td>E4 · D5</td></tr>
-
-    <tr><td>TC-14</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The swap record and the device reservation are created together at physical-confirm.</td><td>On "physical swap done", the swap record is created and both devices are reserved in one atomic step; two concurrent confirmations for the same device cannot both create a record.</td><td>Record + reservation atomic; no double-claim.</td><td>D4 · I11</td></tr>
-
-    <tr><td>TC-15</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>ACS — not SRS — runs the swap after the gates.</td><td>After physical-confirm, ACS does provisional, the VL calls, commit/reverse, and tells SRS to resolve. SRS does not call Remote or VL.</td><td>Orchestration owned by ACS.</td><td>D5</td></tr>
-
-    <tr><td>TC-16</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>Every attempt — committed, expired, cancelled, aborted — is logged.</td><td>The swap table holds one record per attempt with its terminal state, device pair, timestamps, validation outcome. No Remote/custody action without a record.</td><td>Full lifecycle reconstructible from the table.</td><td>I10 · D10</td></tr>
-
-    <tr><td>TC-17</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>Navigating away doesn't disturb the swap.</td><td>Back button / app close during the wait → backend continues; on return the FE shows the live state (completed → resolved; expired → fresh; in-progress → timer).</td><td>Server-authoritative; FE reconciles on return.</td><td>D11 · E9</td></tr>
-
-    <tr><td>TC-18</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>A swap can only start on a live, open ticket with a device-fault diagnosis.</td><td>Complaint in ASSIGNED/ESCALATED (G7); <code>diagnosis_fault_type</code> ∈ the 3 device types (G8/G9); persisted before guards.</td><td>No open ticket or no device fault → no swap.</td><td>I1/I4 · E15</td></tr>
-
-    <tr><td>TC-19</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>Tapping confirm twice never creates two swaps.</td><td>Duplicate "physical swap done" taps → one record (idempotent); duplicate custody commit → no second transition.</td><td>Exactly one swap per intent.</td><td>R3</td></tr>
-
+    <tr><td>TC-01</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>Custody changes only after the swap is validated or the CSP/system confirms it.</td><td>ACS commits only after a VL check CONFIRMED, a CSP self-confirm (≥3 retries), or the 20-min auto-confirm. No commit otherwise.</td><td>No custody change without validate-or-override.</td><td>I6 · D6</td></tr>
+    <tr><td>TC-02</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A confirmed swap always moves forward — it's never reversed or cancelled.</td><td>No path reverses the Remote swap or the custody change; there is no CANCELLED/EXPIRED-with-undo. Once physical-confirmed, the swap reaches COMMITTED (or an ops terminal).</td><td>Forward-only; no reversal exists.</td><td>I7 · D8</td></tr>
+    <tr><td>TC-03</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>If nothing completes in 20 minutes, the backend auto-confirms and resolves.</td><td>At <code>P_SWAP_EXHAUST_CAP</code> with no VL pass / self-confirm, ACS commits (<code>AUTO_OVERRIDE</code>) and SRS resolves — server-side, no CSP action.</td><td>Auto-confirm at the cap; no indefinite in-progress.</td><td>I12 · D9</td></tr>
+    <tr><td>TC-04</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>The self-confirm option only appears after 3 failed retries.</td><td>Self-confirm CTA is gated on <code>retry_count ≥ P_SWAP_MAX_RETRIES</code> (3); a self-confirm attempt before that is rejected.</td><td>No premature override.</td><td>R1 · E7</td></tr>
+    <tr><td>TC-05</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>Provisioning only starts after the CSP confirms the physical handoff.</td><td>No swap record and no Remote call until the "I've swapped" confirm; before that only gate checks ran.</td><td>Record + provisioning gated on physical-confirm.</td><td>I5 · D3/D5</td></tr>
+    <tr><td>TC-06</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A device / ticket can only be in one swap at a time.</td><td>Gate rejects if either device or the ticket has a swap in REQUESTED/PROVISIONAL; record creation reserves both devices atomically. After a terminal, a fresh swap on the same device/ticket is allowed.</td><td>One in-progress swap per device and per ticket.</td><td>I11 · D10 · E2</td></tr>
+    <tr><td>TC-07</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A ticket with a running swap can't be resolved any other way.</td><td>While REQUESTED/PROVISIONAL, Resolve is blocked / shown as "continue swap"; only a COMMITTED swap resolves it.</td><td>Resolve blocked during a swap.</td><td>I9 · D11</td></tr>
+    <tr><td>TC-08</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A swap is "verified" only when the new device is up and the old one is down.</td><td>CONFIRM requires new ≥1 ping in last 10 min AND old 0 pings in last 10 min.</td><td>new-up + old-down → confirm.</td><td>D7 · E6</td></tr>
+    <tr><td>TC-09</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>The custody change moves both devices together or neither.</td><td>On commit: old DEPLOYED→RETRIEVAL_PENDING AND new →DEPLOYED in one transaction; failure rolls both back.</td><td>Both transition or neither.</td><td>I2</td></tr>
+    <tr><td>TC-10</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>Only eligible devices can be swapped.</td><td>Old DEPLOYED + bound to this connection (G1/G4/G5); new CUSTODIED/IDLE (G2); same CSP (G3); new ≠ old.</td><td>Ineligible device → rejected at gate.</td><td>G1–G5 · E1</td></tr>
+    <tr><td>TC-11</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>Every completion records how it happened.</td><td>Every COMMITTED swap records <code>commit_reason ∈ {VL_VALIDATED, CSP_OVERRIDE, AUTO_OVERRIDE}</code>; an override also records actor + time + attestation.</td><td>Completion reason always captured.</td><td>I8 · D13</td></tr>
+    <tr><td>TC-12</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The first verification runs automatically at 10 minutes; retries are immediate.</td><td>Check 1 fires at T₀ + <code>P_VL_FIRST_CHECK_DELAY</code>; on fail, Retry is enabled immediately (no cooldown); each retry re-runs the check.</td><td>Auto first check; immediate retries.</td><td>D7</td></tr>
+    <tr><td>TC-13</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The CSP configures the new device via the task's config link before confirming.</td><td>The physical-handoff screen shows the task-scoped config URL; the confirm attests both the physical swap and the ISP config are done.</td><td>Config link present; confirm = swap + config done.</td><td>D4</td></tr>
+    <tr><td>TC-14</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The swap record + device reservation are created together at physical-confirm.</td><td>On confirm, the record is created and both devices reserved in one atomic step; concurrent confirms can't both claim a device/ticket.</td><td>Record + reservation atomic.</td><td>D5 · I11</td></tr>
+    <tr><td>TC-15</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>If the connectivity swap can't be done, the swap aborts and the CSP can retry.</td><td>Remote call fails → <code>ABORTED</code>; no custody change; retry from physical-confirm (fresh record + timer).</td><td>Abort on Remote failure; clean restart.</td><td>E4 · D6</td></tr>
+    <tr><td>TC-16</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>If the commit fails after a go, it's escalated to ops, not marked done.</td><td>VL/override says go but the custody commit fails → <code>COMMIT_FAILED</code> + ops; ticket not resolved.</td><td>No false done on commit failure.</td><td>E9</td></tr>
+    <tr><td>TC-17</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>An interrupted swap is resumable and the app reflects backend state.</td><td>Back/app-kill during the swap → backend continues; the ticket shows "continue swap"; resume endpoints rehydrate the exact step; on completion the ticket is resolved.</td><td>Durable, server-authoritative resume.</td><td>D12 · E11</td></tr>
+    <tr><td>TC-18</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>A swap can only start on a live, open ticket with a device-fault diagnosis.</td><td>Complaint ASSIGNED/ESCALATED (G7); fault type ∈ the 3 device types (G8/G9); persisted before guards.</td><td>No open ticket or no device fault → no swap.</td><td>I1/I4 · E13</td></tr>
+    <tr><td>TC-19</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>Tapping confirm twice never creates two swaps.</td><td>Duplicate "I've swapped" taps → one record; duplicate custody commit → no second transition.</td><td>Exactly one swap per intent.</td><td>R3</td></tr>
     <tr><td>TC-20</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The swap no longer depends on the connection being "active".</td><td>No CL OS connection-state query at submission (G6 removed).</td><td>No connection-state lookup occurs.</td><td>D1</td></tr>
-
-    <tr><td>TC-21</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>The CSP can cancel a swap mid-wait.</td><td>Cancel from REQUESTED/PROVISIONAL → CANCELLED → reverse provisional → back to SRS, ticket open.</td><td>Cancel works and reverses cleanly.</td><td>E7 · D7</td></tr>
-
-    <tr><td>TC-22</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>After expire/cancel, a fresh swap can be started on the same ticket.</td><td>Post-terminal re-entry creates a new record + timer; if the real issue is fixed, the next attempt confirms.</td><td>Fresh swap path works end-to-end.</td><td>R1 · E5/E7</td></tr>
-
-    <tr><td>TC-23</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>A new device that never comes online ends in expiry, not a stuck swap.</td><td>New device never pings → checks never confirm → EXPIRED at 20 min → reverse.</td><td>Offline new device → EXPIRED, not stuck.</td><td>E5 · I12</td></tr>
-
-    <tr><td>TC-24</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>A second swap on the same ticket chains custody correctly.</td><td>After #1 commits (A→B), #2 (B→C): B (now DEPLOYED) → RETRIEVAL_PENDING; C → DEPLOYED. Two ordered records.</td><td>Repeats chain correctly; full log.</td><td>R1 · I3</td></tr>
-
-    <tr><td>TC-25</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>If reversal fails on expire/cancel, it's surfaced, not silent.</td><td>Failed Remote reverse → swap-table state <code>REVERSAL_FAILED</code> + ops escalation. <strong>[Handling pending the Remote contract.]</strong></td><td>[To be defined] — reversal failure surfaced.</td><td>E11</td></tr>
-
-    <tr><td>TC-26</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>The cap takes precedence over a late check result.</td><td>If the cap hits before a custody commit has started, EXPIRED wins and a CONFIRM landing afterwards is ignored; a CONFIRM whose commit already started completes.</td><td>No confirm accepted after expiry-without-commit.</td><td>E8</td></tr>
-
-    <tr><td>TC-26b</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>If the final commit fails after a confirmed check, the swap isn't marked done — ops is alerted.</td><td>VL CONFIRMED but the custody commit fails → swap-table state <code>COMMIT_FAILED</code> + ops escalation; the ticket is not resolved; the provisional remains until ops resolves it.</td><td>No false COMPLETED on a commit failure; ops alerted.</td><td>E10</td></tr>
-
-    <tr><td>TC-26c</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>If the customer's connection is deactivated mid-swap, the swap aborts.</td><td><code>CL_CONNECTION_DEACTIVATED</code> during REQUESTED/PROVISIONAL → swap <code>ABORTED</code> (reason CONNECTION_DEACTIVATED); any provisional shift reversed; ticket not resolved.</td><td>Deactivation aborts the swap cleanly.</td><td>E14</td></tr>
-
-    <tr><td>TC-26d</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>System-driven ticket transitions are not blocked by a running swap.</td><td>An escalation timer / platform takeover fires while a swap is in progress → it proceeds (the lock blocks only CSP actions + another swap on these devices). The swap continues independently.</td><td>Lock scope is CSP-only; system transitions proceed.</td><td>E13 · I9</td></tr>
-
-    <tr><td>TC-27</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>If the same issue is reported again after a committed swap, it continues on the new device.</td><td>Reopen within <code>P_SR_REOPEN_WINDOW</code> → same lineage, no fresh SLA clock, new device; outside → new ticket, new device.</td><td>Reopen attaches to lineage; new device.</td><td>E16</td></tr>
-
-    <tr><td>TC-28</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>If the CSP diagnoses something other than a device fault, no swap starts — diagnosis still saved.</td><td>Non-device fault persisted; swap rejected on G9; non-swap resolutions available.</td><td>Diagnosis recorded; swap rejected.</td><td>E15</td></tr>
-
-    <tr><td>TC-29</td><td><span style="color:#6b7280">Low / Regression</span></td><td>Ordinary (non-swap) resolutions behave exactly as before.</td><td>A RESTORE task that never swaps follows the unchanged resolution flow; diagnosis not mandatory; Resolve CTA works (no in-progress swap).</td><td>No change for non-swap resolutions.</td><td>G-A</td></tr>
-
-    <tr><td>TC-30</td><td><span style="color:#6b7280">Low / Regression</span></td><td>A swap by itself doesn't disturb billing, connection state, or quality scoring.</td><td>A committed swap emits no signal to CL/Compensation/Quality OS; connection state unchanged.</td><td>No cross-OS side effects.</td><td>G-C</td></tr>
-
-    <tr><td>TC-31</td><td><span style="color:#6b7280">Low / Regression</span></td><td>The closure signal to Quality is identical with or without a swap.</td><td><code>COMPLAINT_RESOLUTION_SIGNAL</code> schema/semantics identical for swap-resolved vs normally-resolved; no new resolution events.</td><td>Quality signal byte-identical.</td><td>G-D</td></tr>
-
-    <tr><td>TC-32</td><td><span style="color:#6b7280">Low / Regression</span></td><td>Verification stays in the one common layer.</td><td>Swap verification runs through the common VL with swap inputs; no swap-only verifier.</td><td>One verification layer for all tickets.</td><td>G-G</td></tr>
-
-    <tr><td>TC-33</td><td><span style="color:#6b7280">Low / Regression</span></td><td>Normal installations are untouched; the new machinery is swap-only.</td><td>Install binding behaves as before; provisional, VL, reversal, swap table, state machine, reservation, lock fire only on swaps.</td><td>Install flow intact.</td><td>G-F</td></tr>
-
-    <tr><td>TC-34</td><td><span style="color:#6b7280">Low / Regression</span></td><td>A timed-out swap never auto-resolves the ticket.</td><td>EXPIRED reverses and leaves the ticket open; it never closes/resolves the ticket.</td><td>No auto-resolve on timeout.</td><td>G-H · I8</td></tr>
-
-    <tr><td>TC-35</td><td><span style="color:#6b7280">Low / Regression</span></td><td>"Upgrade" swaps are not allowed in this version.</td><td>Every v1 swap carries <code>swap_reason = FAULTY_DEVICE</code>; an UPGRADE request is rejected.</td><td>UPGRADE rejected.</td><td>D12 · E17</td></tr>
+    <tr><td>TC-21</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>A late VL pass after an override is a harmless no-op.</td><td>If a check confirms after CSP/auto override has already COMMITTED, it's ignored (idempotent).</td><td>First terminal wins; no double commit.</td><td>E8</td></tr>
+    <tr><td>TC-22</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>A new device that never comes up still completes (via self/auto-confirm).</td><td>New never pings → checks fail → self-confirm after 3 / auto at 20 min → COMMITTED; old device → RETRIEVAL_PENDING.</td><td>Completes forward; see F4 (faulty device).</td><td>E5 · I12</td></tr>
+    <tr><td>TC-23</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>Connection deactivated mid-swap aborts it.</td><td><code>CL_CONNECTION_DEACTIVATED</code> during a swap → <code>ABORTED</code>; ticket not resolved.</td><td>Deactivation aborts cleanly.</td><td>E10</td></tr>
+    <tr><td>TC-24</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>A second swap on the same ticket chains custody correctly.</td><td>After #1 commits (A→B), #2 (B→C): B → RETRIEVAL_PENDING; C → DEPLOYED. Two ordered records.</td><td>Repeats chain correctly.</td><td>R-repeat · I3</td></tr>
+    <tr><td>TC-25</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>If the CSP diagnoses something other than a device fault, no swap starts.</td><td>Non-device fault persisted; swap rejected on G9; non-swap resolutions available.</td><td>Diagnosis recorded; swap rejected.</td><td>E13</td></tr>
+    <tr><td>TC-26</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>System-driven ticket transitions are not blocked by a running swap.</td><td>Escalation/takeover while a swap runs → proceeds; the swap continues independently (lock is CSP-scope + one-swap-per-device).</td><td>Lock is CSP-scope only.</td><td>E12 · I9</td></tr>
+    <tr><td>TC-27</td><td><span style="color:#6b7280">Low / Regression</span></td><td>Ordinary (non-swap) resolutions behave exactly as before.</td><td>A RESTORE task that never swaps follows the unchanged resolution flow; Resolve works (no in-progress swap).</td><td>No change for non-swap resolutions.</td><td>G-A</td></tr>
+    <tr><td>TC-28</td><td><span style="color:#6b7280">Low / Regression</span></td><td>A swap by itself doesn't disturb billing, connection state, or quality scoring.</td><td>A committed swap emits no signal to CL/Compensation/Quality OS; connection state unchanged.</td><td>No cross-OS side effects.</td><td>G-C</td></tr>
+    <tr><td>TC-29</td><td><span style="color:#6b7280">Low / Regression</span></td><td>The closure signal to Quality is identical with or without a swap.</td><td><code>COMPLAINT_RESOLUTION_SIGNAL</code> identical for swap-resolved vs normally-resolved; no new resolution events.</td><td>Quality signal byte-identical.</td><td>G-D</td></tr>
+    <tr><td>TC-30</td><td><span style="color:#6b7280">Low / Regression</span></td><td>Normal installations are untouched; the new machinery is swap-only.</td><td>Install binding behaves as before; physical-handoff, Remote swap, VL, table, state machine, reservation, lock fire only on swaps.</td><td>Install flow intact.</td><td>G-F</td></tr>
+    <tr><td>TC-31</td><td><span style="color:#6b7280">Low / Regression</span></td><td>A swap never silently closes a ticket.</td><td>Every closure (incl. AUTO_OVERRIDE) records a <code>commit_reason</code>; auto-confirmed closures are auditable.</td><td>No silent closure.</td><td>G-H · I8</td></tr>
+    <tr><td>TC-32</td><td><span style="color:#6b7280">Low / Regression</span></td><td>"Upgrade" swaps are not allowed in this version.</td><td>Every v1 swap carries <code>swap_reason = FAULTY_DEVICE</code>; UPGRADE rejected.</td><td>UPGRADE rejected.</td><td>D14 · E15</td></tr>
   </table>
-  <p style="font-size:13px;color:var(--muted);"><strong>Coverage:</strong> 38 test cases spanning every A5 delta (D1–D12), every A7.1 invariant/rule (I1–I12, R1–R4), every guard (G1–G11 minus removed G6) plus the new one-swap-per-device gate, the ACS swap state machine (B2), every edge E1–E17, and every A6 regression guard. The cap-vs-check (E8), commit-failure (E10), cancel-vs-confirm (E12), system-transition (E13), and connection-deactivation (E14) decisions are now resolved. One row stays open: <strong>TC-25</strong> (reversal-failure handling — pending the Remote contract with Rahul Nijhawan).</p>
+  <p style="font-size:13px;color:var(--muted);"><strong>Coverage:</strong> 32 test cases spanning every A5 delta (D1–D14), every A7.1 invariant/rule (I1–I12, R1–R4), every guard (G1–G11 minus removed G6) plus one-swap-per-device/ticket, the forward-only state machine (B2), every edge E1–E15, and every A6 regression guard. Pending: the Remote forward-only contract (Rahul) and the app resume/self-attest endpoints (FE/design).</p>
   <hr class="sect-end">
 </section>
 
@@ -620,25 +572,29 @@ flowchart TD
   <h3>F1. Closing a Pickup Ticket (PUT) by swapping a device</h3>
   <table>
     <tr><th style="width:22%">Aspect</th><th>Detail</th></tr>
-    <tr><td>The gap / scenario</td><td>A frustrated customer raises a <strong>PUT</strong> (intent to leave + return the device). The CSP visits, diagnoses on site, and saves the customer by giving a new device. Today a PUT can only close via recharge or pickup — not a save-via-swap.</td></tr>
-    <tr><td>The proposal</td><td>Swapping as a third PUT-closure path, alongside recharge and pickup.</td></tr>
-    <tr><td>Why deferred</td><td>Ripples across Exit OS, CL OS, Asset Custody OS, and SR OS; breaks invariant I1 (a swap needs an open complaint). Its own initiative.</td></tr>
-    <tr><td>Status</td><td><strong>Noted only.</strong></td></tr>
+    <tr><td>The gap</td><td>A churning customer raises a PUT; the CSP saves them on site with a new device. Today a PUT can only close via recharge or pickup — not a save-via-swap.</td></tr>
+    <tr><td>Why deferred</td><td>Ripples across Exit OS, CL OS, Custody OS, SR OS; breaks I1 (a swap needs an open complaint). Its own initiative.</td></tr>
   </table>
 
-  <h3>F2. Non-swap concurrency between physical-confirm and commit</h3>
+  <h3>F2. Non-swap concurrency between confirm and commit</h3>
   <table>
     <tr><th style="width:22%">Aspect</th><th>Detail</th></tr>
-    <tr><td>The gap</td><td>One-swap-per-device (I11) stops two <em>swaps</em> fighting over a device. But a device's custody state could still change via a <em>non-swap</em> process during the ~20-min window; ACS re-reads state at commit but holds no exclusive cross-process lock.</td></tr>
-    <tr><td>Why deferred</td><td>A full reservation across all OSes is larger than this effort. Accepted as a known limitation; the commit re-read is the safeguard.</td></tr>
-    <tr><td>Status</td><td><strong>Noted only.</strong></td></tr>
+    <tr><td>The gap</td><td>One-swap-per-device/ticket stops concurrent swaps, but a device's custody state could change via a non-swap process during the window; ACS re-reads at commit but holds no exclusive cross-process lock.</td></tr>
+    <tr><td>Why deferred</td><td>A full reservation across OSes is larger than this effort.</td></tr>
   </table>
 
-  <h3>F3. Validation beyond a ping (true service check)</h3>
+  <h3>F3. Validation beyond a ping</h3>
   <table>
     <tr><th style="width:22%">Aspect</th><th>Detail</th></tr>
-    <tr><td>The gap</td><td>v1 treats a ping as proof of internet; a device can ping while the customer still has no usable service, and a ping proves the device is alive, not that it serves <em>this</em> connection.</td></tr>
-    <tr><td>Why deferred</td><td>Deeper checks (session/auth/throughput/connection-binding) are a future VL enhancement; the validation outcome flag helps spot patterns that justify them.</td></tr>
+    <tr><td>The gap</td><td>v1 treats a ping as proof of internet; a device can ping while service is down, and a ping proves the device is alive, not serving this connection.</td></tr>
+    <tr><td>Why deferred</td><td>Deeper checks (session/auth/throughput) are a future VL enhancement.</td></tr>
+  </table>
+
+  <h3>F4. Genuinely-faulty replacement device</h3>
+  <table>
+    <tr><th style="width:22%">Aspect</th><th>Detail</th></tr>
+    <tr><td>The scenario</td><td>The internet genuinely isn't working <em>and</em> the new device is also faulty. The CSP still completes the swap forward (self-confirm or auto-confirm) — the system has no software un-swap — and then <strong>raises it to the Wiom ops team</strong> for next steps.</td></tr>
+    <tr><td>Why deferred</td><td>Reversal / refurb of a faulty replacement, and the ops-handoff workflow, are out of v1 scope. v1 only guarantees the swap is recorded forward; the ops follow-up is a separate path.</td></tr>
     <tr><td>Status</td><td><strong>Noted only.</strong></td></tr>
   </table>
   <hr class="sect-end">
@@ -653,19 +609,19 @@ flowchart TD
     <tr><td>A2</td><td>Why this change</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
     <tr><td>A3</td><td>Current behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
     <tr><td>A4</td><td>Desired behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
-    <tr><td>A5</td><td>The delta</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">— (D5/D7 Remote contract placeholder)</td></tr>
+    <tr><td>A5</td><td>The delta</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">— (D6 Remote contract; D4/D12 app contract placeholders)</td></tr>
     <tr><td>A6</td><td>Must-not-change (guard)</td><td><span class="tier guard">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
-    <tr><td>A7</td><td>Rules, invariants &amp; edge cases</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">— (E11 reversal-failure pending Rahul)</td></tr>
-    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td><span class="tier guard">Always — gate</span></td><td class="check">[x]</td><td class="check">— (5 sign-offs Pending)</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edge cases</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">— (forward-only; no open edge decisions)</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td><span class="tier guard">Always — gate</span></td><td class="check">[x]</td><td class="check">— (6 sign-offs Pending)</td></tr>
     <tr><td>B1</td><td>Changed workflow (before/after)</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">—</td></tr>
-    <tr><td>B2</td><td>State changes</td><td><span class="tier cond">Strict cond.</span></td><td class="check">[x]</td><td class="check">— (NEW ACS swap state machine + complaint lock/resolve)</td></tr>
-    <tr><td>B3</td><td>Data &amp; parameter changes</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">— (incl. NEW ACS swap table + timer model)</td></tr>
-    <tr><td>B4</td><td>UI impact</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">— (full FE journey + design asks)</td></tr>
-    <tr><td>B5</td><td>Acceptance criteria (test cases)</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">— (38 cases; TC-25 pending Rahul)</td></tr>
-    <tr><td>F</td><td>Future scope (noted, not specced)</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B2</td><td>State changes</td><td><span class="tier cond">Strict cond.</span></td><td class="check">[x]</td><td class="check">— (forward-only swap state machine + complaint lock/resolve)</td></tr>
+    <tr><td>B3</td><td>Data &amp; parameter changes</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">— (swap table + 5 swap params)</td></tr>
+    <tr><td>B4</td><td>UI impact</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">— (screens + FE journey + app contract)</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria (test cases)</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">— (32 cases)</td></tr>
+    <tr><td>F</td><td>Future scope (noted, not specced)</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">— (incl. F4 faulty new device)</td></tr>
   </table>
   <div class="footer note">
-    <strong>Not sendable yet — blockers:</strong> (1) The Remote API forward(provisional)+reverse contract (D5/D7) TBD with Rahul Nijhawan → TC-25 (reversal-failure) + partial-failure undefined; the VL core is owned by another PM (swap rules only here). (2) Author to confirm reverse-on-expire/cancel (standing assumption: reverse + swap-back message). (3) All five A8 sign-offs Pending (Dhruv: Custody OS, ESR · Varun: SR OS · Rahul Nijhawan: Remote/Inventory · VL-owning PM: Validation Layer). (4) Status = Draft pending human review. <em>(Resolved this round: commit-failure → ops; cap-vs-check; cancel-vs-confirm; system-transition not blocked; connection-deactivation aborts.)</em><br><br>
+    <strong>Not sendable yet — blockers:</strong> (1) The Remote API <strong>forward-only</strong> connectivity-swap contract (D6) TBD with Rahul Nijhawan; the task config-link URL (D4); the app resume/self-attest endpoints (D12 — design PR #381); the VL core (another PM — swap rules only here). (2) All six A8 sign-offs Pending (Dhruv: Custody OS, ESR · Varun: SR OS · Rahul Nijhawan: Remote API · VL-owning PM · FE/Design: app contract). (3) Status = Draft pending human review. <em>(This round: forward-only — reversal/cancel/expire removed; self-confirm after 3 retries; auto-confirm at 20 min; physical-handoff config link; one-swap-per-device-and-ticket; aligned to design PR #381.)</em><br><br>
     <strong>Deliberate template deviation (author-directed):</strong> exact API paths, event names, field names, and DB columns are carried inline throughout, overriding the template's default out-of-scope fence. Engineering still owns final naming, schemas, concurrency, and transport.<br><br>
     <strong>Explicit non-scope:</strong> SRS fundamentals (ticket-creation gating by connection state, complaint lifecycle automatics) — separate amendment, separate owner. Frontend journey design — frontend/design team's deliverable; this spec defines only what the backend receives and exposes.
   </div>
@@ -687,11 +643,12 @@ flowchart TD
     <tr><td>v0.10</td><td>2026-06-12</td><td>Jaivin Prajapati (with Claude)</td><td>A5, A7, B2, B5</td><td>Author decisions on open edges. <strong>Ticket lock narrowed</strong> to CSP actions + one-swap-per-device only — it no longer blocks <strong>system-driven</strong> transitions (escalation/takeover/CL-deactivation), which proceed (D9/I9/E13). <strong>Commit-failure</strong> after a confirmed check → <code>COMMIT_FAILED</code> + ops escalation, ticket not resolved (E10). <strong>Connection deactivated mid-swap</strong> → swap <code>ABORTED</code> + reverse (E14, new). Cap-vs-check (E8) and cancel-vs-confirm (E12) precedence made definite. State machine gained COMMIT_FAILED + the deactivation→ABORTED transition. B5 → 38 cases (TC-26b/c/d added). Old-down strictness confirmed intentional. Still pending: reverse-on-expire/cancel confirm + the Rahul reversal-failure contract (TC-25).</td><td>—</td></tr>
     <tr><td>v0.11</td><td>2026-06-12</td><td>Jaivin Prajapati (with Claude)</td><td>B4</td><td>Added the <strong>FE journey screen-flow diagram</strong> to B4 — ticket → Netbox Swap → device details → gate check → physical-swap confirm → verifying (timer) → success / expired / cancelled / aborted, with explicit <strong>back-navigation</strong> on every screen. Captures the rule that once a swap is in progress, leaving a screen doesn't stop it; re-opening the ticket resumes the live state.</td><td>—</td></tr>
     <tr><td>v0.12</td><td>2026-06-12</td><td>Jaivin Prajapati (with Claude)</td><td>B4</td><td>Removed swap history from the UI — the ACS swap table is a backend reconciliation artifact only, not a CSP-facing surface. B4 now states this explicitly.</td><td>—</td></tr>
+    <tr><td>v0.13</td><td>2026-06-13</td><td>Jaivin Prajapati (with Claude)</td><td>A4–A8, B1–B5, F</td><td>Forward-only redesign + design-PR alignment. <strong>Reversal, cancel, and expire-with-undo removed</strong> — a confirmed swap always completes (D8/I7). New completion model: first VL check auto at 10 min, <strong>immediate retries</strong> (2-min cooldown dropped), <strong>self-confirm after 3 failed retries</strong> (<code>P_SWAP_MAX_RETRIES</code>, R1), and <strong>backend auto-confirm at the 20-min cap</strong> (<code>AUTO_OVERRIDE</code>, D9) so nothing drifts indefinitely. <code>commit_reason ∈ {VL_VALIDATED, CSP_OVERRIDE, AUTO_OVERRIDE}</code> (I8). Physical-handoff now includes the <strong>ISP-config link</strong> (D4). <strong>One swap per device AND per ticket</strong> stated explicitly (D10/I11). All swap timers parameterised (B3, 5 params). Aligned to design PR #381: continue-swap resume, app resume/self-attest endpoints + config URL (D12, A8), return-old-box reminder. State machine → forward-only (EXPIRED/CANCELLED/REVERSAL_FAILED removed). B5 = 32 cases. F4 (faulty new device → override + ops) added.</td><td>—</td></tr>
   </table>
 </section>
 
 <p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
-  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.12 Draft
+  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap — Diagnosis-Driven Device Replacement · v0.13 Draft
 </p>
 
 </main>
