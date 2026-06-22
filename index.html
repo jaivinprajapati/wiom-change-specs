@@ -48,7 +48,7 @@
     </a></li>
     <li><a href="specs/netbox-device-swap/netbox-device-swap_change_spec.html">
       <div class="spec-title">CSP Netbox Swap — Diagnosis-Driven Device Replacement</div>
-      <div class="spec-sub">v0.13 Draft · 2026-06-13 · Forward-only CSP journey: gate-check → physical-handoff (swap + ISP-config link) confirm (record + 20-min timer) → Remote swap → Validation Layer (auto check at 10 min, immediate retries, self-confirm after 3) → always completes (validated / self-confirmed / auto-confirmed at 20 min); no reversal/cancel · one swap per device & ticket · aligned to design PR #381 · 32 test cases</div>
+      <div class="spec-sub">v0.14 Draft · 2026-06-22 · Forward-only CSP journey: gate-check → physical-handoff confirm (record + 20-min timer) → Remote swap → validation (new device up only) → always completes (validated / self-confirmed after 3 / auto-confirmed at 20 min); no reversal · Remote API + connection-validation-service contracts provided · fault = 3 device types (no FAULTY_DEVICE) · config link FE-only · blocker: OS amendments to be LOCKED · 32 test cases</div>
     </a></li>
     <li><a href="specs/lost-device-lifecycle/lost-device-lifecycle_change_spec.html">
       <div class="spec-title">Lost Device Lifecycle</div>
