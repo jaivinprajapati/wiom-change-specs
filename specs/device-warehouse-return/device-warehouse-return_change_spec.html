@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — Warehouse Device Return (CSP/3PL) — Change Spec</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.5; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 270px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 28px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 30px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 14.5px; margin: 0; max-width: 72ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .quickcheck { margin: 24px 0 36px; background: var(--quickcheck-bg);
+    border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+  .part-divider { margin: 50px 0 28px; padding: 26px 30px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 26px; margin: 4px 0 6px; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 72ch; }
+  section.spec { margin: 36px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 20px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 14.5px; margin: 18px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.core { background: var(--core-bg); color: var(--core); }
+  .tier.cond { background: var(--cond-bg); color: var(--cond); }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+  .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+  .new { color: var(--core); font-weight: 700; font-size: 11px; }
+  .gate { color: var(--guard); font-weight: 700; font-size: 11px; }
+  .mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 14px; margin: 14px 0; text-align: center; }
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin.computation { border-left-color: var(--what); }
+  .gherkin.invariant { border-left-color: var(--how); }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  .gherkin.computation .kw { color: var(--what); }
+  .gherkin.invariant .kw { color: var(--how); }
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 30px 0 0; }
+  footer.checklist { margin-top: 56px; padding-top: 28px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 19px; margin-top: 0; }
+  footer.checklist td.check { width: 70px; text-align: center; font-family: monospace; }
+  .diff-legend { font-size: 12.5px; margin: 14px 0 6px; color: var(--muted); }
+  .diff-legend .chip { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 6px; border: 1px solid; }
+  .chip.unchanged { background: #f4f4f2; color: #444; border-color: #cfcfca; }
+  .chip.added { background: #e9f5ee; color: #064e2b; border-color: #0b6b3a; }
+  .chip.changed { background: #fbf1dd; color: #5b3a00; border-color: #8a5a00; }
+  .chip.removed { background: #fee2e2; color: #7f1d1d; border-color: #b91c1c; }
+  .flow-label { font-size: 13px; font-weight: 700; margin: 18px 0 0; }
+  .flow-label.before { color: #7f1d1d; }
+  .flow-label.after { color: #064e2b; }
+  @media print { nav.toc { display: none; } .layout { grid-template-columns: 1fr; } main { padding: 20px; max-width: none; } }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } nav.toc { position: static; height: auto; } main { padding: 24px; } }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired — state closure matrix</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflow</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameters</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v0.1 · PM → Engineering</div>
+  <h1>Warehouse Device Return (CSP / 3PL) — Acceptance &amp; Closure</h1>
+  <p class="lede">What happens when a Wiom NetBox shows up at the warehouse — returned by a CSP or by a 3PL/recovery agent. Today returns are accepted from only two custody states; on the ground devices come back from any state and Wiom learns only at the warehouse. This spec accepts every returned device, attributes who returned it, moves it to RETURNED, and runs a per-state closure (exposure, money, liability, customer). Fundamental state-machine + money change → EM and Product Head review before any architectural call.</p>
+  <div class="meta-row">
+    <span><strong>Author (PM):</strong> Jaivin Prajapati &nbsp;·&nbsp; <strong>Reviewers:</strong> Dhruv (Product Head) · EM &nbsp;·&nbsp; <strong>Tier:</strong> Full</span>
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage.</div>
+  <dl>
+    <dt>What is changing?</dt><dd>Warehouse accepts device returns from CSP and 3PL from <em>any</em> custody state; per-state closure of money, liability, exposure &amp; customer.</dd>
+    <dt>What triggered it?</dt><dd>Operational reality — devices change hands near CSPs and are physically returned in states the system can't accept; Wiom only learns at the warehouse; returned devices stay stuck under the CSP.</dd>
+    <dt>Blast radius</dt><dd>Custody state machine, exposure counter, carry-fee/idle, condition/damage classification, NBREC closure + ₹50 payout, DEPLOYED→connection deactivation, dispatch receipt. Consumers: Payment, Compensation, TAS, CL OS.</dd>
+    <dt>Reversible?</dt><dd>Partial — new transitions are config/flag-gated, but this is a fundamental state-machine expansion (architectural review required).</dd>
+    <dt>Money / PII / migration?</dt><dd>Money <strong>Y</strong> · PII <strong>N</strong> · Migration <strong>Y</strong> (backfill of already-stuck returned devices — engineering runbook).</dd>
+    <dt>OS impact / sign-off?</dt><dd>Asset Custody, Compensation, Payment &amp; Settlement, Connection Lifecycle, TAS, ESR — <strong>all Pending</strong>.</dd>
+    <dt>Tier</dt><dd>Full.</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>Why we are changing this, what happens today, the desired per-state closure, and the precise delta. Stable across implementation revisions.</p>
+</div>
+
+<!-- A1 -->
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Warehouse Device Return (CSP / 3PL) — Acceptance &amp; Closure</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft</td></tr>
+    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Baseline</td><td>Asset Custody OS v1.11.1 (LOCKED) + SD-architecture fork (ACS v1.12 → renumber v1.14) + NETBOX forks (v1.12 rescue, v1.13 dispatch). Services: <span class="mono">csp-asset-custody-service</span>, <span class="mono">csp-compensation-service</span>, <span class="mono">csp-payment-settlement-service</span>, <span class="mono">csp-tas-service</span>.</td></tr>
+  </table>
+  <div class="hint">Scope = Part 1 (closure of the CSP↔device relationship). Part 2 (remove csp↔device mapping, re-dispatch / supply chain) and Part 3 (CSP-side return process &amp; non-compliance) are separate specs.</div>
+  <hr class="sect-end">
+</section>
+
+<!-- A2 -->
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with current behaviour?</td><td>Returns are accepted only from <span class="mono">RETRIEVAL_PENDING</span> and <span class="mono">RECOVERY_HOLD</span>. CSPs physically return devices that are still DEPLOYED, IDLE, in customer-recovery, or already LOST — and the warehouse has no way to accept them. There is no signal distinguishing a CSP return from a 3PL return, and no check on <em>who</em> returned it.</td></tr>
+    <tr><td>Who experiences it?</td><td>Inventory &amp; finance ops (devices unaccounted, exposure/liability wrong), CSPs (returns don't close, missed ₹50 recovery payout), customers (a device taken wrongfully from them is never detected).</td></tr>
+    <tr><td>Cost of leaving it?</td><td>₹-value assets unreconciled, incorrect exposure/liability, no closure of the CSP↔device relationship, CSP trust erosion.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<!-- A3 -->
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:38%">Given (condition)</th><th>The system does today</th></tr>
+    <tr><td>Device in RETRIEVAL_PENDING, ops confirms handover</td><td>→ RETURNED; exposure −1; condition classified (FUNCTIONAL → stays RETURNED, damage → DAMAGED) at this point only.</td></tr>
+    <tr><td>Device in RECOVERY_HOLD, ops confirms late handover</td><td>→ RETURNED; exposure −1.</td></tr>
+    <tr><td>Device in CUSTODIED / IDLE / DEPLOYED / CUSTOMER_RECOVERY_PENDING / LOST / DAMAGED / WRITTEN_OFF / PENDING_CSP_RECEIPT physically returned to warehouse</td><td>No path. Device cannot be accepted; stays mapped to the CSP.</td></tr>
+    <tr><td>Warehouse physically receives a device</td><td>No inbound event exists; no CSP-vs-3PL source signal; <span class="mono">handoverAgentId</span> is free-text audit only.</td></tr>
+    <tr><td>Device marked LOST (any reason)</td><td>Exposure −1 at the LOST transition; liability stands; no recovery path except CSP-side RECOVERY_HOLD.</td></tr>
+    <tr><td>Any device returned (clean)</td><td>No deposit credit — <span class="mono">DEVICE_RETURN_CREDIT</span> (+₹200) is dead code; return = exposure closure only.</td></tr>
+    <tr><td>Multi-device order at DISPATCHED</td><td>Receipt is all-or-nothing (OS v1.13 / INV-ACO-DISPATCH-01); no partial confirmation, no per-device removal.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<!-- A4 -->
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour — Per-State Closure Matrix <span class="tier what">WHAT</span></h2>
+  <p style="font-size:13px;color:var(--muted)">Universal entry: a Warehouse Return Event (Pyrops) for every physical receipt, carrying <span class="mono">returned_by_type</span> (CSP/3PL) and <span class="mono">returned_by_id</span>. Every accepted device moves to RETURNED, then runs the handler for its source state.</p>
+  <table>
+    <tr><th>#</th><th>Return-from state</th><th>Action</th><th>Exposure</th><th>Money / liability</th><th>Customer / other</th></tr>
+    <tr><td>1</td><td class="mono">RETRIEVAL_PENDING</td><td>→ RETURNED (today)</td><td>−1</td><td>None if FUNCTIONAL; QC damage → DAMAGED → COMP_DAMAGE_LIABILITY</td><td>QC classifies condition</td></tr>
+    <tr><td>2</td><td class="mono">CUSTODIED / IDLE</td><td>→ RETURNED (skip step) <span class="new">NEW</span></td><td>−1</td><td>Carry-fee + idle stop from that day; accrued units zeroed; <strong>prior liability stands</strong></td><td>None</td></tr>
+    <tr><td>3</td><td class="mono">CUSTOMER_RECOVERY_PENDING</td><td>→ RETURNED; auto-close NBREC success <span class="new">NEW</span></td><td>−1</td><td><strong>₹50</strong> recovery payout (method + 30d SLA)</td><td>NBREC COMPLETED · new resolution "returned-to-warehouse"</td></tr>
+    <tr><td>4</td><td class="mono">DEPLOYED</td><td>→ RETURNED + raise flag (non-blocking) <span class="new">NEW</span></td><td>−1</td><td>Connection deactivation downstream (CL OS)</td><td><strong>Ops calls customer</strong> — confirm given willingly, not taken wrongfully</td></tr>
+    <tr><td>5</td><td class="mono">PENDING_CSP_RECEIPT</td><td>→ RETURNED (allowed) <span class="new">NEW</span></td><td><strong>No change</strong> (never entered exposure)</td><td>None</td><td><strong>Partial order:</strong> remaining devices still confirm → CUSTODIED; this one excluded</td></tr>
+    <tr><td>6</td><td class="mono">LOST (any reason)</td><td>→ RETURNED (already penalised) <span class="new">NEW</span></td><td>No change (−1 already at LOST)</td><td><strong>Liability stands — no reversal</strong></td><td>—</td></tr>
+    <tr><td>7</td><td class="mono">DAMAGED</td><td>→ RETURNED (already penalised) <span class="new">NEW</span></td><td>No change (not in exposure)</td><td><strong>Liability stands — no reversal</strong></td><td>—</td></tr>
+    <tr><td>8</td><td class="mono">WRITTEN_OFF</td><td>→ RETURNED (already penalised) <span class="new">NEW</span></td><td>No change (not in exposure)</td><td><strong>Liability stands — no reversal</strong></td><td>—</td></tr>
+    <tr><td>9</td><td class="mono">RECOVERY_HOLD</td><td><span class="mono">handover-late</span> → RETURNED (today)</td><td>−1</td><td>None new</td><td>Install blocked while in RECOVERY_HOLD</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<!-- A5 -->
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <table class="delta">
+    <tr><th style="width:22%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:24%">Why</th></tr>
+    <tr><td>Return entry point</td><td>Ops API only, device in RETRIEVAL_PENDING / RECOVERY_HOLD.</td><td>Warehouse Return Event (Pyrops) is the universal entry on physical receipt.</td><td>Wiom only learns of most returns at the warehouse.</td></tr>
+    <tr><td>Source attribution</td><td>Free-text <span class="mono">handoverAgentId</span> audit string.</td><td>Typed <span class="mono">returned_by_type</span> (CSP / 3PL) + <span class="mono">returned_by_id</span>.</td><td>CSP and 3PL returns follow different rules.</td></tr>
+    <tr><td>Allowed source states (CSP)</td><td>RETRIEVAL_PENDING, RECOVERY_HOLD only.</td><td>Any custody state → RETURNED, via per-state handler.</td><td>Match ground reality; accept every device.</td></tr>
+    <tr><td>3PL acceptance gate</td><td>No 3PL concept.</td><td>Accept only when state = LOST <em>and</em> lost_reason = NOT_RECOVERED_FROM_CUSTOMER.</td><td>3PL works only on customer-lost devices.</td></tr>
+    <tr><td>Returning-entity identity check</td><td>None.</td><td><span class="mono">returned_by_id</span> vs mapped <span class="mono">csp_id</span>; mismatch → accept + raise flag.</td><td>Detect a device returned by a different CSP.</td></tr>
+    <tr><td>CUSTODIED / IDLE return</td><td>Must route through RETRIEVAL_PENDING.</td><td>Direct → RETURNED; carry-fee + idle stop that day; prior liability untouched.</td><td>No business step in between; just close it.</td></tr>
+    <tr><td>CUSTOMER_RECOVERY_PENDING return</td><td>Closed via NBREC recovery-confirmed (hardcoded CSP_PICKUP).</td><td>Warehouse return auto-closes NBREC as success; ₹50 paid; new resolution "returned-to-warehouse".</td><td>CSP did recover — give credit + close the task.</td></tr>
+    <tr><td>DEPLOYED return</td><td>Not CSP-initiated (exit/system only).</td><td>Allowed; raise flag + ops customer-confirm (non-blocking); trigger connection deactivation.</td><td>Live customer at risk of wrongful pickup — verify, don't block.</td></tr>
+    <tr><td>PENDING_CSP_RECEIPT return + partial receipt</td><td>All-or-nothing receipt; no per-device removal.</td><td>A returned PCR device is excluded; the remaining devices still confirm to CUSTODIED.</td><td>One bad unit shouldn't block the whole order.</td></tr>
+    <tr><td>LOST / DAMAGED / WRITTEN_OFF return</td><td>Terminal; no return path.</td><td>Accept → RETURNED; <strong>no</strong> exposure change; booked liability stands.</td><td>Reconcile the physical asset without un-penalising.</td></tr>
+    <tr><td>Damage-QC entry point</td><td>Classification allowed only in RETRIEVAL_PENDING.</td><td>Classification allowed on RETURNED (any source state).</td><td>States 2–8 go straight to RETURNED; damage must still price.</td></tr>
+    <tr><td>Exposure event on DAMAGED / direct WRITTEN_OFF</td><td>Leaves exposure but emits no CSP_EXPOSURE_CHANGED (event leak).</td><td>Emit CSP_EXPOSURE_CHANGED (−1) on these exits.</td><td>Payment OS consumers must be notified.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<!-- A6 -->
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <table>
+    <tr><th style="width:52%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr><td>Damage pricing (Compensation age-band tiers: MINOR ₹150, REPAIRABLE min(₹300,residual), NON_REPAIRABLE residual).</td><td>We move the entry point but the amounts must be byte-for-byte as today.</td></tr>
+    <tr><td>No reversal of an already-booked LOST / DAMAGE liability when a device is returned.</td><td>States 6–8 return devices that were already penalised — must not credit back.</td></tr>
+    <tr><td>Exposure set + exposure starts at CUSTODIED (receipt), not at dispatch.</td><td>The new PCR-return handler must not shift when exposure begins.</td></tr>
+    <tr><td>₹50 payout gating (CSP_PICKUP / CUSTOMER_RETURN only, within 30-day SLA).</td><td>New CRP-return path reuses this — must not pay outside the gate.</td></tr>
+    <tr><td>Existing RETRIEVAL_PENDING → RETURNED and RECOVERY_HOLD → RETURNED flows.</td><td>Shared RETURNED entry; easy to disturb.</td></tr>
+    <tr><td>Carry-fee/idle eligibility (IDLE + was_ever_deployed) and immutability of prior ledger entries.</td><td>States 2 stop accrual going forward only; the past stays.</td></tr>
+    <tr><td>Forward-only state machine; no retroactive state edits.</td><td>New edges must be forward-effective, audited.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<!-- A7 -->
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases <span class="tier what">WHAT</span></h2>
+  <h3>A7.1 Rules &amp; invariants</h3>
+  <table>
+    <tr><th style="width:34%">Rule / invariant</th><th>Statement</th></tr>
+    <tr><td>INV — single custody state</td><td>A device is in exactly one custody state at any moment.</td></tr>
+    <tr><td>INV — exposure set</td><td>Exposure counts exactly {CUSTODIED, DEPLOYED, IDLE, CUSTOMER_RECOVERY_PENDING, RETRIEVAL_PENDING, RECOVERY_HOLD}. RETURNED is never counted.</td></tr>
+    <tr><td>INV — no liability reversal on return</td><td>Returning a device never reverses a booked LOST/DAMAGE liability. The only credit on return is the gated ₹50.</td></tr>
+    <tr><td>INV — exposure event completeness</td><td>Every exit from the exposure set emits exactly one CSP_EXPOSURE_CHANGED(−1), including DAMAGED and direct WRITTEN_OFF.</td></tr>
+    <tr><td>RULE — source attribution mandatory</td><td>Every warehouse return carries <span class="mono">returned_by_type</span> + <span class="mono">returned_by_id</span>.</td></tr>
+    <tr><td>RULE — 3PL scope</td><td>A 3PL return is valid only for LOST + NOT_RECOVERED_FROM_CUSTOMER; any other state via 3PL is rejected.</td></tr>
+    <tr><td>RULE — partial receipt isolation</td><td>Excluding one PENDING_CSP_RECEIPT device from an order does not block confirmation of the rest.</td></tr>
+    <tr><td>INV — ₹50 conditions</td><td>₹50 is paid only for CSP_PICKUP/CUSTOMER_RETURN within the 30-day window.</td></tr>
+  </table>
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:38%">Edge / condition</th><th>Intended outcome</th></tr>
+    <tr><td>3PL returns a non-LOST (or CSP-custody-lost) device</td><td>Reject / exception — outside 3PL scope.</td></tr>
+    <tr><td>Returning CSP ≠ device's mapped CSP</td><td>Accept + raise cross-CSP flag; closure proceeds.</td></tr>
+    <tr><td>DEPLOYED device returned; customer later says they did not hand it over</td><td>Flag raised, ops follow-up; <strong>non-blocking</strong> — return still completes. <span class="gate">[decision: confirm non-blocking is acceptable]</span></td></tr>
+    <tr><td>WRITTEN_OFF device already settled, then returned</td><td>Accept → RETURNED; no money movement.</td></tr>
+    <tr><td>PCR device returned while its order is still in progress</td><td>Remaining devices proceed to CUSTODIED; returned one excluded; order closes partial. <span class="gate">[conflicts with INV-ACO-DISPATCH-01 all-or-nothing — decision needed]</span></td></tr>
+    <tr><td>Device returned from LOST and QC finds damage</td><td>Loss liability stands; do we additionally book damage? <span class="gate">[decision needed — avoid double-charge]</span></td></tr>
+    <tr><td>Legacy devices already RETURNED &amp; stuck under old CSP</td><td>Backfill / re-attribution. <span class="gate">[migration — engineering runbook]</span></td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<!-- A8 -->
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <table>
+    <tr><th>OS</th><th>Impacted?</th><th>Amendment (one line)</th><th>Type</th><th>Owner (consulted)</th><th>Sign-off</th></tr>
+    <tr><td>Asset Custody OS</td><td>Yes</td><td>Warehouse-return entry; →RETURNED from any state; source attribution; 3PL gate; partial receipt; exposure-event fix; classification on RETURNED.</td><td>Behaviour change</td><td>[ACS owner]</td><td>Pending</td></tr>
+    <tr><td>Compensation OS</td><td>Yes</td><td>₹50 on warehouse-return CRP path; confirm no double-charge when a LOST device is later found damaged.</td><td>Cross-OS contract</td><td>[Comp owner]</td><td>Pending</td></tr>
+    <tr><td>Payment &amp; Settlement OS</td><td>Yes</td><td>Consume new CSP_EXPOSURE_CHANGED(−1) on DAMAGED/WRITTEN_OFF; confirm no reversal on return; deposit/SD untouched.</td><td>Cross-OS contract</td><td>[Payment owner]</td><td>Pending</td></tr>
+    <tr><td>Connection Lifecycle OS</td><td>Yes</td><td>DEPLOYED return triggers connection deactivation + customer-confirm flag.</td><td>Behaviour change</td><td>[CL owner]</td><td>Pending</td></tr>
+    <tr><td>TAS (task)</td><td>Yes</td><td>New NBREC resolution "returned-to-warehouse"; auto-close on warehouse return.</td><td>Behaviour change</td><td>[TAS owner]</td><td>Pending</td></tr>
+    <tr><td>ESR (event registry)</td><td>Yes</td><td>New WAREHOUSE_RETURN event + returned_by fields; new resolution enum value.</td><td>Cross-OS contract</td><td>[ESR owner]</td><td>Pending</td></tr>
+    <tr><td>SPR (parameters)</td><td>No</td><td>No new tunable parameter.</td><td>None</td><td>—</td></tr>
+    <tr><td>Demand &amp; Allocation OS</td><td>No</td><td>Re-dispatch is Part 2.</td><td>None</td><td>—</td></tr>
+    <tr><td>Exit OS</td><td>No</td><td>Exit auto-write-off unaffected.</td><td>None</td><td>—</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>The detail engineering needs to build and verify the delta. Still business behaviour — diagrams describe logic, never architecture.</p>
+</div>
+
+<!-- B1 -->
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflow — Before &amp; After <span class="tier cond">Conditional — flow changes</span></h2>
+  <div class="diff-legend"><strong>Colour key</strong>
+    <span class="chip unchanged">Unchanged</span><span class="chip added">Added</span><span class="chip changed">Changed</span><span class="chip removed">Removed</span></div>
+
+  <p class="flow-label before">Before — acceptance today</p>
+  <div class="mermaid">
+flowchart TD
+  S([Device physically at warehouse]) --> M{Ops marks return}
+  M -->|in RETRIEVAL_PENDING| H[Ops confirm handover]
+  M -->|in RECOVERY_HOLD| H
+  H --> R[RETURNED · exposure -1]
+  M -->|any other state| X[No path · device unaccepted]
+  R --> E([Closed])
+  X --> EX([Stuck under CSP])
+  classDef removed fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+  class X,EX removed;
+  </div>
+
+  <p class="flow-label after">After — acceptance &amp; source routing</p>
+  <div class="mermaid">
+flowchart TD
+  S([Device physically at warehouse]) --> P[Pyrops: Warehouse Return Event]
+  P --> T{returned_by_type}
+  T -->|CSP| I{returned_by_id == mapped csp_id}
+  I -->|match| ST[Accept · per-state handler]
+  I -->|mismatch| FL[Accept + raise cross-CSP flag]
+  T -->|3PL| L{LOST and NOT_RECOVERED_FROM_CUSTOMER}
+  L -->|yes| ST
+  L -->|no| RJ[Reject / exception]
+  ST --> R[Move to RETURNED + downstream by source state]
+  FL --> R
+  R --> QC{QC: damaged}
+  QC -->|yes| D[Classify -> COMP_DAMAGE_LIABILITY]
+  QC -->|no| C([Closed])
+  D --> C
+  classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+  classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+  class P,T,I,FL,L,RJ,ST added;
+  class R,QC changed;
+  </div>
+  <hr class="sect-end">
+</section>
+
+<!-- B2 -->
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> State Changes <span class="tier cond">State machine touched</span></h2>
+  <p style="font-size:13px;color:var(--muted)">New edges into RETURNED from every source state, plus a new classification edge RETURNED → DAMAGED. Existing edges unchanged.</p>
+  <div class="mermaid">
+stateDiagram-v2
+  RETRIEVAL_PENDING --> RETURNED: handover (existing)
+  RECOVERY_HOLD --> RETURNED: handover-late (existing)
+  CUSTODIED --> RETURNED: warehouse return (NEW)
+  IDLE --> RETURNED: warehouse return (NEW)
+  DEPLOYED --> RETURNED: warehouse return + flag (NEW)
+  CUSTOMER_RECOVERY_PENDING --> RETURNED: warehouse + NBREC close + 50 (NEW)
+  PENDING_CSP_RECEIPT --> RETURNED: warehouse return (NEW)
+  LOST --> RETURNED: warehouse return, liability stands (NEW)
+  DAMAGED --> RETURNED: warehouse return, liability stands (NEW)
+  WRITTEN_OFF --> RETURNED: warehouse return, liability stands (NEW)
+  RETURNED --> DAMAGED: QC damage found (NEW)
+  </div>
+  <hr class="sect-end">
+</section>
+
+<!-- B3 -->
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
+  <table>
+    <tr><th>Parameter / data</th><th>Old</th><th>New</th><th>Range / scope</th><th>Reason</th></tr>
+    <tr><td>Who returned the device (type)</td><td>Not tracked (free-text)</td><td>Tracked: CSP / 3PL</td><td>Per return event</td><td>Drives acceptance rules.</td></tr>
+    <tr><td>Returning entity identity</td><td>Not tracked</td><td>Tracked (entity id)</td><td>Per return event</td><td>Identity match vs mapped CSP.</td></tr>
+    <tr><td>NBREC resolution outcome</td><td>State-machine only (implicit CSP_PICKUP)</td><td>New outcome "returned-to-warehouse"</td><td>Per NBREC task</td><td>Distinguish warehouse closure.</td></tr>
+    <tr><td>Cross-CSP-return flag</td><td>Not tracked</td><td>Tracked (business flag)</td><td>Per device</td><td>Surface wrong-CSP returns.</td></tr>
+    <tr><td>DEPLOYED-return customer-confirm flag</td><td>Not tracked</td><td>Tracked (business flag)</td><td>Per device</td><td>Drives ops customer call; non-blocking.</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--muted)">No new tunable parameter. ₹50 / 30-day SLA / damage tiers reuse existing SPR + Compensation values.</p>
+  <hr class="sect-end">
+</section>
+
+<!-- B4 -->
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> UI Impact <span class="tier cond">User-visible</span></h2>
+  <table>
+    <tr><th>Surface</th><th>What the user now sees</th></tr>
+    <tr><td>Ops / warehouse tool</td><td>Return intake capturing CSP vs 3PL + returning identity; cross-CSP flag; DEPLOYED-return customer-confirm task.</td></tr>
+    <tr><td>CSP app — returned / wallet</td><td>Closure of a returned device; ₹50 credit on a customer-recovery return.</td></tr>
+  </table>
+  <div class="hint">New backend-dependent screen states (warehouse intake form, ops customer-confirm task) → raise an <strong>Experience–Data Spec</strong> and link here.</div>
+  <hr class="sect-end">
+</section>
+
+<!-- B5 -->
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+
+  <div class="gherkin"><strong>LOGIC_01 (logic · happy):</strong> CSP return from IDLE<br>
+    <span class="kw">Given</span> a device in IDLE returned by its mapped CSP<br>
+    <span class="kw">When</span> the Warehouse Return Event is processed<br>
+    <span class="kw">Then</span> the device moves to RETURNED, exposure decreases by 1, carry-fee/idle stop that day<br>
+    <span class="kw">And</span> any prior liability ledger entry is unchanged</div>
+
+  <div class="gherkin"><strong>LOGIC_02 (logic · happy):</strong> CRP return closes NBREC with ₹50<br>
+    <span class="kw">Given</span> a device in CUSTOMER_RECOVERY_PENDING returned by the mapped CSP within the 30-day window<br>
+    <span class="kw">When</span> the warehouse return is processed<br>
+    <span class="kw">Then</span> the NBREC task closes as success with resolution "returned-to-warehouse"<br>
+    <span class="kw">And</span> a ₹50 recovery payout is credited</div>
+
+  <div class="gherkin"><strong>LOGIC_03 (logic · negative):</strong> 3PL return outside scope<br>
+    <span class="kw">Given</span> a 3PL return for a device that is DEPLOYED (or LOST with CSP_CUSTODY_LOST)<br>
+    <span class="kw">When</span> the event is processed<br>
+    <span class="kw">Then</span> it is rejected as an exception and no state change occurs</div>
+
+  <div class="gherkin"><strong>LOGIC_04 (logic · negative):</strong> DEPLOYED return raises flag, non-blocking<br>
+    <span class="kw">Given</span> a device in DEPLOYED returned by the CSP<br>
+    <span class="kw">When</span> the warehouse return is processed<br>
+    <span class="kw">Then</span> the device moves to RETURNED, exposure −1, a wrongful-pickup flag is raised and an ops customer-confirm task is created<br>
+    <span class="kw">And</span> the return is not blocked by the flag</div>
+
+  <div class="gherkin computation"><strong>COMPUTE_01 (computation · boundary):</strong> ₹50 at SLA edge<br>
+    <span class="kw">Given</span> a CRP return with recovery_method = CSP_PICKUP<br>
+    <span class="kw">When</span> confirmed at exactly entered_recovery + 30 days vs one second later<br>
+    <span class="kw">Then</span> at the boundary ₹50 is paid; one second later no payout, exposure still closes</div>
+
+  <div class="gherkin computation"><strong>COMPUTE_02 (computation · boundary):</strong> Damage residual cap<br>
+    <span class="kw">Given</span> a returned device classified DAMAGE_REPAIRABLE at device age 13 months<br>
+    <span class="kw">Then</span> liability = min(₹300, age-band residual) using ≤24mo = 70% of ₹1500<br>
+    <span class="kw">And</span> DAMAGE_NON_REPAIRABLE at the same age = full residual (uncapped)</div>
+
+  <div class="gherkin invariant"><strong>INVARIANT_01 (A7.1):</strong> No liability reversal on return<br>
+    <span class="kw">Given</span> a device already booked LOST/DAMAGED/WRITTEN_OFF<br>
+    <span class="kw">When</span> it is later returned to the warehouse<br>
+    <span class="kw">Then</span> the booked liability is never reversed or credited back</div>
+
+  <div class="gherkin invariant"><strong>INVARIANT_02 (A7.1):</strong> Exposure-event completeness<br>
+    <span class="kw">Given</span> any device leaving the exposure set, including via DAMAGED or direct WRITTEN_OFF<br>
+    <span class="kw">Then</span> exactly one CSP_EXPOSURE_CHANGED(−1) is emitted</div>
+
+  <div class="gherkin"><strong>EDGE_01 (edge):</strong> Cross-CSP return<br>
+    <span class="kw">Given</span> a device mapped to CSP-A returned by CSP-B<br>
+    <span class="kw">Then</span> the return is accepted and a cross-CSP flag is raised</div>
+
+  <div class="gherkin"><strong>EDGE_02 (edge · transition):</strong> Partial dispatch receipt<br>
+    <span class="kw">Given</span> a 10-device order in PENDING_CSP_RECEIPT, one device returned<br>
+    <span class="kw">When</span> the CSP confirms receipt<br>
+    <span class="kw">Then</span> the 9 remaining devices move to CUSTODIED and the returned one is excluded; exposure for the returned device is unchanged</div>
+
+  <div class="gherkin regression"><strong>REGRESSION_01 (A6):</strong> Damage pricing unchanged<br>
+    <span class="kw">Given</span> a device classified DAMAGE_MINOR<br>
+    <span class="kw">Then</span> the liability is exactly ₹150, identical to pre-change</div>
+
+  <div class="gherkin regression"><strong>REGRESSION_02 (A6):</strong> Existing handover flow intact<br>
+    <span class="kw">Given</span> a device in RETRIEVAL_PENDING confirmed by ops<br>
+    <span class="kw">Then</span> it moves to RETURNED with exposure −1 exactly as before</div>
+
+  <div class="gherkin regression"><strong>REGRESSION_03 (A6):</strong> Exposure still starts at receipt<br>
+    <span class="kw">Given</span> an order dispatched to PENDING_CSP_RECEIPT<br>
+    <span class="kw">Then</span> no exposure is counted until the device reaches CUSTODIED</div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <tr><th style="width:24%">Coverage class</th><th>Source</th><th style="width:12%">Items</th><th style="width:12%">Blocks</th><th style="width:16%">All covered?</th></tr>
+    <tr><td>Business logic</td><td>A5 delta · A7.1 rules</td><td>11</td><td>4 (+ shared)</td><td>Partial — expand per delta row</td></tr>
+    <tr><td>Computation</td><td>₹50, exposure Δ, damage residual</td><td>3</td><td>2</td><td>Partial — add zero/boundary</td></tr>
+    <tr><td>Invariants</td><td>A7.1 (8)</td><td>8</td><td>2</td><td>Partial — one block per invariant</td></tr>
+    <tr><td>Use &amp; edge cases</td><td>A7.2 (7) · B1 branches · B2 transitions (11)</td><td>18</td><td>2</td><td>Partial — one per edge/transition</td></tr>
+    <tr><td>Regression</td><td>A6 (7)</td><td>7</td><td>3</td><td>Partial — one per guard line</td></tr>
+  </table>
+  <div class="hint">Draft B5 is a representative sample. Before build, every A5 row, A7.1 invariant, B2 transition and A6 guard needs its own block — matrix must read "all covered" on every class.</div>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <table>
+    <tr><th>#</th><th>Section</th><th class="check">Filled</th><th class="check">N/A</th></tr>
+    <tr><td>QC</td><td>Quick Check</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A1</td><td>Metadata</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A2</td><td>Why this change</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A3</td><td>Current behaviour</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A4</td><td>Desired — state closure matrix</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A5</td><td>The delta</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A6</td><td>Must-not-change (guard)</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edges</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B1</td><td>Changed workflow</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B2</td><td>State changes</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B3</td><td>Data &amp; parameters</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B4</td><td>UI impact</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria</td><td class="check">draft</td><td class="check">—</td></tr>
+  </table>
+  <div class="footer note" style="margin-top:18px;padding:14px;background:var(--bg);border-left:3px solid var(--ink);font-size:13px;">
+    <strong>Not yet sendable</strong> — Status is Draft, every A8 sign-off is Pending, and B5 coverage is a representative sample (not "all covered"). For EM / Product Head architectural review before build: this is a state-machine expansion + money/exposure change. Open decisions are flagged in A7.2 (DEPLOYED non-blocking, PCR partial-receipt vs all-or-nothing, loss+damage double-charge, legacy backfill).
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top:50px;">
+  <h2>Changelog</h2>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:150px">Author</th><th style="width:90px">Section(s)</th><th>Change</th></tr>
+    <tr><td>v0.1</td><td>2026-06-24</td><td>Jaivin Prajapati</td><td>All</td><td>Initial change spec — combines warehouse acceptance (CSP/3PL) + per-state closure matrix.</td></tr>
+  </table>
+</section>
+
+<p style="margin-top:28px;font-size:12px;color:var(--muted);text-align:center;">
+  Wiom Change Spec v1.0 format · Part 1 of 3 (closure) · Part 2 = supply chain / re-dispatch · Part 3 = CSP-side return process
+</p>
+
+</main>
+</div>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });</script>
+</body>
+</html>

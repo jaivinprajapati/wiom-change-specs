@@ -34,6 +34,10 @@
   </header>
 
   <ul class="specs">
+    <li><a href="specs/device-warehouse-return/device-warehouse-return_change_spec.html">
+      <div class="spec-title">Warehouse Device Return (CSP / 3PL) — Acceptance &amp; Closure</div>
+      <div class="spec-sub">v0.1 Draft · 2026-06-24 · Part 1 of 3 · accept device returns from ANY custody state via a Pyrops warehouse-return event (CSP vs 3PL source + identity check, 3PL gated to LOST/customer-non-recovery) → move to RETURNED → per-state closure of exposure, money, liability &amp; customer · 9-state matrix + 12-row delta + new RETURNED edges · code-grounded · EM/Product-Head architectural review pending</div>
+    </a></li>
     <li><a href="specs/rescue-intent-transition/rescue-intent-transition_change_spec.html">
       <div class="spec-title">Rescue-Intent Transition (T_RESCUE) — resolve to ACTIVE or PAUSED by ISP window</div>
       <div class="spec-sub">v0.1 Draft · 2026-06-11 · CLOS-only fix: post-deactivation recharge no longer parks the connection in PAUSED with a live window · adds PENDING_DEACTIVATION→ACTIVE + emits CL_CONNECTION_ACTIVATED so the recharge candidate resolves via the CL path (RV Gate 2 unchanged) · 14 test cases</div>

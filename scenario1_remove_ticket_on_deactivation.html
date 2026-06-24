@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenario 1 — Remove ISP ticket on deactivation</title>
+<style>
+  :root{--bg:#0f1623;--card:#1a2436;--line:#2b3950;--ink:#e7edf6;--mut:#94a3b8;--blue:#3b82f6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--violet:#a78bfa;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;padding:32px 18px;max-width:920px;margin:0 auto}
+  h1{font-size:22px}.tag{font-size:12px;color:var(--blue);font-weight:700;letter-spacing:.05em}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:18px}
+  h2{font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);margin:24px 0 11px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px;margin-bottom:10px}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .c-done{background:rgba(34,197,94,.15);color:var(--green);border:1px solid var(--green)}
+  .c-add{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid var(--blue)}
+  .c-watch{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid var(--amber)}
+  .c-trap{background:rgba(239,68,68,.15);color:var(--red);border:1px solid var(--red)}
+  code{background:#0c1320;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12.5px ui-monospace,Menlo,monospace;color:#cbd5e1}
+  .ref{color:var(--violet);font:12px ui-monospace,monospace}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0}
+  .step{background:#0c1320;border:1px solid var(--line);border-radius:7px;padding:7px 11px;font-size:13px}
+  .arrow{color:var(--mut);font-size:18px}.svc{font-weight:700;color:var(--blue)}
+  .obj{background:linear-gradient(90deg,rgba(59,130,246,.12),transparent);border-left:3px solid var(--blue);padding:10px 14px;border-radius:6px;margin-bottom:16px}
+</style>
+</head>
+<body>
+
+<div class="tag">SCENARIO 1 · CHANGE #1</div>
+<h1>ISP ticket is live → customer moves to PENDING_DEACTIVATION → remove it</h1>
+<div class="sub">Trigger: <code>CL_DEACTIVATION_INITIATED</code> · csp-os-yaml/services (main) · code-anchored</div>
+
+<div class="obj"><b>Goal:</b> When the connection enters <code>PENDING_DEACTIVATION</code>, cancel the existing ISP ticket — <b>no payout to CSP.</b></div>
+
+<h2>What happens today</h2>
+<div class="card">
+  <div class="flow">
+    <span class="step"><span class="svc">CLOS</span> ACTIVE/PAUSED → PENDING_DEACTIVATION</span><span class="arrow">→</span>
+    <span class="step">emits CL_DEACTIVATION_INITIATED</span>
+  </div>
+  <div class="flow">
+    <span class="arrow">└→</span><span class="step"><span class="svc">TAS</span> candidate → <b>CANCELLED</b> → ES_RECHARGE_CANDIDATE_CANCELLED</span>
+  </div>
+  <div class="flow">
+    <span class="arrow">└→</span><span class="step"><span class="svc">CAEOS</span> only sets cl_state — obligation stays <b style="color:var(--red)">OPEN</b></span>
+  </div>
+</div>
+
+<h2>Already built — don't rebuild</h2>
+<div class="card">
+  <span class="chip c-done">DONE</span> <b>TAS already cancels the ISP ticket.</b><br>
+  <code>CL_DEACTIVATION_INITIATED</code> → every open candidate (ACTION_REQUIRED/VALIDATING/VALIDATION_FAILED) → <code>CANCELLED</code>. <span class="ref">TAS …InboundEventProcessingServiceImpl.java:300-314</span>
+</div>
+<div class="card">
+  <span class="chip c-done">DONE</span> <b>No payout is automatic.</b> Payout keys off candidate <b>RESOLVED</b> → COMP_CONNECTION_CREDIT_ISSUED. A <code>CANCELLED</code> candidate never resolves → never paid. <span class="ref">TAS :417-450</span>
+</div>
+
+<h2>The gap to add</h2>
+<div class="card">
+  <span class="chip c-add">ADD</span> <b>CAEOS must dissolve the obligation.</b><br>
+  <code>handleClDeactivationInitiated</code> (<span class="ref">CAEOS :244-272</span>) sets <code>cl_state="PENDING_DEACTIVATION"</code> and leaves <code>supply_recharge_obligation</code> = <b>OPEN</b> forever. Mark it <code>DISSOLVED</code>.
+</div>
+
+<h2>Downstream you may have missed</h2>
+<div class="card">
+  <span class="chip c-trap">TRAP</span> <b>RESOLVE vs CANCEL = payout.</b> Don't dissolve via <code>resolveObligationIfOpen</code> — it emits <code>SUPPLY_RECHARGE_RESOLVED</code>, which TAS turns into candidate <b>RESOLVED → payout.</b> Dissolve in-place, <b>no resolve-emit.</b> <span class="ref">TAS :224-253</span>
+</div>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>Orphan OPEN obligation blocks future tickets.</b> Flow 8 idempotency (<span class="ref">CAEOS :676-682</span>) sees the stale open obligation and skips creating a new one if the connection is later rescued → no ISP ticket when one is truly needed.
+</div>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>RV gate not closed.</b> RV has no consumer for <code>CL_DEACTIVATION_INITIATED</code> — the gate stays live. Optional: RV consumes it to mark the gate terminal. Same gap in <span class="svc">CRV</span> <code>scheduled_expiries</code>.
+</div>
+
+<h2>Target</h2>
+<div class="card" style="font:13px ui-monospace,monospace;color:#cbd5e1;line-height:1.8">
+CL_DEACTIVATION_INITIATED<br>
+&nbsp;&nbsp;├─ <span class="svc">TAS</span>&nbsp;&nbsp; candidate → CANCELLED&nbsp;&nbsp;<span style="color:var(--green)">[exists · no payout]</span><br>
+&nbsp;&nbsp;└─ <span class="svc">CAEOS</span> obligation → DISSOLVED, no resolve-emit&nbsp;&nbsp;<span style="color:var(--blue)">[ADD]</span>
+</div>
+
+</body>
+</html>

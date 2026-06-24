@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenario 2 — No ISP ticket when already PENDING_DEACTIVATION</title>
+<style>
+  :root{--bg:#0f1623;--card:#1a2436;--line:#2b3950;--ink:#e7edf6;--mut:#94a3b8;--blue:#3b82f6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--violet:#a78bfa;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;padding:32px 18px;max-width:920px;margin:0 auto}
+  h1{font-size:22px}.tag{font-size:12px;color:var(--blue);font-weight:700;letter-spacing:.05em}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:18px}
+  h2{font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);margin:24px 0 11px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px;margin-bottom:10px}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .c-add{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid var(--blue)}
+  .c-watch{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid var(--amber)}
+  .c-gap{background:rgba(239,68,68,.15);color:var(--red);border:1px solid var(--red)}
+  code{background:#0c1320;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12.5px ui-monospace,Menlo,monospace;color:#cbd5e1}
+  .ref{color:var(--violet);font:12px ui-monospace,monospace}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0}
+  .step{background:#0c1320;border:1px solid var(--line);border-radius:7px;padding:7px 11px;font-size:13px}
+  .arrow{color:var(--mut);font-size:18px}.svc{font-weight:700;color:var(--blue)}
+  .obj{background:linear-gradient(90deg,rgba(59,130,246,.12),transparent);border-left:3px solid var(--blue);padding:10px 14px;border-radius:6px;margin-bottom:16px}
+</style>
+</head>
+<body>
+
+<div class="tag">SCENARIO 2 · CHANGE #2</div>
+<h1>Customer already in PENDING_DEACTIVATION → don't create the ISP ticket</h1>
+<div class="sub">Trigger: <code>RECHARGE_WINDOW_APPROACHING</code> (RV → CAEOS) · csp-os-yaml/services (main) · code-anchored</div>
+
+<div class="obj"><b>Goal:</b> When the recharge window approaches, CAEOS must not create an obligation (→ no ISP ticket) if the connection is <code>PENDING_DEACTIVATION</code>.</div>
+
+<h2>What happens today</h2>
+<div class="card">
+  <div class="flow">
+    <span class="step"><span class="svc">RV</span> RECHARGE_WINDOW_APPROACHING</span><span class="arrow">→</span>
+    <span class="step"><span class="svc">CAEOS</span> creates obligation</span><span class="arrow">→</span>
+    <span class="step">SUPPLY_RECHARGE_NEEDED</span><span class="arrow">→</span>
+    <span class="step"><span class="svc">TAS</span> ISP ticket</span>
+  </div>
+  <div class="card" style="margin-top:8px;background:#0c1320">
+    <span class="chip c-gap">GAP</span> CAEOS <code>handleRechargeWindowApproaching</code> guards only on <code>entitlement_end &gt; window_end</code>. <b>No cl_state check.</b> So it creates a ticket even when the connection is deactivating. <span class="ref">CAEOS :650-705</span>
+  </div>
+</div>
+
+<h2>The change to add</h2>
+<div class="card">
+  <span class="chip c-add">ADD</span> <b>Guard on CL state in Flow 8.</b><br>
+  After loading the entity, add: if <code>cl_state ∈ {PENDING_DEACTIVATION, DEACTIVATED}</code> → log + <code>return</code> (no obligation, no <code>SUPPLY_RECHARGE_NEEDED</code>). CAEOS already mirrors it in <code>customer_access_states.cl_state</code> — no CLOS call needed. <span class="ref">CAEOS :666</span>
+</div>
+
+<h2>Downstream you may have missed</h2>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>Reactive path too.</b> The same emit happens from <code>createOrEscalateReactiveObligation</code> (RV expired / supply-loss). Apply the identical guard there. Rescue is the safe exception — by then cl_state is already back to <code>PAUSED</code>. <span class="ref">CAEOS :802-840</span>
+</div>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>All creation entry points.</b> Proactive (Flow 8) + reactive + bulk admin (already PAUSED-guarded <span class="ref">:766-769</span>). Miss one → ticket re-appears.
+</div>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>RV keeps firing.</b> RV has no consumer for <code>CL_DEACTIVATION_INITIATED</code>, so it keeps emitting APPROACHING/EXPIRED for a deactivating connection. CAEOS now drops them, but the source keeps firing (noise). Optional: RV marks the gate terminal on deactivation.
+</div>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>Race with Scenario 1.</b> If APPROACHING is processed microseconds before deactivation, ticket+obligation get created anyway — then Scenario 1's cancel+dissolve must clean up. Both changes are needed together.
+</div>
+
+<h2>Target</h2>
+<div class="card" style="font:13px ui-monospace,monospace;color:#cbd5e1;line-height:1.8">
+RECHARGE_WINDOW_APPROACHING while cl_state = PENDING_DEACTIVATION<br>
+&nbsp;&nbsp;└─ <span class="svc">CAEOS</span> guard hits → no obligation, no SUPPLY_RECHARGE_NEEDED, no ticket&nbsp;&nbsp;<span style="color:var(--blue)">[ADD · proactive + reactive]</span>
+</div>
+
+</body>
+</html>

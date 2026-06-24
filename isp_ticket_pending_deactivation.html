@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISP Ticket × Pending Deactivation — Change Spec</title>
+<style>
+  :root{--bg:#0f1623;--card:#1a2436;--line:#2b3950;--ink:#e7edf6;--mut:#94a3b8;--blue:#3b82f6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--violet:#a78bfa;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,Segoe UI,Roboto,sans-serif;padding:32px 18px;max-width:1000px;margin:0 auto}
+  h1{font-size:23px;margin-bottom:4px}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:22px}
+  h2{font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);margin:26px 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle}
+  .c-done{background:rgba(34,197,94,.15);color:var(--green);border:1px solid var(--green)}
+  .c-add{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid var(--blue)}
+  .c-watch{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid var(--amber)}
+  .c-trap{background:rgba(239,68,68,.15);color:var(--red);border:1px solid var(--red)}
+  code{background:#0c1320;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font:12.5px ui-monospace,Menlo,monospace;color:#cbd5e1}
+  .ref{color:var(--violet);font:12px ui-monospace,monospace}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0}
+  .step{background:#0c1320;border:1px solid var(--line);border-radius:7px;padding:7px 11px;font-size:13px}
+  .arrow{color:var(--mut);font-size:18px}
+  .svc{font-weight:700;color:var(--blue)}
+  ol,ul{margin:6px 0 2px 20px}
+  li{margin:5px 0}
+  .t{font-weight:700;color:var(--ink)}
+  .obj{background:linear-gradient(90deg,rgba(59,130,246,.12),transparent);border-left:3px solid var(--blue);padding:10px 14px;border-radius:6px;margin-bottom:18px}
+  .num{display:inline-block;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;text-align:center;font-size:13px;font-weight:700;line-height:22px;margin-right:8px}
+</style>
+</head>
+<body>
+
+<h1>ISP Ticket × Pending Deactivation</h1>
+<div class="sub">Change spec · csp-os-yaml/services (main) · code-anchored, no inference</div>
+
+<div class="obj"><b>Objective:</b> If customer is in <code>PENDING_DEACTIVATION</code>, no ISP ticket shown to CSP. If a ticket is live and customer moves to <code>PENDING_DEACTIVATION</code>, remove it — <b>with no payout to CSP.</b></div>
+
+<h2>How the ISP ticket flows today</h2>
+<div class="card">
+  <div class="flow">
+    <span class="step"><span class="svc">RV</span> RECHARGE_WINDOW_APPROACHING</span><span class="arrow">→</span>
+    <span class="step"><span class="svc">CAEOS</span> creates obligation</span><span class="arrow">→</span>
+    <span class="step">SUPPLY_RECHARGE_NEEDED</span><span class="arrow">→</span>
+    <span class="step"><span class="svc">TAS</span> recharge_execution_candidate = <b>ISP ticket</b></span>
+  </div>
+  <div style="color:var(--mut);font-size:13px;margin-top:6px">RV holds no CL state. CAEOS guard checks only <code>entitlement_end &gt; window_end</code> — <b>no cl_state check.</b> <span class="ref">CAEOS InboundEventProcessingServiceImpl.java:650-705</span></div>
+</div>
+
+<h2>Already built — don't rebuild</h2>
+<div class="card">
+  <span class="chip c-done">DONE</span> <b>TAS already cancels the ticket on deactivation.</b><br>
+  <code>CL_DEACTIVATION_INITIATED</code> → open candidate → <code>CANCELLED</code> → <code>ES_RECHARGE_CANDIDATE_CANCELLED</code>. <span class="ref">TAS …InboundEventProcessingServiceImpl.java:300-314</span>
+</div>
+<div class="card">
+  <span class="chip c-done">DONE</span> <b>"No payout" is automatic — if cancelled, not resolved.</b><br>
+  Payout keys off candidate <b>RESOLVED</b> → COMP_CONNECTION_CREDIT_ISSUED → <code>commission_status=DISBURSED</code>. A <code>CANCELLED</code> candidate never resolves → never paid. <span class="ref">TAS :417-450</span>
+</div>
+
+<h2>What to actually add</h2>
+<div class="card">
+  <span class="num">2</span><span class="chip c-add">ADD</span> <b>CAEOS Flow 8 — guard on CL state.</b><br>
+  In <code>handleRechargeWindowApproaching</code> (<span class="ref">:650-705</span>), after loading entity: if <code>cl_state ∈ {PENDING_DEACTIVATION, DEACTIVATED}</code> → log + return (no obligation, no emit). CAEOS already mirrors it in <code>customer_access_states.cl_state</code> — no CLOS call needed. <b>Apply same guard to <code>createOrEscalateReactiveObligation</code></b> (<span class="ref">:802</span>) to cover the REACTIVE origin.
+</div>
+<div class="card">
+  <span class="num">1</span><span class="chip c-add">ADD</span> <b>CAEOS — dissolve the obligation on deactivation (the real gap).</b><br>
+  <code>handleClDeactivationInitiated</code> (<span class="ref">:244-272</span>) only sets <code>cl_state</code> — the <code>supply_recharge_obligation</code> stays <b>OPEN</b> forever. TAS cancels its candidate; CAEOS must mark its obligation <code>DISSOLVED</code>.
+</div>
+
+<h2>Downstream you may have missed</h2>
+<div class="card">
+  <span class="chip c-trap">TRAP</span> <b>RESOLVE vs CANCEL = payout.</b> Don't dissolve via <code>resolveObligationIfOpen</code> — it emits <code>SUPPLY_RECHARGE_RESOLVED</code>, which TAS turns into candidate <b>RESOLVED → payout.</b> Dissolve in-place, <b>no resolve-emit</b>; let <code>CL_DEACTIVATION_INITIATED</code> own the cancel. <span class="ref">TAS :224-253</span>
+</div>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>Orphan OPEN obligation blocks future tickets.</b> Flow 8 idempotency (<span class="ref">:676-682</span>) treats an open obligation as "handled" — if the connection is later rescued, no new ISP ticket is created. This is exactly why it must be dissolved.
+</div>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>Race condition.</b> If APPROACHING is processed microseconds before deactivation, ticket+obligation get created, then deactivation cancels candidate (exists) and must dissolve obligation (Change&nbsp;#1). Both changes are needed together — neither alone closes the window.
+</div>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>All creation entry points.</b> Guard must cover Flow 8 proactive + <code>createOrEscalateReactiveObligation</code> (supply-loss + rescue) + bulk admin (already PAUSED-guarded). Miss one → ticket re-appears.
+</div>
+<div class="card">
+  <span class="chip c-watch">WATCH</span> <b>RV gates never close.</b> RV has no consumer for <code>CL_DEACTIVATION_INITIATED</code> — it keeps emitting for a deactivated connection (CAEOS now drops it, but the source keeps firing). Optional: RV consumes the event to mark the gate terminal. Same gap in <span class="svc">CRV</span> <code>scheduled_expiries</code>.
+</div>
+
+<h2>Target flow</h2>
+<div class="card" style="font:13px ui-monospace,monospace;color:#cbd5e1;line-height:1.8">
+PENDING_DEACTIVATION reached → CLOS emits CL_DEACTIVATION_INITIATED<br>
+&nbsp;&nbsp;├─ <span class="svc">TAS</span>&nbsp;&nbsp; candidate → CANCELLED → ES_RECHARGE_CANDIDATE_CANCELLED&nbsp;&nbsp;<span style="color:var(--green)">[exists · no payout]</span><br>
+&nbsp;&nbsp;└─ <span class="svc">CAEOS</span> obligation → DISSOLVED (no resolve-emit)&nbsp;&nbsp;<span style="color:var(--blue)">[ADD #1]</span><br><br>
+RECHARGE_WINDOW_APPROACHING while cl_state = PENDING_DEACTIVATION<br>
+&nbsp;&nbsp;└─ <span class="svc">CAEOS</span> guard hits → no obligation, no ticket&nbsp;&nbsp;<span style="color:var(--blue)">[ADD #2 · proactive + reactive]</span>
+</div>
+
+</body>
+</html>
