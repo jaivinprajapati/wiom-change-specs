@@ -104,7 +104,7 @@
   </ol>
   <h2 class="how">Part B — HOW</h2>
   <ol>
-    <li><a href="#b1"><span class="ix">B1.</span>Changed workflow</a></li>
+    <li><a href="#b1"><span class="ix">B1.</span>The journey, step by step</a></li>
     <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
     <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameters</a></li>
     <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
@@ -120,9 +120,9 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v0.1 · PM → Engineering</div>
+  <div class="eyebrow">Wiom · Change Spec · v0.2 · PM → Engineering</div>
   <h1>CSP Cancellation of an Initiated Device Return</h1>
-  <p class="lede"><strong>Objective:</strong> let a CSP undo a return <em>it</em> started — before the device is gone — without ever undoing a return the <em>system</em> started, and without letting the limbo days erase the clocks or the carry fees that would otherwise have accrued. Today RETRIEVAL_PENDING is a one-way door: once a CSP taps "return", the only exits are RETURNED or the timers that mark it LOST/WRITTEN_OFF — there is no path back. This spec adds a single, tightly-gated reverse transition (<span class="mono">T_RETURN_CANCELLED</span>) that restores the device to its exact prior resting state (IDLE or CUSTODIED), keeps the no-deployment / idle clocks continuous across the limbo, and charges a one-time carry-fee catch-up where one is due. Fundamental state-machine change → EM review before any architectural call.</p>
+  <p class="lede"><strong>The story:</strong> a CSP raised a return on a NetBox, the box went into <span class="mono">RETRIEVAL_PENDING</span> and Ops started preparing the pickup — then a customer walked in and the CSP wants the box back. Today there is no way back: <span class="mono">RETRIEVAL_PENDING</span> is a one-way door whose only exits are RETURNED or the timers that quietly mark the box LOST/WRITTEN_OFF, leaving the CSP penalised for an asset it still holds. <strong>This spec gives the CSP a "Cancel return" it can actually use</strong> — a single, tightly-gated reverse transition (<span class="mono">T_RETURN_CANCELLED</span>) that walks the box home to the exact state it left (IDLE or CUSTODIED), keeps every clock running across the in-between days, charges the carry fee that was genuinely due, and tells the warehouse to stand down. It refuses to undo a return the <em>system</em> started, and it shuts off the moment the box is marked LOST. Written from the backend's point of view, told as the journey a device takes. Fundamental state-machine change → EM review before any architectural call.</p>
   <div class="meta-row">
     <span><strong>Author (PM):</strong> Jaivin Prajapati &nbsp;·&nbsp; <strong>Reviewers:</strong> Dhruv · EM &nbsp;·&nbsp; <strong>Tier:</strong> Full</span>
   </div>
@@ -156,7 +156,7 @@
     <tr><td>Change title</td><td>CSP Cancellation of an Initiated Device Return</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Version</td><td>v0.2</td></tr>
     <tr><td>Baseline — OS (governance)</td><td>Asset Custody OS v1.11.1 (LOCKED) + SD-fork (ACS v1.12 → renumber v1.14); Compensation OS (carry-fee).</td></tr>
     <tr><td>Baseline — code (flows)</td><td><span class="mono">csp-asset-custody-service</span> (<span class="mono">CustodyStateServiceImpl</span>, <span class="mono">NetboxCustodyStateMachine</span>, <span class="mono">CarryFeeAccrualServiceImpl</span>), <span class="mono">csp-compensation-service</span>; pickup orchestration = Pyrops/Ops (upstream).</td></tr>
   </table>
@@ -180,6 +180,7 @@
 <!-- A3 -->
 <section class="spec" id="a3">
   <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <p style="font-size:14px;">Here is the box's life today, and where the journey dead-ends. A CSP can <em>start</em> a return easily; the trouble is there is no second act — the code simply has no edge that walks a <span class="mono">RETRIEVAL_PENDING</span> box backwards, and no way to tell whether the CSP or the system started the return in the first place.</p>
   <table>
     <tr><th style="width:38%">Given (condition)</th><th>Today — code (governing OS)</th></tr>
     <tr><td>CSP raises a return</td><td><span class="mono">initiateReturn</span> / <span class="mono">batchInitiateReturn</span> / <span class="mono">deactivate-and-return</span> → device → RETRIEVAL_PENDING; sets <span class="mono">retrieval_start_date</span>; <strong>zeroes</strong> <span class="mono">carry_fee_active / carry_fee_accrual_units / last_accrual_date</span>; <strong>preserves</strong> <span class="mono">idle_start_date</span>. Emits <span class="mono">DEVICE_RETURN_REQUESTED</span> (Ops/Pyrops begin pickup prep). (Code: <span class="mono">CustodyStateServiceImpl.initiateReturn</span>)</td></tr>
@@ -196,7 +197,7 @@
 <!-- A4 -->
 <section class="spec" id="a4">
   <h2><span class="num">A4.</span> Desired Behaviour — Restore-by-Prior-State Matrix <span class="tier what">WHAT</span></h2>
-  <p style="font-size:13px;color:var(--muted)">A cancel restores the device to <span class="mono">pre_retrieval_status</span> (the resting state it left). Eligibility is gated on <span class="mono">retrieval_initiator = CSP</span> AND current status = RETRIEVAL_PENDING. The limbo (<span class="mono">retrieval_start_date</span> → cancel) <strong>counts</strong> toward the relevant clock in every row — it is never excluded. <strong>Audit rule:</strong> every entry carries <span class="mono">device_id</span> AND <span class="mono">csp_id</span> explicitly.</p>
+  <p style="font-size:14px;">The whole journey hinges on one question — <em>where was the box before it tried to leave?</em> — and one principle: <strong>the in-between days always count</strong>. A cancel walks the box back to <span class="mono">pre_retrieval_status</span> (the resting state it left), but only if the CSP started the return (<span class="mono">retrieval_initiator = CSP</span>) and the box is still <span class="mono">RETRIEVAL_PENDING</span>. The matrix below is the same journey told as a table — which prior states earn a way home, and what each clock and the carry fee do when they get there. Every row writes <span class="mono">device_id</span> AND <span class="mono">csp_id</span> on every entry.</p>
   <table class="matrix">
     <tr><th>#</th><th>Prior state</th><th>Cancel allowed?</th><th>Restores to</th><th>No-deployment clock</th><th>Idle clock</th><th>Carry-fee effect</th><th>Exposure</th><th>Pickup</th></tr>
     <tr><td>1</td><td>CUSTODIED <span style="color:var(--muted)">(CSP-initiated return)</span></td><td><span class="new">YES</span></td><td>CUSTODIED</td><td><strong>counts limbo</strong> (created_at-anchored — automatic)</td><td>n/a</td><td>none (CUSTODIED not carry-fee eligible)</td><td>no change (in exposure both sides)</td><td>abort</td></tr>
@@ -302,7 +303,39 @@
 
 <!-- B1 -->
 <section class="spec" id="b1">
-  <h2><span class="num">B1.</span> Changed Workflow — Before &amp; After <span class="tier cond">Conditional — flow changes</span></h2>
+  <h2><span class="num">B1.</span> The Journey — Cancelling a Return, Step by Step <span class="tier cond">Conditional — flow changes</span></h2>
+
+  <p style="font-size:14px;">Picture a NetBox that has been sitting <span class="mono">IDLE</span> in a CSP's shop for a few days. Last Tuesday the CSP tapped <strong>Return</strong> in the app — that fired <span class="mono">initiateReturn</span>, pushed the box into <span class="mono">RETRIEVAL_PENDING</span>, stamped <span class="mono">retrieval_start_date</span>, quietly paused the carry-fee fields, and sent <span class="mono">DEVICE_RETURN_REQUESTED</span> so Ops could schedule a pickup. Today a new customer walks in and the CSP needs that box back. Here is what happens behind the glass when they tap <strong>Cancel return</strong> — the backend never changes a thing until it has asked, in order, four questions.</p>
+
+  <h3>Step 1 · The CSP asks to cancel</h3>
+  <p style="font-size:14px;">The app calls <span class="mono">POST /api/asset-custody/devices/{deviceId}/cancel-return</span> (CSP-permissioned). ACS loads the single <span class="mono">netbox_custody</span> row for that <span class="mono">device_id</span> and takes an optimistic-lock read on its <span class="mono">version</span> — so if a nightly timer touches the same row mid-cancel, one of them will lose cleanly rather than corrupt the state.</p>
+
+  <h3>Step 2 · "Did <em>you</em> start this return?"</h3>
+  <p style="font-size:14px;">The first guard reads <span class="mono">retrieval_initiator</span>. If it says <span class="mono">SYSTEM</span> — the box was pulled into <span class="mono">RETRIEVAL_PENDING</span> by the 45-day no-deployment recall (<span class="mono">T_RECALL_CUSTODIED</span>), by an exit, or by a swap-out — ACS stops here and the app would not have shown the Cancel button in the first place. Only a CSP-started return (<span class="mono">retrieval_initiator = CSP</span>) gets through. Ours did, so we continue.</p>
+
+  <h3>Step 3 · "Is it too late?"</h3>
+  <p style="font-size:14px;">The second guard checks the box is <em>still</em> in <span class="mono">RETRIEVAL_PENDING</span>. If one of the timers had already fired overnight — the <span class="mono">P20</span> window flipping it to <span class="mono">LOST</span>, or the write-off sweep — then in the system's eyes the box has already left the CSP's hands, and ACS answers <span class="mono">CANCEL_TOO_LATE</span>. The cancel window is exactly "until the box is marked LOST," and not a moment later.</p>
+
+  <h3>Step 4 · "Where does it go home to?"</h3>
+  <p style="font-size:14px;">ACS reads <span class="mono">pre_retrieval_status</span> — the resting state the box was in when the return was raised, stamped at that moment so we never have to guess. Two roads lead out of here.</p>
+
+  <h3>Step 5a · The box was CUSTODIED (a fresh box, never deployed)</h3>
+  <p style="font-size:14px;">ACS sets <span class="mono">status = CUSTODIED</span> and we are almost done — because the clock that matters here, the 45-day no-deployment recall, was never paused in a way that loses time. That recall hunts for devices via <span class="mono">findNeverDeployedCustodiedBefore</span>, which measures age from the row's immutable <span class="mono">created_at</span>. The days the box spent in limbo were always counted; restoring <span class="mono">CUSTODIED</span> simply makes the box visible to the recall sweep again. So if those limbo days pushed the box past 45 days old, the very next sweep re-recalls it immediately — the CSP cannot park a box in <span class="mono">RETRIEVAL_PENDING</span> to dodge the recall. No carry fee applies (CUSTODIED boxes never accrue it). Nothing else moves.</p>
+
+  <h3>Step 5b · The box was IDLE (it had been deployed before)</h3>
+  <p style="font-size:14px;">ACS sets <span class="mono">status = IDLE</span>. The idle clock, like the recall clock, never actually lost time: <span class="mono">initiateReturn</span> preserves <span class="mono">idle_start_date</span> (it only zeroes the carry-fee counters), so the box's idle age already includes the limbo. The one thing that needs care is the money. Two sub-stories:</p>
+  <ul style="font-size:14px;">
+    <li><strong>(a) Carry fee was not yet due.</strong> The box's idle age — limbo included — is still under the <span class="mono">P19</span> threshold. The catch-up computes to <strong>zero</strong>; ACS just re-activates accrual and the daily job picks it up from here. The CSP pays nothing extra.</li>
+    <li><strong>(b) Carry fee had become due.</strong> Counting the limbo, the box has crossed <span class="mono">P19</span> and would have been accruing carry fee had it stayed IDLE. So ACS runs <strong>one</strong> off-cycle accrual — the very same mechanism the daily job uses — emitting <span class="mono">CUSTODY_CARRY_FEE_ACCRUED</span> for exactly the units that came due across the limbo, capped at the hard cap, which Compensation turns into the normal <span class="mono">CARRY_FEE_DEBIT</span>. It then sets <span class="mono">last_accrual_date = today</span> so the daily job continues cleanly and never double-charges. The CSP is charged precisely what it would have paid by simply leaving the box idle — no reward for the round-trip, no penalty either.</li>
+  </ul>
+
+  <h3>Step 6 · Tell the warehouse to stand down</h3>
+  <p style="font-size:14px;">Ops began preparing a pickup the moment the box hit <span class="mono">RETRIEVAL_PENDING</span>. So ACS emits <span class="mono">DEVICE_RETURN_CANCELLED</span> (device_id, csp_id, the state it was restored to, timestamp). Pyrops/Ops consume it and drop the box from the pickup queue — the retraction the original <span class="mono">DEVICE_RETURN_REQUESTED</span> never had.</p>
+
+  <h3>Step 7 · The box is home</h3>
+  <p style="font-size:14px;">ACS writes one <span class="mono">custody_audit_log</span> row (<span class="mono">RETRIEVAL_PENDING → IDLE/CUSTODIED</span>, <span class="mono">triggered_by = csp</span>, <span class="mono">reason = CSP_RETURN_CANCELLED</span>, carrying both ids). Because <span class="mono">RETRIEVAL_PENDING</span>, <span class="mono">IDLE</span> and <span class="mono">CUSTODIED</span> are all inside the exposure set, the box never left the CSP's exposure — so <strong>no</strong> <span class="mono">CSP_EXPOSURE_CHANGED</span> is emitted. The Cancel CTA disappears, and the CSP redeploys the box to its new customer that same afternoon. If it changes its mind again next week, it can raise a fresh return — every initiate and every cancel is its own audited line.</p>
+
+  <h3>The same journey, as a flow</h3>
   <div class="diff-legend"><strong>Colour key</strong>
     <span class="chip unchanged">Unchanged</span><span class="chip added">Added</span><span class="chip changed">Changed</span><span class="chip removed">Removed</span></div>
 
@@ -393,6 +426,7 @@ stateDiagram-v2
 <!-- B4 -->
 <section class="spec" id="b4">
   <h2><span class="num">B4.</span> UI Impact <span class="tier cond">User-visible</span></h2>
+  <p style="font-size:14px;">From the CSP's side the journey is small and reassuring: a <strong>Cancel return</strong> button that only appears when it can actually be used, and — if money is involved — an honest line telling them what the one-time carry-fee catch-up will cost before they confirm. Everything else happens out of sight.</p>
   <table>
     <tr><th>Surface</th><th>What the user now sees</th></tr>
     <tr><td>CSP app — device / returning list</td><td>A <strong>Cancel return</strong> CTA on a device the CSP itself put into "returning", available until pickup/LOST. On tap: device returns to its prior state; if a carry-fee catch-up applies, the CSP is shown the one-time charge before/after confirming.</td></tr>
@@ -500,6 +534,7 @@ stateDiagram-v2
   <table>
     <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:150px">Author</th><th style="width:90px">Section(s)</th><th>Change</th></tr>
     <tr><td>v0.1</td><td>2026-06-25</td><td>Jaivin Prajapati</td><td>All</td><td>Initial — CSP self-cancellation of an initiated return: gated reverse transition (T_RETURN_CANCELLED), restore-by-prior-state, limbo-counts clock rule, one-time carry-fee catch-up, pickup-abort event. "Wiom could not pick up" reversal explicitly out of scope.</td></tr>
+    <tr><td>v0.2</td><td>2026-06-25</td><td>Jaivin Prajapati</td><td>Lede · A3 · A4 · B1 · B4</td><td>Re-voiced from the backend's point of view but told as the journey a device takes — B1 rewritten as a 7-step walkthrough (the four guard questions → two restore roads → stand-down → home), with all event names, columns and states kept exact. Narrative lead-ins added to A3/A4/B4. No logic change from v0.1.</td></tr>
   </table>
 </section>
 
