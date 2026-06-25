@@ -137,6 +137,15 @@
   </div>
 </header>
 
+<a href="https://jaivinprajapati.github.io/wiom-change-specs/specs/device-redispatch/custody-episode-log_design.html" style="display:flex;align-items:center;gap:16px;margin:0 0 28px;padding:16px 20px;background:#e9f5ee;border:2px solid #0b6b3a;border-radius:8px;text-decoration:none;color:#064e2b;">
+  <span style="font-size:30px;line-height:1;flex:none;">📐</span>
+  <span>
+    <span style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.09em;font-weight:700;color:#0b6b3a;">Companion · Detailed Design — read for the full review</span>
+    <span style="display:block;font-size:16px;font-weight:700;margin:2px 0;">Custody-Episode Log — objective · scope · exact columns · workflows · system diagram →</span>
+    <span style="display:block;font-size:12.5px;color:#0b6b3a;">Defines the <code>custody_episode</code> table, the <code>netbox_custody</code> re-stamp, and how the two work in tandem. Click to open.</span>
+  </span>
+</a>
+
 <aside class="quickcheck" id="quickcheck">
   <h2>Quick Check</h2>
   <div class="qc-tag">7-line triage.</div>
@@ -380,7 +389,7 @@ stateDiagram-v2
   <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
   <table>
     <tr><th>Data</th><th>Old</th><th>New</th><th>Scope</th><th>Reason</th></tr>
-    <tr><td>Custody-episode log</td><td>Does not exist</td><td>Immutable, one row per (device, CSP) tenure: episode window, terminal disposition, condition, liability refs, recovery/return refs.</td><td>Per device-episode</td><td>Preserve liability + history independent of the live row.</td></tr>
+    <tr><td>Custody-episode log <a href="https://jaivinprajapati.github.io/wiom-change-specs/specs/device-redispatch/custody-episode-log_design.html" style="font-size:11px;font-weight:700;color:#0b6b3a;">↗ full schema</a></td><td>Does not exist</td><td>Immutable, one row per (device, CSP) tenure: episode window, terminal disposition, condition, liability refs, recovery/return refs. <b>Exact columns + workflows + system diagram in the <a href="https://jaivinprajapati.github.io/wiom-change-specs/specs/device-redispatch/custody-episode-log_design.html">detailed design doc</a>.</b></td><td>Per device-episode</td><td>Preserve liability + history independent of the live row.</td></tr>
     <tr><td>Live row re-stamp semantics</td><td>One row, overwrite-by-accident</td><td>Explicit re-stamp on re-dispatch: new csp_id, counters reset, fresh created_at.</td><td>Per device</td><td>Current truth = current custodian; clean new episode.</td></tr>
     <tr><td><span class="mono">was_ever_deployed</span></td><td>Never resets</td><td>Resets to false at episode start.</td><td>Per episode</td><td>Carry-fee fairness for the new CSP.</td></tr>
     <tr><td><span class="mono">device_commissioned_at</span></td><td>Permanent</td><td>Unchanged (permanent, device-level).</td><td>Per device</td><td>Age-band depreciation stays device-level.</td></tr>
