@@ -363,24 +363,61 @@ flowchart TD
 
 <!-- B2 -->
 <section class="spec" id="b2">
-  <h2><span class="num">B2.</span> State Changes <span class="tier cond">State machine touched</span></h2>
-  <p style="font-size:13px;color:var(--muted)">In-episode state machine is unchanged. New: an <b>episode boundary</b> — terminal disposition archives the episode; re-dispatch starts a fresh episode at PENDING_CSP_RECEIPT (same device_id). The live row is re-stamped, not reversed.</p>
+  <h2><span class="num">B2.</span> State Changes — Full Custody State Machine <span class="tier cond">State machine touched</span></h2>
+  <p style="font-size:13px;color:var(--muted)">The complete machine across all 11 custody states. Label prefixes mark the change: unlabelled = existing; <b>P1</b> = warehouse return acceptance (Part 1, accept →RETURNED from any state); <b>P2</b> = re-dispatch / episode (Part 2). The whole machine runs <em>within one episode</em>; the single P2 edge (<span class="mono">WIOM_INVENTORY → PENDING_CSP_RECEIPT</span>) closes the episode and re-stamps the row to open the next.</p>
+  <div class="diff-legend"><strong>Legend</strong>
+    <span class="chip unchanged">existing transition</span>
+    <span class="chip added">P1 — return acceptance (Part 1)</span>
+    <span class="chip changed">P2 — re-dispatch / episode (Part 2)</span>
+  </div>
   <div class="mermaid">
 stateDiagram-v2
-  state "Episode N (CSP-A)" as E1 {
-    [*] --> PENDING_CSP_RECEIPT
-    PENDING_CSP_RECEIPT --> CUSTODIED
-    CUSTODIED --> DEPLOYED
-    DEPLOYED --> RETURNED
-    CUSTODIED --> RETURNED
-  }
-  E1 --> ARCHIVE: episode close -> snapshot to log (NEW)
-  ARCHIVE --> WIOM_INVENTORY: live row detaches (NEW)
-  WIOM_INVENTORY --> E2: re-dispatch, row re-stamped (NEW)
-  state "Episode N+1 (CSP-B)" as E2 {
-    [*] --> PENDING_CSP_RECEIPT2
-  }
+  direction TB
+  [*] --> PENDING_CSP_RECEIPT: dispatch T_DISPATCH
+  PENDING_CSP_RECEIPT --> CUSTODIED: receipt confirmed T_RECEIPT
+
+  CUSTODIED --> DEPLOYED: customer install
+  CUSTODIED --> RETRIEVAL_PENDING: return / recall
+  CUSTODIED --> LOST: CSP loss declared
+
+  DEPLOYED --> CUSTOMER_RECOVERY_PENDING: deactivation T_REC_1
+  DEPLOYED --> RETRIEVAL_PENDING: exit / system / swap-out
+  DEPLOYED --> DEPLOYED: custody transfer A to B
+
+  IDLE --> DEPLOYED: re-install
+  IDLE --> RETRIEVAL_PENDING: return / recall
+  IDLE --> LOST: CSP loss declared
+
+  CUSTOMER_RECOVERY_PENDING --> IDLE: recovered T_REC_2
+  CUSTOMER_RECOVERY_PENDING --> RETURNED: internal direct T_REC_3
+  CUSTOMER_RECOVERY_PENDING --> RETRIEVAL_PENDING: exit during recovery T_REC_4
+  CUSTOMER_RECOVERY_PENDING --> LOST: window exceeded T_REC_5
+  CUSTOMER_RECOVERY_PENDING --> DEPLOYED: rescue T_REC_6
+
+  RETRIEVAL_PENDING --> RETURNED: handover confirmed
+  RETRIEVAL_PENDING --> LOST: unresolved beyond P20
+  RETRIEVAL_PENDING --> DAMAGED: QC damage - deferred
+  RETRIEVAL_PENDING --> WRITTEN_OFF: write-off window
+
+  LOST --> WRITTEN_OFF: loss confirmed + claim
+  LOST --> RECOVERY_HOLD: CSP late recovery T_LATE_RECOVERY
+  RECOVERY_HOLD --> RETURNED: handover late T_HANDOVER_LATE
+
+  PENDING_CSP_RECEIPT --> RETURNED: P1 warehouse return
+  CUSTODIED --> RETURNED: P1 warehouse return
+  IDLE --> RETURNED: P1 warehouse return
+  DEPLOYED --> RETURNED: P1 warehouse return + flag + deactivate
+  LOST --> RETURNED: P1 3PL recovered to warehouse
+  DAMAGED --> RETURNED: P1 warehouse return
+  WRITTEN_OFF --> RETURNED: P1 warehouse return
+
+  RETURNED --> WIOM_INVENTORY: P2 episode close + detach
+  WIOM_INVENTORY --> PENDING_CSP_RECEIPT: P2 re-dispatch - new episode
+
+  classDef p2 fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00
+  class WIOM_INVENTORY p2
   </div>
+  <p style="font-size:12px;color:var(--muted)"><b>Notes:</b> <span class="mono">WIOM_INVENTORY</span> is the live row's <span class="mono">holder_type</span> between episodes (device at Wiom, no CSP), not counted in any CSP's exposure — not a custody status. Damage QC (<span class="mono">RETRIEVAL_PENDING → DAMAGED</span>) is deferred (Part 1 functional default) — shown for completeness. <span class="mono">DEPLOYED → DEPLOYED</span> = logical custody transfer (CSP-A→CSP-B, device does not physically move, SD-fork). REASSIGNED is an OS-only transient (not in the code state enum) — omitted.</p>
   <hr class="sect-end">
 </section>
 
