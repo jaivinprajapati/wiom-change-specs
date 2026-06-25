@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — Custody-Episode Log — Detailed Design</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root { --bg:#fafaf9; --surface:#fff; --ink:#1a1a1a; --muted:#6b6b6b; --rule:#e5e5e2;
+    --core:#0b6b3a; --core-bg:#e9f5ee; --what:#1f3c6e; --what-bg:#e8eef8; --how:#5b2a86; --how-bg:#efe6f7;
+    --guard:#b91c1c; --guard-bg:#fee2e2; --os-bg:#fdecef; --os-rule:#b3123a; --os-ink:#7d0a27;
+    --hint-bg:#ecfeff; --hint-rule:#0e7490; --hint-ink:#155e75; --key-bg:#fff7e6; --key-rule:#b7791f; }
+  * { box-sizing:border-box; } html { scroll-behavior:smooth; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif; font-size:15px; line-height:1.5; color:var(--ink); background:var(--bg); }
+  .layout { display:grid; grid-template-columns:268px 1fr; min-height:100vh; }
+  nav.toc { position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto; padding:24px 18px; border-right:1px solid var(--rule); background:var(--surface); font-size:13px; }
+  nav.toc h2 { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:16px 0 6px; }
+  nav.toc h2:first-of-type { margin-top:0; }
+  nav.toc ol { list-style:none; padding:0; margin:0; }
+  nav.toc li a { text-decoration:none; color:var(--ink); display:flex; gap:8px; padding:4px 6px; border-radius:4px; font-size:12.5px; }
+  nav.toc li a:hover { background:var(--bg); }
+  nav.toc li a .ix { color:var(--muted); min-width:26px; font-weight:600; }
+  main { padding:40px 56px 120px; max-width:1040px; }
+  header.doc { border-bottom:2px solid var(--ink); padding-bottom:18px; margin-bottom:26px; }
+  header.doc .eyebrow { font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+  header.doc h1 { font-size:28px; margin:6px 0 8px; line-height:1.2; }
+  header.doc p.lede { color:var(--muted); font-size:14.5px; margin:0; max-width:76ch; }
+  header.doc .meta-row { margin-top:12px; font-size:13px; color:var(--muted); }
+  section { margin:34px 0; scroll-margin-top:20px; }
+  section h2 { font-size:20px; margin:0 0 8px; display:flex; align-items:center; gap:10px; }
+  section h2 .num { color:var(--muted); font-weight:600; }
+  section h3 { font-size:15px; margin:18px 0 6px; color:var(--what); }
+  p { margin:8px 0; } p.small { font-size:13px; color:var(--muted); }
+  table { width:100%; border-collapse:collapse; margin:8px 0 14px; font-size:13px; }
+  th,td { text-align:left; padding:7px 9px; border:1px solid var(--rule); vertical-align:top; }
+  th { background:var(--bg); font-weight:600; }
+  table.cols td:nth-child(1){ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; font-weight:700; white-space:nowrap; }
+  table.cols td:nth-child(2){ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; color:#475; white-space:nowrap; }
+  .mono { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; }
+  .grp { background:var(--what-bg); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--what); }
+  .pk { color:var(--guard); font-weight:700; }
+  .imm { color:var(--core); font-weight:700; font-size:10px; }
+  .mut { color:var(--how); font-weight:700; font-size:10px; }
+  .mermaid { background:var(--surface); border:1px solid var(--rule); border-radius:5px; padding:14px; margin:14px 0; text-align:center; }
+  .box { border-radius:6px; padding:12px 16px; margin:12px 0; font-size:13.5px; }
+  .box.obj { background:var(--core-bg); border:1px solid var(--core); }
+  .box.key { background:var(--key-bg); border:1px solid var(--key-rule); }
+  .box.os { background:var(--os-bg); border:1px solid var(--os-rule); }
+  .box.os b { color:var(--os-ink); }
+  .hint { background:var(--hint-bg); border-left:3px solid var(--hint-rule); padding:8px 14px; font-size:13px; margin:10px 0; color:var(--hint-ink); border-radius:4px; }
+  ol.wf { padding-left:18px; } ol.wf li { margin:5px 0; }
+  ul.tight { margin:6px 0; padding-left:18px; } ul.tight li { margin:3px 0; }
+  .step { background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--what); border-radius:5px; padding:10px 14px; margin:10px 0; }
+  .step .st-h { font-weight:700; font-size:13.5px; margin-bottom:4px; }
+  .tag { font-size:10px; font-weight:700; padding:1px 6px; border-radius:3px; }
+  .tag.new { background:var(--core-bg); color:var(--core); } .tag.chg { background:#fbf1dd; color:#8a5a00; }
+  hr { border:none; border-top:1px dashed var(--rule); margin:28px 0; }
+  @media (max-width:900px){ .layout{grid-template-columns:1fr;} nav.toc{position:static;height:auto;} main{padding:24px;} }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#obj"><span class="ix">1.</span>Objective</a></li>
+    <li><a href="#scope"><span class="ix">2.</span>Scope</a></li>
+    <li><a href="#model"><span class="ix">3.</span>Core model</a></li>
+    <li><a href="#diagram"><span class="ix">4.</span>System diagram (in tandem)</a></li>
+    <li><a href="#live"><span class="ix">5.</span>netbox_custody changes</a></li>
+    <li><a href="#schema"><span class="ix">6.</span>custody_episode — columns</a></li>
+    <li><a href="#ledger"><span class="ix">7.</span>Liability correlation</a></li>
+    <li><a href="#wf"><span class="ix">8.</span>Workflows</a></li>
+    <li><a href="#inv"><span class="ix">9.</span>Invariants</a></li>
+    <li><a href="#edge"><span class="ix">10.</span>Edge cases</a></li>
+    <li><a href="#open"><span class="ix">11.</span>Open decisions</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="doc">
+  <div class="eyebrow">Wiom · Detailed Design · Part 2 appendix · v0.1</div>
+  <h1>Custody-Episode Log — Detailed Design</h1>
+  <p class="lede">The immutable per-tenure history that lets <span class="mono">netbox_custody</span> stay a single live row while the device passes through many CSPs — preserving every custodian's liability and audit trail. Grounded in the current schema (<span class="mono">V5–V18</span>) and dispatch/receipt code.</p>
+  <div class="meta-row"><strong>Owner:</strong> Jaivin Prajapati &nbsp;·&nbsp; <strong>Reviewers:</strong> Dhruv · EM &nbsp;·&nbsp; <strong>Status:</strong> Draft for detailed review</div>
+</header>
+
+<!-- 1 OBJECTIVE -->
+<section id="obj">
+  <h2><span class="num">1.</span> Objective</h2>
+  <div class="box obj">Give every device a complete, immutable, per-custodian history — so that re-dispatching a device to a new CSP <b>never dilutes</b> the prior CSP's liability or audit trail, and the live custody record always reflects only <b>current physical custody</b>. One device = one live row + N immutable episodes.</div>
+  <p>It separates the two axes that today's single row conflates:</p>
+  <ul class="tight">
+    <li><b>Physical status</b> — where the device is &amp; who holds it now → the live <span class="mono">netbox_custody</span> row (moves with the device).</li>
+    <li><b>Liability status</b> — what each CSP owed / was charged / was credited for the device → the <span class="mono">custody_episode</span> log (frozen per tenure).</li>
+  </ul>
+</section>
+
+<!-- 2 SCOPE -->
+<section id="scope">
+  <h2><span class="num">2.</span> Scope</h2>
+  <table>
+    <tr><th style="width:50%">In scope</th><th>Out of scope</th></tr>
+    <tr><td>The <span class="mono">custody_episode</span> table — purpose, columns, lifecycle.</td><td>Warehouse management / restacking (Pyrops).</td></tr>
+    <tr><td><span class="mono">netbox_custody</span> additions (<span class="mono">current_episode_id</span>, <span class="mono">holder_type</span>) + re-stamp semantics.</td><td>The dispatch ordering workflow itself (unchanged — REQUESTED→APPROVED→DISPATCHED).</td></tr>
+    <tr><td>Episode open / active / close / re-open workflows.</td><td>Money computation logic (Compensation/Payment own it — unchanged).</td></tr>
+    <tr><td><span class="mono">episode_id</span> correlation onto money ledgers + audit log.</td><td>Damage QC (deferred in Part 1 — functional default).</td></tr>
+    <tr><td>Visibility queries powered by the log (lost list, ever-held, money trail).</td><td>UI design (Experience–Data Spec).</td></tr>
+  </table>
+</section>
+
+<!-- 3 MODEL -->
+<section id="model">
+  <h2><span class="num">3.</span> Core model</h2>
+  <p>A device's life is a chain of <b>episodes</b>. An episode = one continuous tenure of the device under one custodian, from dispatch to terminal disposition.</p>
+  <div class="box key">
+    <b>The open episode IS the live row.</b> At any time a device has exactly one open episode — and that open episode is the live <span class="mono">netbox_custody</span> row (tagged with <span class="mono">current_episode_id</span>). The <span class="mono">custody_episode</span> log holds only <b>closed</b> episodes (immutable). So there is one source of truth for "now" (the live row) and one immutable record per finished tenure (the log) — never two live copies.
+  </div>
+  <h3>Why a second row can't exist (the constraint that forces this)</h3>
+  <p class="small"><span class="mono">netbox_custody.device_id</span> is the <span class="pk">PRIMARY KEY</span>, reinforced by partial-unique <span class="mono">idx_netbox_custody_active_device ON (device_id) WHERE status NOT IN ('RETURNED','DAMAGED','LOST','WRITTEN_OFF')</span>. So a re-dispatch <b>cannot insert</b> a second row — it must <b>re-stamp the existing row</b>. Re-stamping overwrites the prior tenure → which is exactly why the tenure must be snapshotted to the log <em>before</em> the row is reset ("freeze-before-move").</p>
+  <h3>Identity</h3>
+  <p class="small"><span class="mono">episode_id</span> is minted at episode <b>open</b> (dispatch), stored on the live row as <span class="mono">current_episode_id</span>, and stamped on every event, audit row, and money-ledger entry during the tenure. At close, the full episode row is written to the log under that same <span class="mono">episode_id</span>. So the per-tenure trail is a clean filter by <span class="mono">episode_id</span> — robust even when the same device returns to the same CSP twice (each tenure = a distinct episode).</p>
+</section>
+
+<!-- 4 DIAGRAM -->
+<section id="diagram">
+  <h2><span class="num">4.</span> System diagram — the two working in tandem</h2>
+  <div class="mermaid">
+flowchart TB
+  D["DEVICE_ORDER_DISPATCHED (to CSP-A)"]
+  RD["Re-dispatch (to CSP-B)"]
+
+  subgraph LIVE["LIVE · netbox_custody — 1 row per device, mutable"]
+    L["device_id (PK)<br/>current_episode_id = epN<br/>csp_id = A · holder_type = CSP<br/>status = PENDING_CSP_RECEIPT -> CUSTODIED -> ... -> terminal<br/>device_commissioned_at (constant)"]
+  end
+
+  subgraph LOG["HISTORY · custody_episode — append-only, IMMUTABLE"]
+    H1["ep(N-1) · CSP-? · CLOSED"]
+    H2["epN · CSP-A · CLOSED<br/>disposition + liability snapshot"]
+  end
+
+  subgraph TRAIL["LEDGERS + AUDIT — stamped (episode_id, csp_id, device_id)"]
+    M["recoverable_due · deposit · liability · wallet · entitlement"]
+    AU["custody_audit_log"]
+  end
+
+  D -->|mint epN · tag live row| L
+  L -->|tenure: money events| M
+  L -->|tenure: transitions| AU
+  L -->|reaches terminal + return accepted| CLOSE{CLOSE EPISODE}
+  CLOSE -->|1. snapshot live row + totals| H2
+  CLOSE -->|2. holder_type = WIOM_INVENTORY · current_episode_id = null| L
+  RD -->|reset row · mint ep N+1 · csp_id = B| L
+
+  Q1["Read: CSP lost list / ever-held / returned"] --> LOG
+  Q2["Read: per-(csp,device) money trail"] --> TRAIL
+  Q3["Read: current custodian / physical state"] --> LIVE
+
+  style LIVE fill:#e8eef8,stroke:#1f3c6e
+  style LOG fill:#e9f5ee,stroke:#0b6b3a
+  style TRAIL fill:#fff7e6,stroke:#b7791f
+  style CLOSE fill:#fdecef,stroke:#b3123a
+  </div>
+  <p class="small"><b>Read it as:</b> the live row is the open episode and answers "now"; on close, its tenure is snapshotted into the log and the row detaches to Wiom-inventory; re-dispatch resets the row and opens the next episode. Money &amp; audit rows are tagged with <span class="mono">episode_id</span> throughout, so history reads hit the log + ledgers, while "current" reads hit the live row only.</p>
+</section>
+
+<!-- 5 LIVE -->
+<section id="live">
+  <h2><span class="num">5.</span> <span class="mono">netbox_custody</span> changes</h2>
+  <h3>5.1 New columns</h3>
+  <table class="cols">
+    <tr><th style="width:20%">Column</th><th style="width:18%">Type</th><th>Purpose</th></tr>
+    <tr><td>current_episode_id <span class="tag new">NEW</span></td><td>VARCHAR(255) NULL</td><td>The open episode this row belongs to. Set at open; null between episodes (Wiom-inventory).</td></tr>
+    <tr><td>holder_type <span class="tag new">NEW</span></td><td>VARCHAR(16) NOT NULL</td><td><span class="mono">CSP</span> | <span class="mono">WIOM_INVENTORY</span>. Authoritative "who holds it" — distinguishes a CSP tenure from a between-episodes warehouse hold.</td></tr>
+  </table>
+  <h3>5.2 Re-stamp (on episode open / re-dispatch) — exact field operations</h3>
+  <table>
+    <tr><th style="width:50%">RESET to a clean episode</th><th>PRESERVE</th></tr>
+    <tr><td><span class="mono">status</span>=PENDING_CSP_RECEIPT · <span class="mono">csp_id</span>=new · <span class="mono">holder_type</span>=CSP · <span class="mono">current_episode_id</span>=new · <span class="mono">idle_start_date</span>=null · <span class="mono">idle_days</span>=0 · <span class="mono">carry_fee_accrual_units</span>=0 · <span class="mono">carry_fee_active</span>=false · <span class="mono">last_accrual_date</span>=null · <span class="mono">retrieval_start_date</span>=null · <span class="mono">condition_classification/detail</span>=null · <span class="mono">total_liability</span>=null · <span class="mono">connection_deactivated</span>=false · <span class="mono">customer_id/connection_id/current_connection_id/last_connection_id</span>=null · <span class="mono">recovery_pending_since/recovery_method/lost_reason/retrieval_reason/csp_never_had_custody</span>=null · <span class="mono">was_ever_deployed</span>=FALSE · <span class="mono">dispatched_at</span>=now · <span class="mono">created_at</span>=now (fresh)</td><td><span class="mono">device_id</span> (PK) · <span class="mono">device_commissioned_at</span> (device-level, never resets)</td></tr>
+  </table>
+  <div class="hint"><b>was_ever_deployed</b> resets to FALSE (per-episode carry-fee fairness — the new CSP holds it as fresh stock); <b>device_commissioned_at</b> stays constant (device age / depreciation clock). Per the decided OS calls.</div>
+</section>
+
+<!-- 6 SCHEMA -->
+<section id="schema">
+  <h2><span class="num">6.</span> <span class="mono">custody_episode</span> — exact columns</h2>
+  <p class="small">Append-only, immutable after write. One row per closed (device, custodian) tenure. <span class="imm">IMM</span> = set once at close, never updated.</p>
+  <table class="cols">
+    <tr><th style="width:22%">Column</th><th style="width:20%">Type</th><th style="width:9%">Null</th><th>Source / meaning</th></tr>
+    <tr><td colspan="4" class="grp">A · Identity &amp; sequence</td></tr>
+    <tr><td><span class="pk">episode_id</span></td><td>VARCHAR(255) PK</td><td>No</td><td>Minted at open; carried on live row as <span class="mono">current_episode_id</span> through the tenure.</td></tr>
+    <tr><td>device_id</td><td>VARCHAR(255)</td><td>No</td><td>The device thread. FK-style to the physical device. Indexed.</td></tr>
+    <tr><td>episode_seq</td><td>INT</td><td>No</td><td>1,2,3… ordinal tenure of this device (ordering / display).</td></tr>
+    <tr><td>csp_id</td><td>VARCHAR(255)</td><td>No</td><td>The custodian for this episode. Indexed (per-CSP history).</td></tr>
+    <tr><td>order_request_id</td><td>VARCHAR(255)</td><td>Yes</td><td><span class="mono">device_orders.request_id</span> that opened the episode. Null for legacy/initial.</td></tr>
+    <tr><td colspan="4" class="grp">B · Window &amp; triggers</td></tr>
+    <tr><td>opened_at</td><td>TIMESTAMPTZ</td><td>No</td><td>Dispatch time (episode start) = live row <span class="mono">dispatched_at</span> at open.</td></tr>
+    <tr><td>opening_trigger</td><td>VARCHAR(32)</td><td>No</td><td><span class="mono">INITIAL</span> / <span class="mono">DISPATCH</span> / <span class="mono">RE_DISPATCH</span> / <span class="mono">TRANSFER_IN</span>.</td></tr>
+    <tr><td>received_at</td><td>TIMESTAMPTZ</td><td>Yes</td><td>CUSTODIED confirmation (CSP_RECEIPT_CONFIRMED). Null if never received (dispatch timeout).</td></tr>
+    <tr><td>closed_at</td><td>TIMESTAMPTZ</td><td>No</td><td>Terminal disposition / handover time (episode end).</td></tr>
+    <tr><td>closing_trigger</td><td>VARCHAR(32)</td><td>No</td><td><span class="mono">RETURNED</span> / <span class="mono">LOST</span> / <span class="mono">DAMAGED</span> / <span class="mono">WRITTEN_OFF</span> / <span class="mono">TRANSFERRED_OUT</span> / <span class="mono">NEVER_RECEIVED</span>.</td></tr>
+    <tr><td>tenure_days</td><td>INT</td><td>Yes</td><td>Derived: closed_at − (received_at ?? opened_at).</td></tr>
+    <tr><td colspan="4" class="grp">C · Custody facts at close (snapshot of live row)</td></tr>
+    <tr><td>final_custody_state</td><td>VARCHAR(30)</td><td>No</td><td>Last custody status on the live row at close.</td></tr>
+    <tr><td>liability_disposition</td><td>VARCHAR(32)</td><td>No</td><td>The <b>liability</b> axis: <span class="mono">CLEAN_RETURN</span> / <span class="mono">LOST_CSP_CUSTODY</span> / <span class="mono">LOST_CUSTOMER_NONRECOVERY</span> / <span class="mono">DAMAGED</span> / <span class="mono">WRITTEN_OFF</span> / <span class="mono">NONE</span>.</td></tr>
+    <tr><td>physical_outcome</td><td>VARCHAR(32)</td><td>No</td><td>The <b>physical</b> axis: <span class="mono">RECOVERED_TO_WAREHOUSE</span> / <span class="mono">NOT_RECOVERED</span> / <span class="mono">TRANSFERRED</span>.</td></tr>
+    <tr><td>was_ever_deployed</td><td>BOOLEAN</td><td>No</td><td>Did the device serve a customer during THIS episode.</td></tr>
+    <tr><td>last_customer_id</td><td>VARCHAR(100)</td><td>Yes</td><td>From live row <span class="mono">customer_id</span>.</td></tr>
+    <tr><td>last_connection_id</td><td>VARCHAR(64)</td><td>Yes</td><td>From live row <span class="mono">last_connection_id</span>.</td></tr>
+    <tr><td>condition_classification</td><td>VARCHAR(20)</td><td>Yes</td><td>FUNCTIONAL / DAMAGE_* if classified (usually FUNCTIONAL — QC deferred).</td></tr>
+    <tr><td>condition_detail</td><td>VARCHAR(500)</td><td>Yes</td><td>From live row.</td></tr>
+    <tr><td>lost_reason</td><td>VARCHAR(64)</td><td>Yes</td><td>CSP_CUSTODY_LOST / NOT_RECOVERED_FROM_CUSTOMER.</td></tr>
+    <tr><td>retrieval_reason</td><td>VARCHAR(64)</td><td>Yes</td><td>e.g. EXIT_DURING_RECOVERY.</td></tr>
+    <tr><td>recovery_method</td><td>VARCHAR(32)</td><td>Yes</td><td>CSP_PICKUP / CUSTOMER_RETURN / INTERNAL_TEAM / INTERNAL_TEAM_DIRECT (NBREC).</td></tr>
+    <tr><td>csp_never_had_custody</td><td>BOOLEAN</td><td>Yes</td><td>From live row.</td></tr>
+    <tr><td colspan="4" class="grp">D · Liability snapshot (convenience; source of truth = ledgers via episode_id)</td></tr>
+    <tr><td>carry_fee_units_total</td><td>INT</td><td>Yes</td><td>Total carry-fee units accrued this episode (live row at close).</td></tr>
+    <tr><td>total_liability_amount</td><td>BIGINT (paise)</td><td>Yes</td><td>Closure liability if computed (e.g. write-off). Denormalised.</td></tr>
+    <tr><td>loss_liability_ref</td><td>VARCHAR(255)</td><td>Yes</td><td><span class="mono">recoverable_due</span> id / source_event_id for the loss due.</td></tr>
+    <tr><td>damage_liability_ref</td><td>VARCHAR(255)</td><td>Yes</td><td><span class="mono">recoverable_due</span> id for damage.</td></tr>
+    <tr><td>writeoff_liability_ref</td><td>VARCHAR(255)</td><td>Yes</td><td>DEPOSIT_FORFEITURE / WRITE_OFF_RESIDUAL ref.</td></tr>
+    <tr><td>recovery_credit_ref</td><td>VARCHAR(255)</td><td>Yes</td><td>₹50 recovery payout ref.</td></tr>
+    <tr><td>liability_open_at_close</td><td>BOOLEAN</td><td>No</td><td>Was any due still PENDING (unsettled) at close → drives "dues outstanding" visibility.</td></tr>
+    <tr><td colspan="4" class="grp">E · Handoff / source attribution (from Part 1)</td></tr>
+    <tr><td>returned_by_type</td><td>VARCHAR(8)</td><td>Yes</td><td>CSP / 3PL.</td></tr>
+    <tr><td>returned_by_id</td><td>VARCHAR(255)</td><td>Yes</td><td>Who physically returned it.</td></tr>
+    <tr><td>handover_ref</td><td>VARCHAR(255)</td><td>Yes</td><td>Warehouse receipt / Pyrops ref.</td></tr>
+    <tr><td>anomaly_flag</td><td>VARCHAR(32)</td><td>Yes</td><td>CROSS_CSP / 3PL_SCOPE / WRONGFUL_PICKUP (Part 1 persisted flag).</td></tr>
+    <tr><td>anomaly_reason</td><td>VARCHAR(500)</td><td>Yes</td><td>Free text for the alert.</td></tr>
+    <tr><td colspan="4" class="grp">F · Provenance</td></tr>
+    <tr><td>opening_event_id</td><td>VARCHAR(255)</td><td>Yes</td><td>Event that opened the episode.</td></tr>
+    <tr><td>closing_event_id</td><td>VARCHAR(255)</td><td>Yes</td><td>Event that closed it.</td></tr>
+    <tr><td>correlation_id</td><td>VARCHAR(100)</td><td>Yes</td><td>Trace.</td></tr>
+    <tr><td>causation_id</td><td>VARCHAR(100)</td><td>Yes</td><td>Trace.</td></tr>
+    <tr><td>created_at</td><td>TIMESTAMPTZ</td><td>No</td><td>When this immutable row was written (= close). <b>No <span class="mono">updated_at</span></b> — immutable.</td></tr>
+  </table>
+  <h3>6.1 Indexes</h3>
+  <ul class="tight">
+    <li><span class="mono">PK (episode_id)</span></li>
+    <li><span class="mono">(csp_id, liability_disposition)</span> — old-CSP lost list / penalty history</li>
+    <li><span class="mono">(csp_id, closed_at DESC)</span> — old-CSP "ever-held / returned" feed</li>
+    <li><span class="mono">(device_id, episode_seq)</span> — full device timeline across custodians</li>
+  </ul>
+</section>
+
+<!-- 7 LEDGER -->
+<section id="ledger">
+  <h2><span class="num">7.</span> Liability correlation — <span class="mono">episode_id</span> on the ledgers</h2>
+  <p>Money attribution is already <b>safe</b> (every ledger stamps <span class="mono">csp_id</span> at txn time; no path re-derives the current custodian). This change adds <b>queryability</b>, not correctness:</p>
+  <table>
+    <tr><th>Ledger</th><th>Today</th><th>Add</th></tr>
+    <tr><td><span class="mono">recoverable_due</span></td><td>csp_id ✓ device_id ✓</td><td><span class="mono">episode_id</span> <span class="tag new">NEW</span></td></tr>
+    <tr><td><span class="mono">liability_ledger_entries</span></td><td>csp_id ✓ device_id (null for carry-fee/FPV)</td><td><span class="mono">episode_id</span> + backfill device_id</td></tr>
+    <tr><td><span class="mono">deposit_ledger_entries</span></td><td>csp_id ✓ netbox_id only</td><td><span class="mono">episode_id</span> + <span class="mono">device_id</span></td></tr>
+    <tr><td><span class="mono">wallet_ledger_entries</span></td><td>csp_id ✓ device only in remarks JSON (carry-fee = comma list)</td><td><span class="mono">episode_id</span> + first-class <span class="mono">device_id</span></td></tr>
+    <tr><td><span class="mono">entitlement_ledger_entries</span></td><td>csp_id ✓ device in program_ref/JSON</td><td><span class="mono">episode_id</span> + <span class="mono">device_id</span></td></tr>
+    <tr><td><span class="mono">custody_audit_log</span></td><td>device_id ✓ csp_id ✓</td><td><span class="mono">episode_id</span> <span class="tag new">NEW</span></td></tr>
+  </table>
+  <p class="small"><b>Per-(CSP, device, tenure) money statement</b> = ledger rows filtered by <span class="mono">episode_id</span> — unambiguous even if the same device served the same CSP across two separate tenures.</p>
+  <div class="box os"><b>Guard (must-not-change):</b> stamping <span class="mono">episode_id</span> is additive. No settlement/reconciliation decision may read the live custodian — reconciliation still settles a due against its stamped <span class="mono">recoverable_due.csp_id</span>. The episode log <b>references</b> dues; it never moves or duplicates money.</div>
+</section>
+
+<!-- 8 WORKFLOWS -->
+<section id="wf">
+  <h2><span class="num">8.</span> Workflows</h2>
+
+  <div class="step"><div class="st-h">W1 · Episode OPEN (dispatch)</div>
+  Trigger: <span class="mono">DEVICE_ORDER_DISPATCHED</span> (device assigned to CSP-X). Steps:
+  <ol class="wf">
+    <li>Mint <span class="mono">episode_id</span>; compute <span class="mono">episode_seq</span> = (max prior seq for device)+1.</li>
+    <li>Re-stamp the live row (§5.2): <span class="mono">csp_id</span>=X, <span class="mono">holder_type</span>=CSP, <span class="mono">status</span>=PENDING_CSP_RECEIPT, <span class="mono">current_episode_id</span>=new, counters reset, <span class="mono">was_ever_deployed</span>=false, fresh <span class="mono">created_at/dispatched_at</span>; preserve <span class="mono">device_commissioned_at</span>.</li>
+    <li>No <span class="mono">custody_episode</span> row yet — the open episode <b>is</b> the live row.</li>
+  </ol>
+  <span class="small">For a first-ever dispatch <span class="mono">opening_trigger=INITIAL</span>; for a re-dispatch <span class="mono">RE_DISPATCH</span> (the live row already exists in WIOM_INVENTORY).</span></div>
+
+  <div class="step"><div class="st-h">W2 · Episode ACTIVE (tenure)</div>
+  Normal custody transitions on the live row (CUSTODIED→DEPLOYED→IDLE→…), each tagged <span class="mono">current_episode_id</span>. Every emitted event, <span class="mono">custody_audit_log</span> row, and money-ledger entry carries <span class="mono">(episode_id, csp_id, device_id)</span>. <span class="mono">was_ever_deployed</span> set true on first CUSTODIED→DEPLOYED <em>within this episode</em>.</div>
+
+  <div class="step"><div class="st-h">W3 · Episode CLOSE (terminal + return accepted) — the critical transaction</div>
+  Trigger: device reaches a terminal disposition and is accepted back to Wiom (RETURNED, per Part 1) — or LOST/DAMAGED/WRITTEN_OFF, or TRANSFERRED. <b>All steps in ONE transaction (freeze-before-move):</b>
+  <ol class="wf">
+    <li>Compute the liability snapshot: pull totals + due refs for <span class="mono">episode_id</span> from the ledgers; set <span class="mono">liability_open_at_close</span>.</li>
+    <li>Determine <span class="mono">liability_disposition</span> (liability axis) and <span class="mono">physical_outcome</span> (physical axis) — these can differ (e.g. LOST + RECOVERED_TO_WAREHOUSE).</li>
+    <li>Write the immutable <span class="mono">custody_episode</span> row (all §6 columns from the live row + snapshot).</li>
+    <li>Detach the live row: <span class="mono">holder_type</span>=WIOM_INVENTORY, <span class="mono">current_episode_id</span>=null. (Row keeps its terminal values until re-dispatch resets them.)</li>
+  </ol>
+  <span class="small">If the device is <em>not</em> re-dispatched, it simply stays in WIOM_INVENTORY with the episode logged — no further action.</span></div>
+
+  <div class="step"><div class="st-h">W4 · Episode RE-OPEN (re-dispatch)</div>
+  Trigger: a new <span class="mono">DEVICE_ORDER_DISPATCHED</span> for a device currently in <span class="mono">holder_type</span>=WIOM_INVENTORY. → Run W1 with <span class="mono">opening_trigger=RE_DISPATCH</span>. The loop repeats for every onward CSP.</div>
+
+  <div class="step"><div class="st-h">W5 · Visibility reads</div>
+  <ul class="tight">
+    <li><b>Old-CSP lost list:</b> <span class="mono">custody_episode WHERE csp_id=A AND liability_disposition IN (LOST_CSP_CUSTODY, LOST_CUSTOMER_NONRECOVERY)</span>.</li>
+    <li><b>Ever-held / returned:</b> <span class="mono">custody_episode WHERE csp_id=A</span> (+ live row if currently held).</li>
+    <li><b>Device timeline:</b> all episodes for <span class="mono">device_id</span> (by <span class="mono">episode_seq</span>) + <span class="mono">custody_audit_log</span> + the live row.</li>
+    <li><b>Per-(csp, device) money trail:</b> ledger rows by <span class="mono">episode_id</span>.</li>
+  </ul></div>
+
+  <div class="step"><div class="st-h">W6 · Reconciliation / money interaction</div>
+  Unchanged. Dues stay keyed by stamped <span class="mono">csp_id</span>; reconciliation settles a PENDING due against the original CSP's wallet/SD regardless of where the device now sits. <span class="mono">episode_id</span> is drill-down only.</div>
+
+  <div class="step"><div class="st-h">W7 · Special — LOST → 3PL → warehouse</div>
+  The episode closes with <span class="mono">liability_disposition=LOST_*</span> (penalty stays with CSP-A) AND <span class="mono">physical_outcome=RECOVERED_TO_WAREHOUSE</span> (3PL brought it back). The two axes captured independently — then W4 re-dispatches the physically-recovered device to CSP-B with no inherited liability.</div>
+
+  <div class="step"><div class="st-h">W8 · Wiom-inventory gap</div>
+  Between W3 and W4 the device is <span class="mono">holder_type=WIOM_INVENTORY</span>, not counted in any CSP's exposure/free-stock/prior-POD. (Warehouse sub-states are Pyrops.)</div>
+</section>
+
+<!-- 9 INV -->
+<section id="inv">
+  <h2><span class="num">9.</span> Invariants</h2>
+  <ul class="tight">
+    <li><b>One open episode per device</b> = the live row. Closed episodes live only in the log.</li>
+    <li><b>Immutability:</b> a <span class="mono">custody_episode</span> row is never updated after write.</li>
+    <li><b>Freeze-before-move:</b> the episode row is written before the live row is detached/re-stamped — atomically.</li>
+    <li><b>Forward-only within an episode;</b> re-dispatch is a new episode, never a terminal reversal.</li>
+    <li><b>Liability never follows the device:</b> a booked/pending due stays with the episode's <span class="mono">csp_id</span>.</li>
+    <li><b>Episode_id completeness:</b> every money/audit row created during a tenure carries that tenure's <span class="mono">episode_id</span>.</li>
+    <li><b>device_commissioned_at constant;</b> <span class="mono">was_ever_deployed</span> resets per episode.</li>
+  </ul>
+</section>
+
+<!-- 10 EDGE -->
+<section id="edge">
+  <h2><span class="num">10.</span> Edge cases</h2>
+  <table>
+    <tr><th style="width:40%">Case</th><th>Handling</th></tr>
+    <tr><td>Dispatched but never received (timeout)</td><td>Episode closes <span class="mono">closing_trigger=NEVER_RECEIVED</span>, <span class="mono">received_at=null</span>; no exposure was ever counted.</td></tr>
+    <tr><td>Same device, same CSP, second tenure</td><td>A distinct episode (new <span class="mono">episode_id</span>, higher <span class="mono">episode_seq</span>) — money cleanly separable by episode_id.</td></tr>
+    <tr><td>Pending due unsettled at close</td><td><span class="mono">liability_open_at_close=true</span>; due still settles at the original CSP's reconciliation.</td></tr>
+    <tr><td>CSP exit while a device is in WIOM_INVENTORY</td><td>Device isn't the exiting CSP's (holder=WIOM_INVENTORY) → correctly excluded; its prior episode under that CSP remains in the log.</td></tr>
+    <tr><td>Crash between snapshot and re-stamp</td><td>Single transaction → either both or neither; no half-closed episode.</td></tr>
+    <tr><td>Legacy stuck devices</td><td>Backfill one CLOSED episode per stuck (device, csp) + stamp <span class="mono">episode_id</span> onto historical money rows. <span class="tag chg">migration</span></td></tr>
+  </table>
+</section>
+
+<!-- 11 OPEN -->
+<section id="open">
+  <h2><span class="num">11.</span> Open decisions (for review)</h2>
+  <ol class="wf">
+    <li><b>csp_id nullability on the live row.</b> When <span class="mono">holder_type=WIOM_INVENTORY</span>, set <span class="mono">csp_id=null</span> (needs the NOT-NULL constraint relaxed) or keep last csp with holder as authoritative? Recommend: nullable + holder authoritative.</li>
+    <li><b>Open at dispatch vs at receipt.</b> Episode opens at dispatch (captures NEVER_RECEIVED). Confirm this vs opening only at CUSTODIED.</li>
+    <li><b>Episode_id on ledgers — scope.</b> All five money ledgers + audit (robust) vs minimum device_id only (lighter). Recommend episode_id everywhere.</li>
+    <li><b>Snapshot totals vs pure refs.</b> Keep denormalised totals (group D) for fast visibility, or refs-only with on-read aggregation? Recommend keep totals + refs.</li>
+    <li><b>Transfer (CUSTODY_TRANSFERRED) as an episode boundary?</b> A logical CSP-A→CSP-B transfer (device stays DEPLOYED, no physical move) — close + open an episode, or a separate "logical re-attribution" path? Recommend: close epN (TRANSFERRED_OUT) + open epN+1 for symmetry.</li>
+  </ol>
+</section>
+
+<p style="margin-top:32px;font-size:12px;color:var(--muted);text-align:center;">
+  Wiom · Custody-Episode Log detailed design · appendix to the Device Re-Dispatch change spec (Part 2 of 3)
+</p>
+
+</main>
+</div>
+<script>mermaid.initialize({ startOnLoad:true, theme:'default', flowchart:{ curve:'basis' } });</script>
+</body>
+</html>
