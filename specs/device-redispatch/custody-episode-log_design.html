@@ -119,8 +119,19 @@
   </div>
   <h3>Why a second row can't exist (the constraint that forces this)</h3>
   <p class="small"><span class="mono">netbox_custody.device_id</span> is the <span class="pk">PRIMARY KEY</span>, reinforced by partial-unique <span class="mono">idx_netbox_custody_active_device ON (device_id) WHERE status NOT IN ('RETURNED','DAMAGED','LOST','WRITTEN_OFF')</span>. So a re-dispatch <b>cannot insert</b> a second row — it must <b>re-stamp the existing row</b>. Re-stamping overwrites the prior tenure → which is exactly why the tenure must be snapshotted to the log <em>before</em> the row is reset ("freeze-before-move").</p>
-  <h3>Identity</h3>
-  <p class="small"><span class="mono">episode_id</span> is minted at episode <b>open</b> (dispatch), stored on the live row as <span class="mono">current_episode_id</span>, and stamped on every event, audit row, and money-ledger entry during the tenure. At close, the full episode row is written to the log under that same <span class="mono">episode_id</span>. So the per-tenure trail is a clean filter by <span class="mono">episode_id</span> — robust even when the same device returns to the same CSP twice (each tenure = a distinct episode).</p>
+  <h3>Identity — <span class="mono">episode_id</span> is universal-level</h3>
+  <p class="small"><span class="mono">episode_id</span> is a <b>universal, system-level identifier</b> — globally unique across all devices and CSPs, allocated from a system-wide episode registry/sequence. It is <b>not</b> a device-scoped counter; <span class="mono">device_id</span> and <span class="mono">csp_id</span> are <em>attributes</em> of an episode, and <span class="mono">episode_seq</span> is only a per-device display ordinal (not identity). The universal <span class="mono">episode_id</span> is minted at episode <b>open</b> (dispatch), stored on the live row as <span class="mono">current_episode_id</span>, and stamped on every event, audit row, and money-ledger entry during the tenure — so the per-tenure trail is one clean filter by <span class="mono">episode_id</span>, robust even when the same device returns to the same CSP twice.</p>
+
+  <h3 id="closurepaths">Two ways an episode closes (the disposition depends on who returned it)</h3>
+  <div class="box key">
+    A device reaches Wiom — and the episode ends — by exactly two paths. Both funnel the live custody state to <span class="mono">RETURNED</span> (physical), but the episode's <b>liability disposition</b> differs:
+    <table style="margin-top:10px">
+      <tr><th>Path</th><th>returned_by_type</th><th>Physical (live row)</th><th>Episode <span class="mono">liability_disposition</span></th></tr>
+      <tr><td><b>A · Returned by CSP</b></td><td>CSP</td><td>RETURNED</td><td><b>RETURNED</b> — CSP fulfilled custody; clean (₹50 if CRP-recovery)</td></tr>
+      <tr><td><b>B · Returned by 3PL</b></td><td>3PL</td><td>RETURNED</td><td><b>LOST</b> — the device was LOST for the CSP (CSP failed to recover from customer); 3PL recovered it. CSP's loss penalty stands.</td></tr>
+    </table>
+    <p class="small" style="margin:8px 0 0">Per Part 1, a 3PL return is only valid for a device that is <span class="mono">LOST</span> with <span class="mono">lost_reason = NOT_RECOVERED_FROM_CUSTOMER</span>. So path B's episode is stored as <b>LOST</b> (carrying that <span class="mono">lost_reason</span>), even though the device is physically back at the warehouse. The custody state machine reflects this as the P1 edge <span class="mono">LOST → RETURNED (3PL recovered)</span>.</p>
+  </div>
 </section>
 
 <!-- 4 DIAGRAM -->
@@ -189,9 +200,9 @@ flowchart TB
   <table class="cols">
     <tr><th style="width:22%">Column</th><th style="width:20%">Type</th><th style="width:9%">Null</th><th>Source / meaning</th></tr>
     <tr><td colspan="4" class="grp">A · Identity &amp; sequence</td></tr>
-    <tr><td><span class="pk">episode_id</span></td><td>VARCHAR(255) PK</td><td>No</td><td>Minted at open; carried on live row as <span class="mono">current_episode_id</span> through the tenure.</td></tr>
-    <tr><td>device_id</td><td>VARCHAR(255)</td><td>No</td><td>The device thread. FK-style to the physical device. Indexed.</td></tr>
-    <tr><td>episode_seq</td><td>INT</td><td>No</td><td>1,2,3… ordinal tenure of this device (ordering / display).</td></tr>
+    <tr><td><span class="pk">episode_id</span></td><td>VARCHAR(255) PK</td><td>No</td><td><b>Universal-level</b> globally-unique id (system episode registry) — NOT device-scoped. Minted at open; carried on the live row as <span class="mono">current_episode_id</span>; stamped on all downstream ledger/audit rows.</td></tr>
+    <tr><td>device_id</td><td>VARCHAR(255)</td><td>No</td><td>The device thread (an attribute of the episode). Indexed.</td></tr>
+    <tr><td>episode_seq</td><td>INT</td><td>No</td><td>1,2,3… per-device ordinal — <b>display/ordering only, NOT identity</b> (identity is the universal episode_id).</td></tr>
     <tr><td>csp_id</td><td>VARCHAR(255)</td><td>No</td><td>The custodian for this episode. Indexed (per-CSP history).</td></tr>
     <tr><td>order_request_id</td><td>VARCHAR(255)</td><td>Yes</td><td><span class="mono">device_orders.request_id</span> that opened the episode. Null for legacy/initial.</td></tr>
     <tr><td colspan="4" class="grp">B · Window &amp; triggers</td></tr>
@@ -199,12 +210,12 @@ flowchart TB
     <tr><td>opening_trigger</td><td>VARCHAR(32)</td><td>No</td><td><span class="mono">INITIAL</span> / <span class="mono">DISPATCH</span> / <span class="mono">RE_DISPATCH</span> / <span class="mono">TRANSFER_IN</span>.</td></tr>
     <tr><td>received_at</td><td>TIMESTAMPTZ</td><td>Yes</td><td>CUSTODIED confirmation (CSP_RECEIPT_CONFIRMED). Null if never received (dispatch timeout).</td></tr>
     <tr><td>closed_at</td><td>TIMESTAMPTZ</td><td>No</td><td>Terminal disposition / handover time (episode end).</td></tr>
-    <tr><td>closing_trigger</td><td>VARCHAR(32)</td><td>No</td><td><span class="mono">RETURNED</span> / <span class="mono">LOST</span> / <span class="mono">DAMAGED</span> / <span class="mono">WRITTEN_OFF</span> / <span class="mono">TRANSFERRED_OUT</span> / <span class="mono">NEVER_RECEIVED</span>.</td></tr>
+    <tr><td>closing_trigger</td><td>VARCHAR(32)</td><td>No</td><td><span class="mono">RETURNED_BY_CSP</span> / <span class="mono">RETURNED_BY_3PL</span> / <span class="mono">DAMAGED</span> / <span class="mono">WRITTEN_OFF</span> / <span class="mono">TRANSFERRED_OUT</span> / <span class="mono">NEVER_RECEIVED</span>. The return path drives <span class="mono">liability_disposition</span> — see §3 two closure paths.</td></tr>
     <tr><td>tenure_days</td><td>INT</td><td>Yes</td><td>Derived: closed_at − (received_at ?? opened_at).</td></tr>
     <tr><td colspan="4" class="grp">C · Custody facts at close (snapshot of live row)</td></tr>
     <tr><td>final_custody_state</td><td>VARCHAR(30)</td><td>No</td><td>Last custody status on the live row at close.</td></tr>
-    <tr><td>liability_disposition</td><td>VARCHAR(32)</td><td>No</td><td>The <b>liability</b> axis: <span class="mono">CLEAN_RETURN</span> / <span class="mono">LOST_CSP_CUSTODY</span> / <span class="mono">LOST_CUSTOMER_NONRECOVERY</span> / <span class="mono">DAMAGED</span> / <span class="mono">WRITTEN_OFF</span> / <span class="mono">NONE</span>.</td></tr>
-    <tr><td>physical_outcome</td><td>VARCHAR(32)</td><td>No</td><td>The <b>physical</b> axis: <span class="mono">RECOVERED_TO_WAREHOUSE</span> / <span class="mono">NOT_RECOVERED</span> / <span class="mono">TRANSFERRED</span>.</td></tr>
+    <tr><td>liability_disposition</td><td>VARCHAR(32)</td><td>No</td><td>The <b>liability</b> axis: <span class="mono">RETURNED</span> (path A · CSP) / <span class="mono">LOST</span> (path B · 3PL — carries <span class="mono">lost_reason</span>) / <span class="mono">DAMAGED</span> / <span class="mono">WRITTEN_OFF</span> / <span class="mono">NONE</span>. Derived from <span class="mono">returned_by_type</span>: CSP→RETURNED, 3PL→LOST.</td></tr>
+    <tr><td>physical_outcome</td><td>VARCHAR(32)</td><td>No</td><td>The <b>physical</b> axis: <span class="mono">RECOVERED_TO_WAREHOUSE</span> (both paths) / <span class="mono">NOT_RECOVERED</span> / <span class="mono">TRANSFERRED</span>.</td></tr>
     <tr><td>was_ever_deployed</td><td>BOOLEAN</td><td>No</td><td>Did the device serve a customer during THIS episode.</td></tr>
     <tr><td>last_customer_id</td><td>VARCHAR(100)</td><td>Yes</td><td>From live row <span class="mono">customer_id</span>.</td></tr>
     <tr><td>last_connection_id</td><td>VARCHAR(64)</td><td>Yes</td><td>From live row <span class="mono">last_connection_id</span>.</td></tr>
@@ -277,15 +288,15 @@ flowchart TB
   <div class="step"><div class="st-h">W2 · Episode ACTIVE (tenure)</div>
   Normal custody transitions on the live row (CUSTODIED→DEPLOYED→IDLE→…), each tagged <span class="mono">current_episode_id</span>. Every emitted event, <span class="mono">custody_audit_log</span> row, and money-ledger entry carries <span class="mono">(episode_id, csp_id, device_id)</span>. <span class="mono">was_ever_deployed</span> set true on first CUSTODIED→DEPLOYED <em>within this episode</em>.</div>
 
-  <div class="step"><div class="st-h">W3 · Episode CLOSE (terminal + return accepted) — the critical transaction</div>
-  Trigger: device reaches a terminal disposition and is accepted back to Wiom (RETURNED, per Part 1) — or LOST/DAMAGED/WRITTEN_OFF, or TRANSFERRED. <b>All steps in ONE transaction (freeze-before-move):</b>
+  <div class="step"><div class="st-h">W3 · Episode CLOSE (return accepted) — the critical transaction</div>
+  Trigger: the device is accepted back to Wiom (custody → RETURNED, per Part 1) by one of the two paths — <b>A · returned by CSP</b> or <b>B · returned by 3PL</b> (see §3). <b>All steps in ONE transaction (freeze-before-move):</b>
   <ol class="wf">
+    <li>Read <span class="mono">returned_by_type</span> → set <span class="mono">closing_trigger</span> (<span class="mono">RETURNED_BY_CSP</span> / <span class="mono">RETURNED_BY_3PL</span>) and <span class="mono">liability_disposition</span> (<b>CSP→RETURNED, 3PL→LOST</b> carrying the <span class="mono">lost_reason</span>). <span class="mono">physical_outcome</span>=RECOVERED_TO_WAREHOUSE in both.</li>
     <li>Compute the liability snapshot: pull totals + due refs for <span class="mono">episode_id</span> from the ledgers; set <span class="mono">liability_open_at_close</span>.</li>
-    <li>Determine <span class="mono">liability_disposition</span> (liability axis) and <span class="mono">physical_outcome</span> (physical axis) — these can differ (e.g. LOST + RECOVERED_TO_WAREHOUSE).</li>
     <li>Write the immutable <span class="mono">custody_episode</span> row (all §6 columns from the live row + snapshot).</li>
-    <li>Detach the live row: <span class="mono">holder_type</span>=WIOM_INVENTORY, <span class="mono">current_episode_id</span>=null. (Row keeps its terminal values until re-dispatch resets them.)</li>
+    <li>Detach the live row: <span class="mono">holder_type</span>=WIOM_INVENTORY, <span class="mono">current_episode_id</span>=null.</li>
   </ol>
-  <span class="small">If the device is <em>not</em> re-dispatched, it simply stays in WIOM_INVENTORY with the episode logged — no further action.</span></div>
+  <span class="small">Other dispositions (DAMAGED / WRITTEN_OFF / TRANSFERRED_OUT / NEVER_RECEIVED) close the episode the same way, carrying their own liability disposition. If the device is <em>not</em> re-dispatched, it stays in WIOM_INVENTORY with the episode logged.</span></div>
 
   <div class="step"><div class="st-h">W4 · Episode RE-OPEN (re-dispatch)</div>
   Trigger: a new <span class="mono">DEVICE_ORDER_DISPATCHED</span> for a device currently in <span class="mono">holder_type</span>=WIOM_INVENTORY. → Run W1 with <span class="mono">opening_trigger=RE_DISPATCH</span>. The loop repeats for every onward CSP.</div>
@@ -301,8 +312,8 @@ flowchart TB
   <div class="step"><div class="st-h">W6 · Reconciliation / money interaction</div>
   Unchanged. Dues stay keyed by stamped <span class="mono">csp_id</span>; reconciliation settles a PENDING due against the original CSP's wallet/SD regardless of where the device now sits. <span class="mono">episode_id</span> is drill-down only.</div>
 
-  <div class="step"><div class="st-h">W7 · Special — LOST → 3PL → warehouse</div>
-  The episode closes with <span class="mono">liability_disposition=LOST_*</span> (penalty stays with CSP-A) AND <span class="mono">physical_outcome=RECOVERED_TO_WAREHOUSE</span> (3PL brought it back). The two axes captured independently — then W4 re-dispatches the physically-recovered device to CSP-B with no inherited liability.</div>
+  <div class="step"><div class="st-h">W7 · Path B detail — LOST → 3PL → warehouse</div>
+  This is closure path B. The device was <span class="mono">LOST</span> for CSP-A (failed to recover from customer). 3PL recovers it to the warehouse → custody <span class="mono">RETURNED</span>. The episode closes with <span class="mono">closing_trigger=RETURNED_BY_3PL</span>, <span class="mono">liability_disposition=LOST</span> (penalty stays with CSP-A, carrying <span class="mono">lost_reason</span>) AND <span class="mono">physical_outcome=RECOVERED_TO_WAREHOUSE</span>. The two axes captured independently — then W4 re-dispatches the physically-recovered device to CSP-B with no inherited liability.</div>
 
   <div class="step"><div class="st-h">W8 · Wiom-inventory gap</div>
   Between W3 and W4 the device is <span class="mono">holder_type=WIOM_INVENTORY</span>, not counted in any CSP's exposure/free-stock/prior-POD. (Warehouse sub-states are Pyrops.)</div>
@@ -342,9 +353,11 @@ flowchart TB
   <ol class="wf">
     <li><b>csp_id nullability on the live row.</b> When <span class="mono">holder_type=WIOM_INVENTORY</span>, set <span class="mono">csp_id=null</span> (needs the NOT-NULL constraint relaxed) or keep last csp with holder as authoritative? Recommend: nullable + holder authoritative.</li>
     <li><b>Open at dispatch vs at receipt.</b> Episode opens at dispatch (captures NEVER_RECEIVED). Confirm this vs opening only at CUSTODIED.</li>
-    <li><b>Episode_id on ledgers — scope.</b> All five money ledgers + audit (robust) vs minimum device_id only (lighter). Recommend episode_id everywhere.</li>
+    <li><b>Episode_id — DECIDED:</b> universal-level globally-unique id, stamped on all five money ledgers + audit (not device-scoped).</li>
+    <li><b>Closure disposition — DECIDED:</b> driven by <span class="mono">returned_by_type</span> — CSP return → episode <span class="mono">RETURNED</span>; 3PL return → episode <span class="mono">LOST</span> (per §3).</li>
     <li><b>Snapshot totals vs pure refs.</b> Keep denormalised totals (group D) for fast visibility, or refs-only with on-read aggregation? Recommend keep totals + refs.</li>
     <li><b>Transfer (CUSTODY_TRANSFERRED) as an episode boundary?</b> A logical CSP-A→CSP-B transfer (device stays DEPLOYED, no physical move) — close + open an episode, or a separate "logical re-attribution" path? Recommend: close epN (TRANSFERRED_OUT) + open epN+1 for symmetry.</li>
+    <li><b>FE API impact — NEXT STEP (after closure model lands).</b> Identify every API used in front-end flows that reads device→CSP / custody state / lost / returned, and define the changes (episode-aware reads, history endpoints). To be detailed once §3 (two closure paths) + universal episode_id are locked.</li>
   </ol>
 </section>
 

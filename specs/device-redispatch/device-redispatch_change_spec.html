@@ -129,7 +129,7 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v0.1 · PM → Engineering · Part 2 of 3</div>
+  <div class="eyebrow">Wiom · Change Spec · v0.2 · PM → Engineering · Part 2 of 3</div>
   <h1>Device Re-Dispatch &amp; Custody Episodes — Supply-Chain Tracking &amp; Liability Trail</h1>
   <p class="lede"><strong>Objective:</strong> ensure 100% accurate tracking of device status across the supply chain, with <strong>no dilution</strong> in asset↔CSP liability transactions and trail. <br><br>Once ACS has accepted a return (Part 1), the warehouse re-stacks the device and re-dispatches it to <em>any</em> CSP — same <span class="mono">device_id</span>. Today the device record is one row per device and RETURNED is terminal, so a re-dispatch is impossible without overwriting the old custodian's record. This spec introduces a <strong>custody-episode model</strong>: the live row always shows current physical custody and moves with the device; every past custodian's <em>liability</em> facts are frozen in an immutable per-episode log. Warehouse management (Pyrops) is out of scope.</p>
   <div class="meta-row">
@@ -185,7 +185,7 @@
     <tr><td>Change title</td><td>Device Re-Dispatch &amp; Custody Episodes — Supply-Chain Tracking &amp; Liability Trail</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Version</td><td>v0.2</td></tr>
     <tr><td>Baseline — OS</td><td>Asset Custody OS v1.11.1 (LOCKED) + SD-fork (ACS v1.12→v1.14); Payment &amp; Settlement v3.5; Compensation.</td></tr>
     <tr><td>Baseline — code</td><td><span class="mono">csp-asset-custody-service</span> (<span class="mono">netbox_custody</span> PK device_id, <span class="mono">custody_audit_log</span>), <span class="mono">csp-payment-settlement-service</span>, <span class="mono">csp-compensation-service</span>, <span class="mono">csp-visibility-service</span>, <span class="mono">csp-tas-service</span> (NBREC).</td></tr>
   </table>
@@ -232,6 +232,14 @@
     <tr><td><b>Liability stays put</b></td><td>Every money fact is already stamped with the episode's <span class="mono">csp_id</span>; it never follows the device to the next CSP. Old CSP's dues settle at <em>its</em> reconciliation.</td></tr>
   </table>
 
+  <h3>Two ways an episode closes (disposition depends on who returned it)</h3>
+  <table>
+    <tr><th>Path</th><th>returned_by_type</th><th>Physical (live row)</th><th>Episode disposition (log)</th></tr>
+    <tr><td><b>A · Returned by CSP</b></td><td>CSP</td><td>RETURNED</td><td><b>RETURNED</b> — clean; CSP fulfilled custody (₹50 if CRP-recovery).</td></tr>
+    <tr><td><b>B · Returned by 3PL</b></td><td>3PL</td><td>RETURNED</td><td><b>LOST</b> — the device was LOST for the CSP (failed to recover from customer); 3PL recovered it. CSP's loss penalty stands. <span class="small">(Part 1: 3PL valid only for LOST + NOT_RECOVERED_FROM_CUSTOMER.)</span></td></tr>
+  </table>
+  <p style="font-size:12px;color:var(--muted)">Both funnel custody to RETURNED physically; the episode-log <b>liability disposition</b> differs by who returned it. <span class="mono">episode_id</span> is a <b>universal-level</b> globally-unique id (not device-scoped), stamped across all ledgers + audit.</p>
+
   <h3>Physical status vs liability status — the two axes</h3>
   <table>
     <tr><th>State / event</th><th>Physical fact (live row)</th><th>Liability fact (episode log) — frozen to the CSP</th></tr>
@@ -252,7 +260,7 @@
   <table class="delta">
     <tr><th style="width:21%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:23%">Why</th></tr>
     <tr class="oscall-row"><td>Re-dispatch mechanism <span class="os-badge">OS</span></td><td>RETURNED terminal; re-dispatch impossible (PK collision / forward-only).</td><td>Re-dispatch <b>closes the episode &amp; opens a new one</b>; the live row is re-stamped, not duplicated or reversed.</td><td>Same device, new CSP — without violating forward-only or the PK.</td></tr>
-    <tr class="oscall-row"><td>Custody-episode log <span class="os-badge">OS</span></td><td>Single row; history destroyed on overwrite.</td><td>New <b>immutable episode log</b> — one row per (device, CSP) tenure — snapshotted at episode close.</td><td>Preserve each custodian's liability + history independent of the live row.</td></tr>
+    <tr class="oscall-row"><td>Custody-episode log <span class="os-badge">OS</span></td><td>Single row; history destroyed on overwrite.</td><td>New <b>immutable episode log</b> — one row per (device, CSP) tenure, keyed by a <b>universal-level <span class="mono">episode_id</span></b>; snapshotted at close with disposition = RETURNED (CSP return) or LOST (3PL return).</td><td>Preserve each custodian's liability + history independent of the live row.</td></tr>
     <tr><td>Live-row reset on new episode</td><td>n/a (no re-dispatch).</td><td>On re-dispatch: status→PENDING_CSP_RECEIPT, <span class="mono">csp_id</span>=new, counters zeroed (idle, carry_fee, retrieval, condition, lost/retrieval reason), fresh <span class="mono">created_at</span>.</td><td>Clean slate for the new custodian; avoids stale-timer mis-fires.</td></tr>
     <tr class="oscall-row"><td><span class="mono">was_ever_deployed</span> <span class="os-badge">OS</span></td><td>Set true on first deploy, never resets.</td><td><b>Resets to false per episode.</b> <span class="mono">device_commissioned_at</span> preserved (constant).</td><td>New CSP holding it as fresh stock is carry-fee-exempt until <em>they</em> deploy it.</td></tr>
     <tr><td>Old-CSP visibility surfaces</td><td>Lost list / returned / ever-held read the live row by <span class="mono">csp_id</span> → vanish on re-map; "ever-held" surface doesn't exist.</td><td>Served from the <b>episode log</b> (+ existing immutable <span class="mono">custody_audit_log</span>) via new per-CSP history endpoints.</td><td>Old CSP keeps lost-list / ever-held / per-device history after the device leaves.</td></tr>
@@ -302,6 +310,7 @@
     <tr><td>Device sits at warehouse (no CSP) between return and re-dispatch</td><td>Live row in a Wiom-inventory holder state; not counted in any CSP's exposure/free-stock. <span class="flag">[holder modelling — decision]</span></td></tr>
     <tr><td>Same device, many customer-recovery journeys over its life</td><td>Each is its own NBREC task in sequence (one open at a time); episodes capture the per-CSP context.</td></tr>
     <tr><td>Legacy devices already RETURNED &amp; stuck under old CSP</td><td>Backfill a closed episode per stuck device + add device_id to historical money rows. <span class="flag">[migration — engineering runbook]</span></td></tr>
+    <tr><td>Front-end API impact</td><td>Every FE-facing API that reads device→CSP / custody state / lost / returned must become episode-aware (current via live row, history via the log). <span class="flag">[NEXT STEP — to be detailed after the closure model lands]</span></td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -539,6 +548,7 @@ stateDiagram-v2
   <table>
     <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:150px">Author</th><th style="width:90px">Section(s)</th><th>Change</th></tr>
     <tr><td>v0.1</td><td>2026-06-25</td><td>Jaivin Prajapati</td><td>All</td><td>Initial — Part 2: custody-episode model for re-dispatch; physical-vs-liability separation; per-CSP history + device_id money trail. Code + OS grounded.</td></tr>
+    <tr><td>v0.2</td><td>2026-06-26</td><td>Jaivin Prajapati</td><td>A4, A5, A7.2</td><td>Feedback: <span class="mono">episode_id</span> is universal-level (not device-scoped); episode closure has two paths — CSP return → disposition RETURNED, 3PL return → disposition LOST (per Part 1 3PL rule). FE-API impact flagged as next step. Full state-machine diagram + design-doc link added earlier.</td></tr>
   </table>
 </section>
 
