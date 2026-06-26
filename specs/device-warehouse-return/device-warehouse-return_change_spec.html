@@ -120,7 +120,7 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v0.2 · PM → Engineering</div>
+  <div class="eyebrow">Wiom · Change Spec · v0.3 · PM → Engineering</div>
   <h1>Warehouse Device Return (CSP / 3PL) — Acceptance &amp; Closure</h1>
   <p class="lede"><strong>Objective:</strong> safeguard the custody of every returned asset all the way to the Wiom warehouse — with a complete audit trail — and ensure the customer's internet has not silently stopped working. <br><br>What happens when a Wiom NetBox shows up at the warehouse — returned by a CSP or by a 3PL/recovery agent. Pyrops already accepts the physical device in any state, but ACS rejects the return event unless the device is in RETRIEVAL_PENDING. This spec makes ACS accept every return from any custody state, attribute who returned it, move it to RETURNED, and run a per-state closure across every affected entity (custody state, PUT, connection, exposure, security deposit, liability ledger, customer internet). Damage QC is deferred — every return takes the functional happy path. Fundamental state-machine + governance change → EM review before any architectural call.</p>
   <div class="meta-row">
@@ -156,7 +156,7 @@
     <tr><td>Change title</td><td>Warehouse Device Return (CSP / 3PL) — Acceptance &amp; Closure</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.2</td></tr>
+    <tr><td>Version</td><td>v0.3</td></tr>
     <tr><td>Baseline — OS (governance)</td><td>Asset Custody OS v1.11.1 (LOCKED) + SD-fork (ACS v1.12 → renumber v1.14); Connection Lifecycle OS v1.7.1; Compensation; Payment &amp; Settlement v3.5.</td></tr>
     <tr><td>Baseline — code (flows)</td><td><span class="mono">csp-asset-custody-service</span>, <span class="mono">csp-compensation-service</span>, <span class="mono">csp-payment-settlement-service</span>, <span class="mono">csp-tas-service</span>; warehouse intake = Pyrops (upstream).</td></tr>
   </table>
@@ -233,7 +233,16 @@
     <tr><td>Damage QC</td><td>Classify only in RETRIEVAL_PENDING — functional-vs-damaged fork before RETURNED.</td><td><strong>Out of scope.</strong> Every return takes the FUNCTIONAL happy path; no DAMAGED diversion, no damage liability — uniformly across all states.</td><td>No real QC process yet; no real money impact; avoid unreal scenarios.</td></tr>
     <tr><td>Exposure-event leak</td><td>DAMAGED / direct WRITTEN_OFF leave exposure but emit no <span class="mono">CSP_EXPOSURE_CHANGED</span>.</td><td>Emit <span class="mono">CSP_EXPOSURE_CHANGED</span> (−1) on those exits.</td><td>Payment consumers must be notified.</td></tr>
     <tr><td>Audit ids on every entry</td><td><span class="mono">wallet_ledger_entries</span> has no device_id column (only in remarks JSON, sometimes a list); <span class="mono">liability_ledger_entries.device_id</span> null for some types; <span class="mono">csp_exposure</span> &amp; <span class="mono">device_orders</span> have no device_id.</td><td><span class="mono">device_id</span> AND <span class="mono">csp_id</span> explicit on every entity entry written in this flow.</td><td>Audit trail + per-device alerting.</td></tr>
+    <tr><td><span class="mono">netbox_custody</span> row cleanup on RETURNED <span class="new">NEW</span></td><td>Row left as-is under the CSP — cleanup was <strong>deferred</strong> (re-dispatch wasn't finalised when this spec was first drafted), so returned devices stayed stuck under the old CSP.</td><td>Once the episode snapshot is written to <span class="mono">custody_episode</span> (Part 2), the live row is <strong>cleaned</strong>: detach (<span class="mono">csp_id</span> cleared, <span class="mono">holder_type</span>=WIOM_INVENTORY, <span class="mono">current_episode_id</span>=null), reset all episode/customer/connection-scoped fields, <span class="mono">was_ever_deployed</span>=false; <strong>persist</strong> <span class="mono">device_id</span> + <span class="mono">device_commissioned_at</span>; status stays RETURNED.</td><td><span class="mono">netbox_custody</span> shows current physical status only; the closed tenure lives in <span class="mono">custody_episode</span>.</td></tr>
   </table>
+
+  <h3 style="font-size:14.5px;margin:18px 0 6px;color:var(--what)">Row cleanup on RETURNED — what clears vs persists</h3>
+  <p style="font-size:13px;color:var(--muted)">Runs <b>after</b> the episode snapshot is written to <span class="mono">custody_episode</span> (Part 2), in the <b>same transaction</b> (freeze-before-move). The live row is left as a clean Wiom-inventory record awaiting re-dispatch.</p>
+  <table>
+    <tr><th style="width:62%">CLEARED — episode / customer / connection-scoped (preserved in the episode snapshot)</th><th>PERSISTS</th></tr>
+    <tr><td><span class="mono">csp_id</span>→null (detach) · <span class="mono">holder_type</span>→WIOM_INVENTORY · <span class="mono">current_episode_id</span>→null · <span class="mono">idle_start_date</span>→null · <span class="mono">idle_days</span>→0 · <span class="mono">carry_fee_accrual_units</span>→0 · <span class="mono">carry_fee_active</span>→false · <span class="mono">last_accrual_date</span>→null · <span class="mono">retrieval_start_date</span>→null · <span class="mono">condition_classification / condition_detail</span>→null · <span class="mono">total_liability</span>→null · <span class="mono">connection_deactivated</span>→false · <span class="mono">customer_id / connection_id / current_connection_id / last_connection_id</span>→null · <span class="mono">recovery_pending_since / recovery_method / lost_reason / retrieval_reason / csp_never_had_custody</span>→null · <span class="mono">was_ever_deployed</span>→false · <span class="mono">dispatched_at</span>→null</td><td><span class="mono">device_id</span> (PK) · <span class="mono">device_commissioned_at</span> (device-level age, never resets) · <span class="mono">status</span> = RETURNED (current physical status)</td></tr>
+  </table>
+  <p style="font-size:12px;color:var(--muted)">Requires <span class="mono">csp_id</span> made nullable (or a WIOM sentinel) + the new <span class="mono">holder_type</span> / <span class="mono">current_episode_id</span> columns — defined in Part 2. Full history stays in <span class="mono">custody_episode</span> + the immutable <span class="mono">custody_audit_log</span>. Cleanup runs for <em>every</em> RETURNED device regardless of return path (CSP or 3PL).</p>
   <hr class="sect-end">
 </section>
 
@@ -250,6 +259,8 @@
     <tr><td>Carry-fee/idle eligibility (IDLE + was_ever_deployed) and immutability of prior ledger entries.</td><td>State 2 stops accrual forward-only; the past stays.</td></tr>
     <tr><td>Forward-only state machine; no retroactive edits.</td><td>New edges must be forward-effective, audited.</td></tr>
     <tr><td>Damage pricing logic (Compensation tiers) — untouched while damage is deferred.</td><td>When damage is later enabled it must price exactly as today.</td></tr>
+    <tr><td><span class="mono">device_id</span> + <span class="mono">device_commissioned_at</span> must survive the row cleanup (never wiped).</td><td>They are device-level (the thread + physical age); losing them breaks re-dispatch and depreciation.</td></tr>
+    <tr><td>The episode snapshot must be written before the row is cleaned.</td><td>Clearing the row before the snapshot would destroy the tenure (no history).</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -271,6 +282,8 @@
     <tr><td>RULE — 3PL scope</td><td>3PL returns are accepted; flagged. Expected = LOST + NOT_RECOVERED_FROM_CUSTOMER; anything else = anomaly flag.</td></tr>
     <tr><td>RULE — partial receipt isolation</td><td>Excluding one PENDING_CSP_RECEIPT device does not block confirmation of the rest.</td></tr>
     <tr><td>RULE — functional default</td><td>While damage is out of scope, every return is treated as FUNCTIONAL; no DAMAGED diversion.</td></tr>
+    <tr><td>INV — freeze-before-move</td><td>On RETURNED, the episode snapshot to <span class="mono">custody_episode</span> is written <em>before</em> the <span class="mono">netbox_custody</span> row is cleaned — atomically, one transaction.</td></tr>
+    <tr><td>INV — cleanup detaches &amp; resets</td><td>Row cleanup clears all episode/customer/connection fields and detaches <span class="mono">csp_id</span> (→ WIOM_INVENTORY); only <span class="mono">device_id</span> + <span class="mono">device_commissioned_at</span> (+ <span class="mono">status</span>=RETURNED) persist.</td></tr>
   </table>
   <h3>A7.2 Edge cases</h3>
   <table>
@@ -281,7 +294,8 @@
     <tr><td>LOST / DAMAGED / WRITTEN_OFF device returned</td><td>Accept → RETURNED; booked liability stands; no money movement.</td></tr>
     <tr><td>PCR device returned while order still in progress</td><td>Remaining devices proceed to CUSTODIED; returned one excluded. <span class="flag">[conflicts with INV-ACO-DISPATCH-01 all-or-nothing — decision needed]</span></td></tr>
     <tr><td>Damage physically present but QC deferred</td><td>Treated FUNCTIONAL for now; revisited when QC process exists. <span class="flag">[accepted limitation]</span></td></tr>
-    <tr><td>Legacy devices already RETURNED &amp; stuck under old CSP</td><td>Backfill / re-attribution + audit-id backfill. <span class="flag">[migration — engineering runbook]</span></td></tr>
+    <tr><td>Device returned but not yet re-dispatched</td><td>Row sits as a clean <span class="mono">WIOM_INVENTORY</span> record (<span class="mono">csp_id</span> cleared); the old CSP sees the return via <span class="mono">custody_episode</span>, not the live row.</td></tr>
+    <tr><td>Legacy devices already RETURNED &amp; stuck under old CSP (uncleaned)</td><td>Backfill: write a closed <span class="mono">custody_episode</span> per stuck device, then clean the row. <span class="flag">[migration — engineering runbook]</span></td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -291,7 +305,8 @@
   <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
   <table>
     <tr><th>OS</th><th>Impacted?</th><th>Amendment (one line)</th><th>Type</th><th>Owner (consulted)</th><th>Sign-off</th></tr>
-    <tr><td>Asset Custody OS</td><td>Yes</td><td>Accept →RETURNED from any state; source attribution; 3PL accept+flag; partial receipt; exposure-event fix; persisted anomaly flags; audit ids. Damage QC deferred (functional default).</td><td>Behaviour change</td><td>[ACS owner]</td><td>Pending</td></tr>
+    <tr><td>Asset Custody OS</td><td>Yes</td><td>Accept →RETURNED from any state; source attribution; 3PL accept+flag; partial receipt; exposure-event fix; persisted anomaly flags; audit ids; <strong>row cleanup on RETURNED (detach → WIOM_INVENTORY)</strong>. Damage QC deferred (functional default).</td><td>Behaviour change</td><td>[ACS owner]</td><td>Pending</td></tr>
+    <tr><td>Cross-dependency — Part 2 (Re-Dispatch / Episodes)</td><td>Yes</td><td>Row cleanup is gated on the <span class="mono">custody_episode</span> snapshot + the new <span class="mono">netbox_custody</span> columns (<span class="mono">holder_type</span>, <span class="mono">current_episode_id</span>, nullable <span class="mono">csp_id</span>) — defined in Part 2.</td><td>Cross-OS contract</td><td>[ACS owner]</td><td>Pending</td></tr>
     <tr><td>Connection Lifecycle OS</td><td>Yes</td><td>DEPLOYED return triggers connection deactivation + customer-confirm flag.</td><td>Behaviour change</td><td>[CL owner]</td><td>Pending</td></tr>
     <tr><td>Compensation OS</td><td>Yes</td><td>₹50 on warehouse-return CRP path. No damage change (deferred).</td><td>Cross-OS contract</td><td>[Comp owner]</td><td>Pending</td></tr>
     <tr><td>Payment &amp; Settlement OS</td><td>Yes</td><td>Consume CSP_EXPOSURE_CHANGED(−1) on DAMAGED/WRITTEN_OFF; confirm no reversal; SD untouched; add device_id to ledger/exposure rows.</td><td>Cross-OS contract</td><td>[Payment owner]</td><td>Pending</td></tr>
@@ -414,7 +429,7 @@ stateDiagram-v2
   classDef p2 fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00
   class WIOM_INVENTORY p2
   </div>
-  <p style="font-size:12px;color:var(--muted)"><b>Notes:</b> <span class="mono">WIOM_INVENTORY</span> is the live row's <span class="mono">holder_type</span> between episodes (device at Wiom, no CSP) — not a custody status; it and the two P2 edges belong to Part 2. Damage QC (<span class="mono">RETRIEVAL_PENDING → DAMAGED</span>) is deferred (functional default) — shown for completeness. <span class="mono">DEPLOYED → DEPLOYED</span> = logical custody transfer (CSP-A→CSP-B, no physical move, SD-fork). REASSIGNED is an OS-only transient (not in the code state enum) — omitted.</p>
+  <p style="font-size:12px;color:var(--muted)"><b>Notes:</b> <span class="mono">WIOM_INVENTORY</span> is the live row's <span class="mono">holder_type</span> after the RETURNED <b>row-cleanup</b> (this spec — A5: detach + reset, snapshot to <span class="mono">custody_episode</span>); the re-dispatch edge back to PENDING_CSP_RECEIPT is Part 2. Damage QC (<span class="mono">RETRIEVAL_PENDING → DAMAGED</span>) is deferred (functional default) — shown for completeness. <span class="mono">DEPLOYED → DEPLOYED</span> = logical custody transfer (CSP-A→CSP-B, no physical move, SD-fork). REASSIGNED is an OS-only transient (not in the code state enum) — omitted.</p>
   <hr class="sect-end">
 </section>
 
@@ -515,6 +530,17 @@ stateDiagram-v2
     <span class="kw">Given</span> an order dispatched to PENDING_CSP_RECEIPT<br>
     <span class="kw">Then</span> no exposure is counted until the device reaches CUSTODIED</div>
 
+  <div class="gherkin"><strong>LOGIC_05 (logic · happy):</strong> Row cleanup on RETURNED<br>
+    <span class="kw">Given</span> a device marked RETURNED (any return path)<br>
+    <span class="kw">When</span> the episode snapshot has been written to custody_episode<br>
+    <span class="kw">Then</span> the netbox_custody row is cleaned — csp_id cleared, holder_type=WIOM_INVENTORY, current_episode_id=null, all episode/customer/connection fields reset, was_ever_deployed=false<br>
+    <span class="kw">And</span> device_id, device_commissioned_at and status=RETURNED persist</div>
+
+  <div class="gherkin invariant"><strong>INVARIANT_03 (A7.1):</strong> Freeze-before-move<br>
+    <span class="kw">Given</span> a RETURNED device whose row is being cleaned<br>
+    <span class="kw">Then</span> the custody_episode snapshot exists before any field is cleared, in one transaction<br>
+    <span class="kw">And</span> a crash mid-way leaves either both or neither — never a cleaned row with no episode</div>
+
   <h3>B5.1 Coverage matrix</h3>
   <table class="coverage">
     <tr><th style="width:24%">Coverage class</th><th>Source</th><th style="width:12%">Items</th><th style="width:12%">Blocks</th><th style="width:18%">All covered?</th></tr>
@@ -558,6 +584,7 @@ stateDiagram-v2
     <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:150px">Author</th><th style="width:90px">Section(s)</th><th>Change</th></tr>
     <tr><td>v0.1</td><td>2026-06-24</td><td>Jaivin Prajapati</td><td>All</td><td>Initial — warehouse acceptance (CSP/3PL) + per-state closure matrix.</td></tr>
     <tr><td>v0.2</td><td>2026-06-25</td><td>Jaivin Prajapati</td><td>A3–A8, B1–B5</td><td>Per-entity matrix (PUT/CLOS/exposure/SD/liability/customer-internet) + audit ids; Pyrops-already-exists reframe (checks at ACS); damage QC deferred (functional default, uniform); 3PL accept+flag, no silent reject; all anomalies persisted as DB flags; removed Product-Head reviewer.</td></tr>
+    <tr><td>v0.3</td><td>2026-06-26</td><td>Jaivin Prajapati</td><td>A5, A6, A7, A8, B2, B5</td><td>Added <span class="mono">netbox_custody</span> <b>row cleanup on RETURNED</b> (deferred when first drafted — re-dispatch now finalised): after the episode snapshot to <span class="mono">custody_episode</span> (Part 2), detach the row (csp_id→null, holder_type=WIOM_INVENTORY, current_episode_id=null) + reset all episode/customer/connection fields + was_ever_deployed=false; persist device_id + device_commissioned_at + status=RETURNED. Defined exact clear-vs-persist set; freeze-before-move invariant; cross-dependency on Part 2.</td></tr>
   </table>
 </section>
 
