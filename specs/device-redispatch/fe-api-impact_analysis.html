@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — FE API Impact (Re-Dispatch / Episode Model) — Tech Review</title>
+<style>
+  :root { --bg:#fafaf9; --surface:#fff; --ink:#1a1a1a; --muted:#6b6b6b; --rule:#e5e5e2;
+    --core:#0b6b3a; --core-bg:#e9f5ee; --what:#1f3c6e; --what-bg:#e8eef8; --how:#5b2a86;
+    --guard:#b91c1c; --guard-bg:#fee2e2; --amber:#8a5a00; --amber-bg:#fbf1dd;
+    --os-bg:#fdecef; --os-rule:#b3123a; --os-ink:#7d0a27; --key-bg:#fff7e6; --key-rule:#b7791f; }
+  * { box-sizing:border-box; } html { scroll-behavior:smooth; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif; font-size:15px; line-height:1.5; color:var(--ink); background:var(--bg); }
+  .layout { display:grid; grid-template-columns:248px 1fr; min-height:100vh; }
+  nav.toc { position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto; padding:24px 16px; border-right:1px solid var(--rule); background:var(--surface); font-size:13px; }
+  nav.toc h2 { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:16px 0 6px; }
+  nav.toc h2:first-of-type { margin-top:0; }
+  nav.toc ol { list-style:none; padding:0; margin:0; }
+  nav.toc li a { text-decoration:none; color:var(--ink); display:flex; gap:8px; padding:4px 6px; border-radius:4px; font-size:12.5px; }
+  nav.toc li a:hover { background:var(--bg); }
+  nav.toc li a .ix { color:var(--muted); min-width:22px; font-weight:600; }
+  main { padding:40px 52px 120px; max-width:1060px; }
+  header.doc { border-bottom:2px solid var(--ink); padding-bottom:18px; margin-bottom:24px; }
+  header.doc .eyebrow { font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+  header.doc h1 { font-size:27px; margin:6px 0 8px; line-height:1.2; }
+  header.doc p.lede { color:var(--muted); font-size:14.5px; margin:0; max-width:78ch; }
+  header.doc .meta-row { margin-top:12px; font-size:12.5px; color:var(--muted); }
+  header.doc .meta-row code { background:var(--bg); padding:1px 5px; border-radius:3px; }
+  section { margin:32px 0; scroll-margin-top:20px; }
+  section h2 { font-size:19px; margin:0 0 8px; display:flex; align-items:center; gap:10px; }
+  section h2 .num { color:var(--muted); font-weight:600; }
+  p { margin:8px 0; } p.small { font-size:13px; color:var(--muted); }
+  table { width:100%; border-collapse:collapse; margin:8px 0 14px; font-size:12.5px; }
+  th,td { text-align:left; padding:7px 9px; border:1px solid var(--rule); vertical-align:top; }
+  th { background:var(--bg); font-weight:600; }
+  .mono { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; }
+  td .mono { font-size:11px; }
+  .badgeA { background:var(--os-bg); color:var(--os-ink); font-weight:700; font-size:10px; padding:2px 7px; border-radius:3px; white-space:nowrap; }
+  .badgeC { background:var(--amber-bg); color:var(--amber); font-weight:700; font-size:10px; padding:2px 7px; border-radius:3px; white-space:nowrap; }
+  .badgeB { background:var(--core-bg); color:var(--core); font-weight:700; font-size:10px; padding:2px 7px; border-radius:3px; white-space:nowrap; }
+  tr.rowA td { background:#fdf3f5; } tr.rowC td { background:#fdf8ec; }
+  .box { border-radius:6px; padding:13px 16px; margin:12px 0; font-size:13.5px; }
+  .box.rule { background:var(--what-bg); border:1px solid var(--what); }
+  .box.key { background:var(--key-bg); border:1px solid var(--key-rule); }
+  .box.cite { background:var(--bg); border-left:3px solid var(--ink); font-size:12.5px; }
+  ul.tight { margin:6px 0; padding-left:18px; } ul.tight li { margin:4px 0; }
+  hr { border:none; border-top:1px dashed var(--rule); margin:26px 0; }
+  @media (max-width:900px){ .layout{grid-template-columns:1fr;} nav.toc{position:static;height:auto;} main{padding:24px;} }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#rule"><span class="ix">1.</span>The test</a></li>
+    <li><a href="#a"><span class="ix">2.</span>Bucket A — change</a></li>
+    <li><a href="#earn"><span class="ix">3.</span>Earnings — source fix</a></li>
+    <li><a href="#b"><span class="ix">4.</span>Bucket B — no change</a></li>
+    <li><a href="#sum"><span class="ix">5.</span>Decisions</a></li>
+  </ol>
+</nav>
+<main>
+<header class="doc">
+  <div class="eyebrow">Wiom · FE API Impact · Part 2 companion · for Tech review</div>
+  <h1>Front-End API Impact — Re-Dispatch / Custody-Episode Model</h1>
+  <p class="lede">Every device-related API the CSP app calls, traced to its backend data source, and whether the custody-episode model requires a change. Two buckets: <b>A</b> = reads <span class="mono">netbox_custody</span> for <em>terminal/past</em> device states → must also consult <span class="mono">custody_episode_log</span>; <b>B</b> = active-only or a different store → no change. Plus one source-of-truth fix on earnings.</p>
+  <div class="meta-row">
+    <b>FE:</b> <code>wiom-csp-app-apr09 @ development</code> (c300cfa0) &nbsp;·&nbsp; <b>Backend:</b> <code>csp-os-yaml @ prod</code> (eddd75d7e) &nbsp;·&nbsp; <b>Owner:</b> Jaivin Prajapati &nbsp;·&nbsp; <b>Reviewers:</b> Tech · EM
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="rule">
+  <h2><span class="num">1.</span> The test (what actually triggers a change)</h2>
+  <div class="box rule">The episode model only moves a device off the CSP's live <span class="mono">netbox_custody</span> row once it is <b>terminal (RETURNED / LOST / DAMAGED / WRITTEN_OFF) and re-dispatched</b>. So the test is not "does it read <span class="mono">netbox_custody</span>" — it is <b>"does it surface a device in LOST or RETURNED (terminal) state from <span class="mono">netbox_custody</span>?"</b> If yes → the device leaves the live row on re-dispatch → the API must consult the episode log → <b>Bucket A</b>.</div>
+  <p class="small">Code-decidable: <span class="mono">findActiveDevicesByCspId</span> = <span class="mono">WHERE csp_id = ? AND status NOT IN ('RETURNED','DAMAGED','LOST','WRITTEN_OFF')</span> (<span class="mono">NetboxCustodyRepository.java:25</span>) — terminal-excluded. Endpoints on this query are active-only (Bucket B). Endpoints that read all statuses or a specific device by id can see terminal states (Bucket A).</p>
+</section>
+
+<!-- 2 -->
+<section id="a">
+  <h2><span class="num">2.</span> Bucket A — needs change <span class="badgeA">EPISODE-LOG AWARE</span></h2>
+  <table>
+    <tr><th>FE call (path · file:line)</th><th>Purpose</th><th>Backend source (file:line, prod)</th><th>Why A · change</th></tr>
+    <tr class="rowA">
+      <td><span class="mono">GET netbox/inventory</span><br><span class="mono">NetBoxApiService.kt:19</span></td>
+      <td>Device buckets by status incl. <b>RETURNED</b> + <b>PROBLEM (LOST+DAMAGED)</b> + paginated device list</td>
+      <td><span class="mono">getInventory</span> NetboxFacadeService.java:195 → <span class="mono">countByCspIdGroupByStatus</span> (:47) + <span class="mono">findByCspIdAndStatusInAfterCursor</span> (:50) = <b>netbox_custody, all statuses</b></td>
+      <td>RETURNED/PROBLEM devices that have been re-dispatched leave the live row → API must read <span class="mono">custody_episode_log</span> to still show them under the old CSP</td>
+    </tr>
+    <tr class="rowA">
+      <td><span class="mono">GET netbox/device/{netbox_id}</span><br><span class="mono">NetBoxApiService.kt:26</span></td>
+      <td>Per-device detail + state timeline</td>
+      <td><span class="mono">getDeviceDetail</span> NetboxFacadeService.java:252 → <span class="mono">getDeviceState→findByDeviceId</span> (:16, netbox_custody) + timeline <span class="mono">findByDeviceIdOrderByCreatedAtDesc</span> (CustodyStateServiceImpl.java:268, custody_audit_log)</td>
+      <td>ACS must resolve the <b>device_id ↔ csp_id mapping across both sources</b> — live row for the current holder, episode log for a past holder. Returns "this CSP's view of this device" correctly</td>
+    </tr>
+  </table>
+  <p class="small">These are the only two read endpoints that surface a LOST/RETURNED device from <span class="mono">netbox_custody</span>. FE contract is unchanged — ACS merges the two sources behind the scenes.</p>
+</section>
+
+<!-- 3 -->
+<section id="earn">
+  <h2><span class="num">3.</span> Earnings — carry-fee source fix <span class="badgeC">CHANGE (different)</span></h2>
+  <p><span class="mono">GET assurance/earnings</span> (<span class="mono">AssuranceStripFacadeService.java:413</span>) builds the earnings strip. Bonus and pickup are read from the <b>Compensation ledger</b> (period-filtered — lines 453–462, historical ✓). <b>Carry fee is the exception:</b></p>
+  <div class="box cite">
+    Lines 464–469 (verbatim intent — code comment on :464): <i>"Carry fee: computed from ACS devices × Comp rate (NOT from ledger)"</i><br>
+    <span class="mono">idleDevices = acs.devices().filter(carryFeeActive &amp;&amp; idleDays>0)</span> · <span class="mono">carryFeeAbsPaise = Σ(rate × idleDays)</span>
+  </div>
+  <p>So the carry-fee number in earnings is recomputed live from <span class="mono">netbox_custody</span> active devices. <b>A device charged carry fee, then returned, drops out of <span class="mono">acs.devices()</span> → its carry fee vanishes from earnings.</b> (Pre-existing inconsistency vs bonus/pickup; the episode model makes it bite more often.)</p>
+  <div class="box key">
+    <b>Fix:</b> source the earnings carry-fee from the <b>carry-fee transaction ledger</b> (entitlement_ledger <span class="mono">CARRY_FEE_DEBIT</span>), like bonus/pickup — it holds the entry regardless of the device's current status.<br><br>
+    <b>Refinement (to enable a break-up):</b> the entitlement <span class="mono">CARRY_FEE_DEBIT</span> entry must also record the <b>count of devices</b> and the <b>rate of fee applied at that moment</b>, so the "<i>N devices × ₹rate/day</i>" break-up is reconstructable historically.
+  </div>
+  <div class="box cite">
+    <b>Why the refinement is needed (prod fact):</b> the carry-fee entry today (<span class="mono">CompensationEventProcessingServiceImpl.java:242-252</span>) sets only <span class="mono">csp_id</span>, <span class="mono">entry_type=CARRY_FEE_DEBIT</span>, <span class="mono">amount</span>, <span class="mono">earning_period_id</span>, <span class="mono">credit_sequence</span>, <span class="mono">program_ref</span> — <b>no device count, no rate field, no per-device breakdown</b>. So a break-up cannot be drawn from the ledger as-is.
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="b">
+  <h2><span class="num">4.</span> Bucket B — no change <span class="badgeB">NO CHANGE</span></h2>
+  <p class="small"><b>B1 · reads <span class="mono">netbox_custody</span> but active-only</b> (live row sufficient — episode model never touches current holdings):</p>
+  <table>
+    <tr><th>FE call</th><th>Purpose</th><th>Source (prod) — active-only</th></tr>
+    <tr><td><span class="mono">GET netbox/home</span> (NetBoxApiService.kt:13)</td><td>Active dashboard summary; <b>total = active devices only</b></td><td><span class="mono">getDashboard</span> CustodyStateServiceImpl.java:49-58, total = <span class="mono">devices.size()</span> from <span class="mono">findActiveDevicesByCspId</span> (:50) — RETURNED/LOST excluded</td></tr>
+    <tr><td><span class="mono">GET netbox/carry-fee-detail</span> (:16)</td><td><b>Devices accruing carry fee right now</b> (live snapshot, not historical)</td><td>NetboxFacadeService.java:142, filters <span class="mono">isCarryFeeActive</span> (:150-153) over active dashboard devices</td></tr>
+    <tr><td><span class="mono">GET netbox/capacity-offer</span> (:61)</td><td>Order eligibility — current custody count + SD</td><td>netbox_custody current count + payment SD</td></tr>
+  </table>
+  <p class="small"><b>B2 · device info from a different store entirely</b> (episode-safe — csp_id stamped at txn time):</p>
+  <table>
+    <tr><th>FE call</th><th>Purpose</th><th>Source (prod)</th></tr>
+    <tr><td><span class="mono">GET netbox/order/{request_id}</span> (:29)</td><td>Device-order detail</td><td><span class="mono">device_orders</span> (findByRequestId) — not netbox_custody</td></tr>
+    <tr><td><span class="mono">GET wallet/deposit</span> (WalletApiService.kt:29)</td><td>Security-deposit ledger (per-device, netbox_id)</td><td>DepositLedgerEntryRepository (payment-settlement)</td></tr>
+    <tr><td><span class="mono">GET wallet/ledger</span> + <span class="mono">/ledger/entries</span> (:22,:60)</td><td><b>Carry-fee debit trail</b> / wallet ledger (device-linked)</td><td>payment-settlement wallet ledger</td></tr>
+    <tr><td><span class="mono">GET wallet/home, /ledger/summary, /history, /ledger/tds/...</span></td><td>Wallet balance / rollups / TDS (device-tagged)</td><td>payment-settlement</td></tr>
+    <tr><td><span class="mono">GET …/netbox-recovery/.../candidates</span>, <span class="mono">nbrec/candidates/by-connection/...</span></td><td>Lost / recovery-pending candidates feed</td><td>csp-tas-service NBREC (execution candidates) — not netbox_custody</td></tr>
+    <tr><td><span class="mono">GET netbox/validate-router</span>, install device lookup</td><td>Router hardware identity / validation</td><td>external i2e1 remote (RemoteServiceClient.java:30,42)</td></tr>
+  </table>
+</section>
+
+<!-- 5 -->
+<section id="sum">
+  <h2><span class="num">5.</span> Decisions</h2>
+  <table>
+    <tr><th>Endpoint</th><th>Verdict</th><th>Change</th></tr>
+    <tr class="rowA"><td><span class="mono">netbox/inventory</span></td><td><span class="badgeA">A</span></td><td>Consult episode log for RETURNED/PROBLEM buckets</td></tr>
+    <tr class="rowA"><td><span class="mono">netbox/device/{id}</span></td><td><span class="badgeA">A</span></td><td>Resolve device↔csp across netbox_custody + episode log</td></tr>
+    <tr class="rowC"><td><span class="mono">assurance/earnings</span></td><td><span class="badgeC">Change</span></td><td>Carry-fee source → entitlement ledger; ledger entry to carry <b>device count + rate</b> for break-up</td></tr>
+    <tr><td><span class="mono">netbox/home</span></td><td><span class="badgeB">B</span></td><td>Active-only total; returned/lost not counted today</td></tr>
+    <tr><td><span class="mono">netbox/carry-fee-detail</span></td><td><span class="badgeB">B</span></td><td>Live snapshot of devices accruing now</td></tr>
+    <tr><td><span class="mono">netbox/capacity-offer</span></td><td><span class="badgeB">B</span></td><td>Current custody counts</td></tr>
+    <tr><td><span class="mono">netbox/order/{id}</span> · all <span class="mono">wallet/*</span> · NBREC candidates · validate-router</td><td><span class="badgeB">B</span></td><td>Other store / TAS / external — no change</td></tr>
+  </table>
+  <p class="small">Net: <b>2 endpoints need episode-log awareness</b> (inventory, device/{id}), <b>1 needs a carry-fee source correction</b> (earnings, + entitlement-ledger enrichment), the rest unchanged. To be reviewed with Tech, then sequenced into Part 2 implementation steps.</p>
+</section>
+
+<p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
+  Wiom · FE API impact analysis · companion to the Device Re-Dispatch change spec (Part 2 of 3) · branches: wiom-csp-app-apr09@development · csp-os-yaml@prod
+</p>
+</main>
+</div>
+</body>
+</html>
