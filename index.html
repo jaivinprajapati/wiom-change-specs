@@ -44,7 +44,7 @@
     </a></li>
     <li><a href="specs/device-warehouse-return/device-warehouse-return_change_spec.html">
       <div class="spec-title">Warehouse Device Return (CSP / 3PL) — Acceptance &amp; Closure</div>
-      <div class="spec-sub">v0.2 Draft · 2026-06-25 · Part 1 of 3 · ACS accepts device returns from ANY custody state (Pyrops already accepts; ACS is the gate) · CSP/3PL source + identity, accept+flag (no silent reject) · per-state entity matrix (PUT · CLOS · exposure · security deposit · liability ledger · customer internet) + device_id/csp_id audit ids · all anomalies persisted as DB flags · damage QC deferred (functional default) · code + OS grounded · EM architectural review pending</div>
+      <div class="spec-sub">v0.3 Draft · 2026-06-26 · Part 1 of 3 · ACS accepts device returns from ANY custody state (Pyrops already accepts; ACS is the gate) · CSP/3PL source + identity, accept+flag (no silent reject) · per-state entity matrix (PUT · CLOS · exposure · security deposit · liability ledger · customer internet) + device_id/csp_id audit ids · all anomalies persisted as DB flags · damage QC deferred · <b>v0.3: netbox_custody row cleanup on RETURNED — after the custody_episode snapshot, detach (csp_id→null, holder_type=WIOM_INVENTORY) + reset all episode fields; persist device_id + device_commissioned_at; exact clear-vs-persist set defined</b> · code + OS grounded · EM review pending</div>
     </a></li>
     <li><a href="specs/rescue-intent-transition/rescue-intent-transition_change_spec.html">
       <div class="spec-title">Rescue-Intent Transition (T_RESCUE) — resolve to ACTIVE or PAUSED by ISP window</div>
