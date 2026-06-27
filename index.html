@@ -36,7 +36,7 @@
   <ul class="specs">
     <li><a href="specs/customer-migration-existing-csp/customer-migration-existing-csp.html">
       <div class="spec-title">Customer Migration to Existing CSPs — Backend Seeding Approach</div>
-      <div class="spec-sub">Draft v2 · 2026-06-27 · <b>Reviewer-facing go/no-go doc.</b> Leads with approach + thought process + the critical entities (5 datastores + ₹300 wallet credit), then the step-by-step sequence · seed re-assigned old-world customers as new ACTIVE connections under an existing CSP, backend-only · seed-and-fire (skip the install flow, write its result, fire the same events) · ₹300 payout = prod install path (direct-to-compensation, mirrors <code>INSTALL:&lt;id&gt;</code>) · csp_id = 6-char short code (prod-verified) · citations in a collapsible appendix</div>
+      <div class="spec-sub">Draft v2.1 · 2026-06-27 · <b>Reviewer-facing go/no-go doc.</b> Leads with approach + thought process + the critical entities (5 datastores + ₹300 wallet credit), then the step-by-step sequence · seed re-assigned old-world customers as new ACTIVE connections under an existing CSP, backend-only · seed-and-fire (skip the install flow, write its result, fire the same events) · <b>v2.1: every SQL seed column reconciled against migration DDL + live rows</b> — CUSTODIED device has no connection_id (set later by device-bind + install-signal); exact required/leave-NULL/default per table · ₹300 payout = prod install path (direct-to-compensation) · csp_id = 6-char short code (prod-verified)</div>
     </a></li>
     <li><a href="specs/device-return-cancellation/device-return-cancellation_change_spec.html">
       <div class="spec-title">CSP Cancellation of an Initiated Device Return</div>

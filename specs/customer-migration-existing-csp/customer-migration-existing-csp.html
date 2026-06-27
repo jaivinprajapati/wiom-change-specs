@@ -106,7 +106,7 @@
   <h1>Customer Migration to Existing CSPs</h1>
   <div class="sub">Re-assigning old-world customers (whose CSP wasn't migrated) as new <b>active connections</b> under an existing new-world CSP — entirely backend.</div>
   <div class="tags">
-    <span class="tag draft">Draft v2 · for go-ahead review</span>
+    <span class="tag draft">Draft v2.1 · for go-ahead review</span>
     <span class="tag">Approach only — no UI/UX</span>
     <span class="tag ok">Code-cited @ prod + prod-data verified</span>
   </div>
@@ -162,9 +162,9 @@
     <span class="how sql">SQL</span>
     <div class="svc">ACS · netbox_custody</div>
     <h4>Device</h4>
-    <div class="arrow">insert →</div>
-    <span class="state">CUSTODIED → DEPLOYED</span>
-    <div class="why">Device won't pre-exist. Seed it owned by the chosen CSP, bound to the connection.</div>
+    <div class="arrow">insert CUSTODIED → bind → </div>
+    <span class="state">DEPLOYED</span>
+    <div class="why">Device won't pre-exist. Seed owned by the chosen CSP (no connection yet), then bind + deploy via events.</div>
   </div>
   <div class="ent sql">
     <span class="how sql">SQL</span>
@@ -203,14 +203,15 @@
 <h2>End-to-end at a glance</h2>
 <div class="flow">PRE   resolve zone (lat-lng) ─ seed CSP zone-eligibility if missing
  │
- 1    SQL  insert device         netbox_custody   = CUSTODIED, bound to connection
- 2    SQL  insert connection      connections      = PENDING_INSTALL
-      SQL  insert allocation      connection_allocations = ACTIVE          (reconciliation)
+ 1    SQL  insert device       netbox_custody          = CUSTODIED   (no connection/customer)
+ 2    SQL  insert connection    connections             = PENDING_INSTALL
+      SQL  insert allocation    connection_allocations  = ACTIVE      (reconciliation)
  │
- 3    EVENT customer-installation-confirmed   → connection  PENDING_INSTALL → ACTIVE
-      EVENT customer-installation-signal      → device      → DEPLOYED
- 4    EVENT customer-recharge-confirmed        → CAEO        → ENABLED (+ plan expiry)
- 5    EVENT recharge-confirmed (→ compensation)→ wallet      +₹300 to CSP
+ 3    EVENT device-bound                  → device      current_connection_id set
+      EVENT customer-installation-confirmed → connection  PENDING_INSTALL → ACTIVE
+      EVENT customer-installation-signal    → device      → DEPLOYED (+ connection_id, customer_id)
+ 4    EVENT customer-recharge-confirmed     → CAEO        → ENABLED (+ plan expiry)
+ 5    EVENT recharge-confirmed (→ compensation) → wallet  +₹300 to CSP
  │
  ✓    Customer is an ACTIVE connection under the chosen CSP. CSP paid ₹300.</div>
 
@@ -240,41 +241,53 @@
   <div class="head"><div class="n">1·2</div><div class="t">Seed device + connection (SQL — emits no events)</div><div class="meta">raw insert = no install task created</div></div>
   <div class="body">
     <div class="step">
-      <div class="top"><span class="pill sql">SQL</span><span class="ttl">Device → CUSTODIED, bound to connection</span><span class="svc">ACS · netbox_custody</span></div>
-      <div class="code">INSERT netbox_custody (device_id, csp_id, status, current_connection_id, …)
-VALUES (:device_id, :csp_short_code, 'CUSTODIED', :connection_id, …);</div>
-      <div class="det">Seed after the service has booted once (<code>status</code> is an FK to a startup-seeded ref table). <code>csp_id</code> here fixes device ownership — the install signal does not re-check it.</div>
+      <div class="top"><span class="pill sql">SQL</span><span class="ttl">Device → CUSTODIED (no connection yet)</span><span class="svc">ACS · netbox_custody</span></div>
+      <div class="code">INSERT INTO netbox_custody (device_id, csp_id, status)
+VALUES (:device_id, :csp_short_code, 'CUSTODIED');
+-- everything else takes its DB default; leave NULL:
+--   current_connection_id, connection_id, customer_id   ← set later (bind + deploy)</div>
+      <div class="det">Only 3 columns are mandatory (<code>device_id</code>, <code>csp_id</code>, <code>status</code>); the rest default. <b>A CUSTODIED device has no connection/customer</b> — verified against live rows — so we leave <code>current_connection_id</code>, <code>connection_id</code>, <code>customer_id</code> NULL; they're filled by the bind event + the deploy signal. Seed only after the service has booted once (<code>status</code> is an FK to a startup-seeded ref table). <code>csp_id</code> fixes device ownership — the install signal does not re-check it.</div>
     </div>
     <div class="step">
       <div class="top"><span class="pill sql">SQL</span><span class="ttl">Connection → PENDING_INSTALL</span><span class="svc">CL · connections</span></div>
-      <div class="code">INSERT connections (connection_id, customer_id, csp_id, zone_id, service_address,
-  plan_id, current_state, state_timestamp, …)
-VALUES (:connection_id, :customer_id, :csp_short_code, :zone_id, :addr,
-  :plan_id, 'PENDING_INSTALL', now(), …);</div>
-      <div class="det">Direct insert is the <b>only emission-free way</b> — any HTTP create path would emit an event that spins up a TAS install task. <code>state_timestamp=now()</code> anchors the 72h activation window used next.</div>
+      <div class="code">INSERT INTO connections
+  (connection_id, customer_id, csp_id, zone_id, service_address, plan_id,
+   current_state, state_timestamp, installation_complete_at)
+VALUES (:connection_id, :customer_id, :csp_short_code, :zone_id, :addr_jsonb, :plan_id,
+   'PENDING_INSTALL', now(), now());
+-- leave NULL: activated_at  ← set by the activation event (step 3)</div>
+      <div class="det">Mandatory: <code>connection_id, customer_id, zone_id, service_address (jsonb), plan_id</code>; the 9 housekeeping columns (pause_count, retry_count, version, …) default. Direct insert is the <b>only emission-free way</b> (any HTTP create path emits an event → TAS install task). <code>state_timestamp=now()</code> anchors the 72h activation window. <code>installation_complete_at=now()</code> is optional but makes the row match an organic ACTIVE connection (which always has it set).</div>
     </div>
     <div class="step">
       <div class="top"><span class="pill sql">SQL</span><span class="ttl">Allocation → ACTIVE (reconciliation)</span><span class="svc">DAS · connection_allocations</span></div>
-      <div class="code">INSERT connection_allocations (connection_id, zone_id, csp_id,
-  allocation_state, allocation_event_type)
-VALUES (:connection_id, :zone_id, :csp_short_code, 'ACTIVE', 'NEW_DEMAND');</div>
-      <div class="det">Keeps the connection visible to DAS sweeps so a future CSP-exit can auto-reallocate it. Standalone — no extra dependencies.</div>
+      <div class="code">INSERT INTO connection_allocations
+  (connection_id, zone_id, csp_id, allocation_state, allocation_event_type,
+   assigned_at, acceptance_timestamp)
+VALUES (:connection_id, :zone_id, :csp_short_code, 'ACTIVE', 'NEW_DEMAND',
+   now(), now());
+-- id, version, retry_count, parallel_install_warning, the 2 JSONB cols: default</div>
+      <div class="det">Mandatory: <code>connection_id, zone_id, allocation_state, allocation_event_type</code> (last two are FK-checked / fixed strings). <code>assigned_at</code> + <code>acceptance_timestamp</code> are optional but every live ACTIVE row has them set. Keeps the connection visible to DAS sweeps so a future CSP-exit can auto-reallocate it. <code>connection_id</code> is UNIQUE — the idempotency guard.</div>
     </div>
   </div>
 </div>
 
 <div class="phase">
-  <div class="head"><div class="n">3</div><div class="t">Activate + deploy (events → CL / ACS, never TAS)</div><div class="meta">drives the real state transitions</div></div>
+  <div class="head"><div class="n">3</div><div class="t">Bind → activate → deploy (events → ACS / CL, never TAS)</div><div class="meta">order matters — bind before activate</div></div>
   <div class="body">
     <div class="step">
+      <div class="top"><span class="pill event">EVENT</span><span class="ttl">Bind device to connection</span><span class="svc">ACS · /events/asset-custody/device-bound</span></div>
+      <div class="code">{ eventId, deviceId, cspId, connectionId, boundAt: now() }</div>
+      <div class="det">Sets <code>current_connection_id</code> on the device (status stays CUSTODIED). <b>Must run before activation</b> — the next step's binding guard reads exactly this. Valid only while the device is CUSTODIED/IDLE.</div>
+    </div>
+    <div class="step">
       <div class="top"><span class="pill event">EVENT</span><span class="ttl">Connection → ACTIVE</span><span class="svc">CL · /events/customer-installation-confirmed</span></div>
-      <div class="code">{ connectionId, sourceSurface:"CUSTOMER_APP", confirmedAt: now() }</div>
-      <div class="det">Flips to ACTIVE (guards: state, source, 72h window, device bound). Auto-creates the CAEO row and notifies DAS + Quality — none reach TAS.</div>
+      <div class="code">{ eventId, connectionId, sourceSurface:"CUSTOMER_APP", confirmedAt: now() }</div>
+      <div class="det">Flips to ACTIVE and stamps <code>activated_at</code> (guards: state, source, 72h window, <b>device bound</b> ← prior step). Auto-creates the CAEO row and notifies DAS + Quality — none reach TAS.</div>
     </div>
     <div class="step">
       <div class="top"><span class="pill event">EVENT</span><span class="ttl">Device → DEPLOYED</span><span class="svc">ACS · /events/asset-custody/customer-installation</span></div>
-      <div class="code">{ deviceId, cspId, customerId, connectionId, installedAt: now() }</div>
-      <div class="det">Moves the seeded device to DEPLOYED and stamps the customer/connection.</div>
+      <div class="code">{ eventId, deviceId, cspId, customerId, connectionId, installedAt: now() }</div>
+      <div class="det">Transitions the device to DEPLOYED and stamps <code>connection_id</code> + <code>customer_id</code> (clears <code>idle_start_date</code>). End-state matches a real deployed device: <code>current_connection_id = connection_id</code>.</div>
     </div>
   </div>
 </div>
@@ -326,8 +339,31 @@ VALUES (:connection_id, :zone_id, :csp_short_code, 'ACTIVE', 'NEW_DEMAND');</div
   <tr><td>No TAS install record / step history for migrated customers.</td><td>Accepted trade-off; tag seeded rows for traceability.</td></tr>
 </table>
 
-<details>
-  <summary>Appendix — evidence &amp; key citations (for the technical reviewer)</summary>
+<details open>
+  <summary>Appendix — exact seed columns + evidence (for the technical reviewer)</summary>
+  <p style="color:var(--muted);font-size:13px;margin-top:0">Columns below are reconciled against the authoritative migration DDL (base <code>CREATE</code> + all <code>uuid→varchar</code> alters) <b>and</b> sampled live rows per state. "Leave NULL" = the column is populated later by a named event, matching how real rows look.</p>
+  <table>
+    <tr><th>Table · state</th><th>Mandatory (set)</th><th>Leave NULL — set later by</th><th>Defaults (skip)</th></tr>
+    <tr>
+      <td><code>netbox_custody</code> · CUSTODIED</td>
+      <td><code>device_id</code>, <code>csp_id</code>, <code>status='CUSTODIED'</code></td>
+      <td><code>current_connection_id</code> ← device-bound · <code>connection_id</code>, <code>customer_id</code> ← install-signal · <code>idle_start_date</code></td>
+      <td>idle_days, carry_fee_*, connection_deactivated, version, created/updated_at</td>
+    </tr>
+    <tr>
+      <td><code>connections</code> · PENDING_INSTALL</td>
+      <td><code>connection_id</code>, <code>customer_id</code>, <code>zone_id</code>, <code>service_address</code> (jsonb), <code>plan_id</code>, <code>csp_id</code>, <code>current_state</code>, <code>state_timestamp</code></td>
+      <td><code>activated_at</code> ← activation event · <i>(opt.)</i> <code>installation_complete_at=now()</code> for fidelity</td>
+      <td>pause_count, retry_count, retry_exhausted, total_*_duration, version, created/updated_at</td>
+    </tr>
+    <tr>
+      <td><code>connection_allocations</code> · ACTIVE</td>
+      <td><code>connection_id</code>, <code>zone_id</code>, <code>csp_id</code>, <code>allocation_state='ACTIVE'</code>, <code>allocation_event_type='NEW_DEMAND'</code></td>
+      <td><i>(opt. for fidelity)</i> <code>assigned_at</code>, <code>acceptance_timestamp</code> = now()</td>
+      <td>id (uuid), retry_count, parallel_install_warning, decline_cooldown_csp_ids '[]', assignment_count_per_csp '{}', version, created/updated_at</td>
+    </tr>
+  </table>
+  <p style="font-size:13px"><b>Verified writes:</b> <code>device-bound</code> sets only <code>current_connection_id</code> (status unchanged) <span class="cite">asset-custody …Impl.java:275-298</span>; <code>customer-installation</code> signal sets <code>connection_id</code>+<code>customer_id</code>, clears <code>idle_start_date</code>, → DEPLOYED <span class="cite">…Impl.java:235-269</span>; activation sets <code>activated_at</code> (not <code>installation_complete_at</code>) <span class="cite">connection_lifecycle …Impl.java:256-263</span>. CSP-id columns are <code>VARCHAR</code> post-migration <span class="cite">netbox V8 · connections V005/006 · DAS V9/10</span>.</p>
   <p><b>Prod data (live, DB 113, 2026-06-27):</b> 12 most-recent install-completed connections — all <code>connection.current_state = ACTIVE</code>, compensation <code>BASE_PAYOUT_CREDIT</code> 30000 paise (<code>credit_type=CONNECTION_ENTITLEMENT</code>, ref <code>INSTALL:&lt;execution_candidate_id&gt;</code>), matching wallet <code>BASE_PAYOUT</code> 30000; connection never PAUSED when paid ⇒ payout reached compensation directly. <code>csp_id</code> = 6-char short code across all five stores.</p>
   <p><b>Why the install flow can't be walked:</b> completion gates on OTP verify, whose active provider calls i2e1 and only advances on a real upstream <code>true</code> — no stored OTP, no bypass. <span class="cite">OtpServiceImpl.java:69-171</span> <span class="cite">I2e1BookingHappyCodeOtpAdapter.java:44-68</span></p>
   <p><b>Why connection creation must be SQL:</b> every CL create path emits <code>CL_CONNECTION_REQUESTED</code> → DAS routing → a TAS install candidate; fan-out is by event-type to all subscribers (can't withhold from TAS). <span class="cite">EventSender.java:20-26</span> <span class="cite">HttpRoutingPublisher.java:34-55</span></p>
@@ -337,7 +373,7 @@ VALUES (:connection_id, :zone_id, :csp_short_code, 'ACTIVE', 'NEW_DEMAND');</div
 </details>
 
 <footer>
-  Customer Migration to Existing CSPs · Draft v2 · 2026-06-27 · Code cited @ csp-os-yaml prod (HEAD <code>eddd75d7e</code>), cross-checked vs live prod data (DB 113). Approach-level only.
+  Customer Migration to Existing CSPs · Draft v2.1 · 2026-06-27 · Seed columns reconciled against migration DDL + live rows; code cited @ csp-os-yaml prod (HEAD <code>eddd75d7e</code>), cross-checked vs live prod data (DB 113). Approach-level only.
 </footer>
 
 </div>
