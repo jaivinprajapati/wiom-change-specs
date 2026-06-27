@@ -34,6 +34,10 @@
   </header>
 
   <ul class="specs">
+    <li><a href="specs/customer-migration-existing-csp/customer-migration-existing-csp.html">
+      <div class="spec-title">Customer Migration to Existing CSPs — Backend Seeding Approach</div>
+      <div class="spec-sub">Draft v1.1 · 2026-06-27 · Seed re-assigned old-world customers as new ACTIVE connections under an existing CSP, backend-only · <b>SKIP-TAS seed-and-fire</b>: raw-INSERT connection + DAS allocation (no events → no orphan install candidate), then fire activation + recharge events · install flow can't be walked (OTP hard-depends on external i2e1) · ₹300 install payout confirmed real in prod (direct-to-compensation recharge, ref <code>INSTALL:&lt;id&gt;</code>, bypasses RV PAUSED gate) — we mirror it with <code>Customer migration:&lt;id&gt;</code> · csp_id = 6-char short code everywhere (prod-verified) · 6-phase sequence with per-step SQL/event/API + citations · API-vs-SQL trade-off · code-cited @ prod + cross-checked vs live data (DB 113)</div>
+    </a></li>
     <li><a href="specs/device-return-cancellation/device-return-cancellation_change_spec.html">
       <div class="spec-title">CSP Cancellation of an Initiated Device Return</div>
       <div class="spec-sub">v0.3 Draft · 2026-06-26 · Part 3 track · told as a device's journey (backend POV) · adds a gated reverse transition (T_RETURN_CANCELLED): a CSP can undo its OWN RETRIEVAL_PENDING back to the exact prior state (IDLE / CUSTODIED) · v0.3: ACS stops zeroing the carry-fee basis at RETRIEVAL_PENDING so the daily cron auto-charges the limbo catch-up on restore · system-initiated retrievals (no-deployment recall, exit, swap-out, deactivate-and-return) NOT cancellable · allowed only until LOST/write-off · limbo days COUNT (no-deployment clock via created_at, idle clock via idle_start_date — both preserved) · one-time carry-fee catch-up on IDLE restore (capped, no double-charge) · DEVICE_RETURN_CANCELLED aborts the pickup · "Wiom could not pick up" reversal out of scope · code + OS grounded · EM review pending</div>
