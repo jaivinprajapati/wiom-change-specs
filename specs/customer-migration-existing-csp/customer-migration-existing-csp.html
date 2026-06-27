@@ -3,360 +3,341 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Customer Migration to Existing CSPs — Backend Seeding Approach</title>
+<title>Customer Migration to Existing CSPs — Approach for Review</title>
 <style>
   :root{
     --bg:#0f1115; --panel:#171a21; --panel2:#1d212b; --line:#2a2f3a;
     --txt:#e6e9ef; --muted:#9aa3b2; --accent:#4f9cff; --green:#3ecf8e;
-    --amber:#f5a623; --red:#ff5d5d; --purple:#b08cff; --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+    --amber:#f5a623; --red:#ff5d5d; --purple:#b08cff;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.5;font-size:15px}
-  .wrap{max-width:1080px;margin:0 auto;padding:32px 24px 96px}
-  header.doc{border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:28px}
-  h1{font-size:26px;margin:0 0 8px}
-  h2{font-size:20px;margin:40px 0 14px;padding-top:14px;border-top:1px solid var(--line)}
-  h3{font-size:16px;margin:22px 0 8px;color:var(--txt)}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.55;font-size:15px}
+  .wrap{max-width:1060px;margin:0 auto;padding:30px 22px 90px}
+  header.doc{margin-bottom:24px}
+  h1{font-size:25px;margin:0 0 6px}
+  h2{font-size:15px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:38px 0 14px;display:flex;align-items:center;gap:10px}
+  h2::after{content:"";flex:1;height:1px;background:var(--line)}
   .sub{color:var(--muted);font-size:14px}
   .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   .tag{font-size:12px;padding:3px 10px;border-radius:20px;border:1px solid var(--line);background:var(--panel2);color:var(--muted)}
   .tag.draft{color:var(--amber);border-color:#5a4a1f}
   .tag.ok{color:var(--green);border-color:#1f5a3f}
   p{margin:8px 0}
-  code{font-family:var(--mono);font-size:.86em;background:#000;padding:1px 6px;border-radius:4px;color:#dfe6f2;border:1px solid var(--line)}
-  .cite{font-family:var(--mono);font-size:11px;color:var(--accent);background:#0c1830;border:1px solid #1e3a5f;border-radius:4px;padding:1px 6px;white-space:nowrap}
-  .callout{border-radius:10px;padding:14px 16px;margin:16px 0;border:1px solid var(--line);background:var(--panel)}
+  code{font-family:var(--mono);font-size:.85em;background:#000;padding:1px 6px;border-radius:4px;color:#dfe6f2;border:1px solid var(--line)}
+  .cite{font-family:var(--mono);font-size:10.5px;color:var(--accent);background:#0c1830;border:1px solid #1e3a5f;border-radius:4px;padding:1px 6px;white-space:nowrap}
+
+  /* the ask */
+  .ask{border:1px solid #1e3a5f;background:linear-gradient(180deg,#0e1a2e,#10141c);border-radius:14px;padding:20px 22px;margin:8px 0 6px}
+  .ask .lbl{font-size:12px;letter-spacing:.7px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+  .ask p{margin:6px 0;font-size:15.5px}
+
+  /* principle cards */
+  .principles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .pc{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:14px 16px}
+  .pc .num{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700}
+  .pc h4{margin:4px 0 5px;font-size:15px}
+  .pc p{margin:0;font-size:13.5px;color:#cdd3df}
+
+  /* entity grid */
+  .entities{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .ent{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:13px 15px;position:relative;overflow:hidden}
+  .ent::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent)}
+  .ent.sql::before{background:var(--amber)} .ent.event::before{background:var(--accent)} .ent.pre::before{background:var(--purple)}
+  .ent .svc{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .ent h4{margin:3px 0 6px;font-size:14.5px}
+  .ent .arrow{font-size:13px;color:var(--muted);margin:2px 0 7px}
+  .ent .state{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:6px;background:#101c16;color:var(--green);border:1px solid #1f5a3f}
+  .ent .why{font-size:12.5px;color:#cdd3df;margin-top:8px}
+  .ent .how{position:absolute;top:11px;right:12px;font-size:10px;font-weight:700;letter-spacing:.4px;padding:2px 7px;border-radius:5px}
+  .how.sql{background:#23170a;color:#ffb86c;border:1px solid #5a3a1f}
+  .how.event{background:#0c1830;color:#7fb4ff;border:1px solid #1e3a5f}
+  .how.pre{background:#1a1320;color:#c9a3ff;border:1px solid #43306a}
+
+  .flow{font-family:var(--mono);font-size:12px;background:#000;border:1px solid var(--line);border-radius:10px;padding:15px;white-space:pre;overflow-x:auto;color:#bcd;line-height:1.5}
+
+  .callout{border-radius:10px;padding:13px 15px;margin:14px 0;border:1px solid var(--line);background:var(--panel);font-size:13.5px}
   .callout.warn{border-color:#5a4a1f;background:#1c1810}
-  .callout.bad{border-color:#5a2020;background:#1c1212}
   .callout.good{border-color:#1f5a3f;background:#101c16}
-  .callout .lbl{font-weight:700;font-size:12px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
-  .callout.warn .lbl{color:var(--amber)} .callout.bad .lbl{color:var(--red)} .callout.good .lbl{color:var(--green)}
-  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}
-  th,td{text-align:left;padding:9px 11px;border:1px solid var(--line);vertical-align:top}
-  th{background:var(--panel2);color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.4px}
-  td.c{white-space:nowrap}
-  .phase{border:1px solid var(--line);border-radius:12px;margin:18px 0;overflow:hidden;background:var(--panel)}
-  .phase>.head{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--panel2);border-bottom:1px solid var(--line)}
-  .phase>.head .n{flex:0 0 auto;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:700;background:#0c1830;color:var(--accent);border:1px solid #1e3a5f}
-  .phase>.head .t{font-weight:700;font-size:15px}
-  .phase>.head .meta{margin-left:auto;font-size:12px;color:var(--muted)}
-  .phase>.body{padding:6px 16px 14px}
-  .step{padding:12px 0;border-bottom:1px dashed var(--line)}
+  .callout .lbl{font-weight:700;font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
+  .callout.warn .lbl{color:var(--amber)} .callout.good .lbl{color:var(--green)}
+
+  /* phase steps */
+  .phase{border:1px solid var(--line);border-radius:12px;margin:12px 0;background:var(--panel)}
+  .phase>.head{display:flex;align-items:center;gap:11px;padding:11px 15px;border-bottom:1px solid var(--line)}
+  .phase>.head .n{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-weight:700;font-size:13px;background:#0c1830;color:var(--accent);border:1px solid #1e3a5f}
+  .phase>.head .t{font-weight:700;font-size:14.5px}
+  .phase>.head .meta{margin-left:auto;font-size:11.5px;color:var(--muted)}
+  .phase>.body{padding:4px 15px 12px}
+  .step{padding:10px 0;border-bottom:1px dashed var(--line)}
   .step:last-child{border-bottom:none}
-  .step .top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .pill{font-size:11px;font-weight:700;padding:2px 9px;border-radius:6px;letter-spacing:.3px}
+  .step .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:5px;letter-spacing:.3px}
   .pill.sql{background:#23170a;color:#ffb86c;border:1px solid #5a3a1f}
   .pill.event{background:#0c1830;color:#7fb4ff;border:1px solid #1e3a5f}
   .pill.api{background:#101c16;color:#5fe0a0;border:1px solid #1f5a3f}
   .pill.check{background:#1a1320;color:#c9a3ff;border:1px solid #43306a}
-  .pill.skip{background:#1c1212;color:#ff8a8a;border:1px solid #5a2020}
-  .step .ttl{font-weight:600}
-  .step .svc{font-size:12px;color:var(--muted);font-family:var(--mono)}
-  .step .det{margin:7px 0 0;color:#cdd3df;font-size:13.5px}
-  .step .fields{margin:8px 0 0;font-family:var(--mono);font-size:12px;background:#000;border:1px solid var(--line);border-radius:7px;padding:9px 11px;color:#cfe0ff;white-space:pre-wrap;overflow-x:auto}
-  .step .cites{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
-  ul{margin:8px 0;padding-left:20px} li{margin:4px 0}
-  .flow{font-family:var(--mono);font-size:12.5px;background:#000;border:1px solid var(--line);border-radius:8px;padding:14px;white-space:pre;overflow-x:auto;color:#bcd}
-  .legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0;font-size:12px;color:var(--muted)}
-  .legend span{display:flex;align-items:center;gap:6px}
-  .dot{width:10px;height:10px;border-radius:3px;display:inline-block}
-  footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+  .step .ttl{font-weight:600;font-size:14px}
+  .step .svc{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+  .step .det{margin:6px 0 0;color:#c4ccd9;font-size:13px}
+  .step .code{margin:7px 0 0;font-family:var(--mono);font-size:11.5px;background:#000;border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:#cfe0ff;white-space:pre-wrap;overflow-x:auto}
+  .step .cites{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border:1px solid var(--line);vertical-align:top}
+  th{background:var(--panel2);color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+  td.c{white-space:nowrap;font-family:var(--mono);font-size:12px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .chip{font-size:12px;padding:5px 11px;border-radius:8px;border:1px solid #5a2020;background:#1c1212;color:#ff9a9a}
+  .chip b{color:#ffcaca}
+  ul{margin:8px 0;padding-left:20px} li{margin:4px 0;font-size:13.5px}
+  details{border:1px solid var(--line);border-radius:10px;background:var(--panel);margin:12px 0;padding:0 14px}
+  summary{cursor:pointer;padding:12px 0;font-weight:600;font-size:14px;color:var(--muted)}
+  details[open] summary{border-bottom:1px solid var(--line);margin-bottom:10px}
+  footer{margin-top:46px;padding-top:16px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
   a{color:var(--accent)}
+  @media(max-width:760px){.principles,.entities{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header class="doc">
-  <h1>Customer Migration to Existing CSPs — Backend Seeding Approach</h1>
-  <div class="sub">Re-assigning old-world customers (whose CSPs were not migrated) as <b>new active connections</b> under an existing new-world CSP, entirely backend, from an Ops-supplied data file.</div>
+  <h1>Customer Migration to Existing CSPs</h1>
+  <div class="sub">Re-assigning old-world customers (whose CSP wasn't migrated) as new <b>active connections</b> under an existing new-world CSP — entirely backend.</div>
   <div class="tags">
-    <span class="tag draft">Draft v1.1 — for review</span>
-    <span class="tag">Prod codebase: csp-os-yaml @ prod</span>
-    <span class="tag">Scope: approach only (no UI/UX)</span>
-    <span class="tag ok">All steps code-verified + cited</span>
+    <span class="tag draft">Draft v2 · for go-ahead review</span>
+    <span class="tag">Approach only — no UI/UX</span>
+    <span class="tag ok">Code-cited @ prod + prod-data verified</span>
   </div>
 </header>
 
-<p>This document defines the exact backend sequence — SQL inserts, event POSTs, and API calls — to take a migrating customer and land them as an <b>ACTIVE</b> connection under a chosen existing CSP, with the CSP paid the ₹300 recharge payout. Every step is verified against the production source; citations are <code>file:line</code>. Nothing here is inferred.</p>
-
-<div class="callout good">
-  <div class="lbl">Verdict on the proposed approach</div>
-  Sound, and backend-only is achievable. <b>One assumption broke under review</b>: the install flow cannot be "walked" backend-only (OTP hard-depends on the external i2e1 service — see below), so we <b>seed-and-fire</b> instead. Everything else holds — including the <code>install:xyz</code> recharge trigger, which <b>production data confirms is real</b> (the ₹300 install payout lands via a direct-to-compensation recharge whose reference is <code>INSTALL:&lt;id&gt;</code>). We replicate that exact mechanism with a <code>Customer migration:&lt;id&gt;</code> reference.
+<div class="ask">
+  <div class="lbl">What we're asking you to approve</div>
+  <p>A backend-only script that takes an Ops data file and lands each migrating customer as an <b>ACTIVE connection</b> under a chosen existing CSP — with the CSP paid the usual <b>₹300</b>. No app screens, no on-ground action, no install task. We <b>seed the end-state directly and fire the same events a real installation fires.</b></p>
+  <p style="color:var(--muted);font-size:13.5px;margin-top:10px">This doc = the approach + the exact entities we write. Looking for a go / no-go before we build the script.</p>
 </div>
 
-<div class="callout good">
-  <div class="lbl">Production validation (live data, 2026-06-27)</div>
-  Sampled the 12 most-recent install-completed connections across 5 prod datastores (via analytics replica, DB 113). Every one shows: <code>connection.current_state = ACTIVE</code>, a compensation <code>BASE_PAYOUT_CREDIT</code> of <b>30000 paise</b> with <code>credit_type=CONNECTION_ENTITLEMENT</code> and <code>recharge_event_ref = INSTALL:&lt;execution_candidate_id&gt;</code>, and a matching wallet <code>BASE_PAYOUT</code> of 30000 keyed on the same reference. The connection is <b>ACTIVE (never PAUSED)</b> when paid → the payout reached compensation <b>directly</b>, not through RV's PAUSED-gated path. This is precisely the Phase 3 + Phase 5 sequence below — our approach mirrors the live install-payout path, only with raw-seeded connection rows instead of a walked install.
-</div>
-
-<h2>Key corrections to the original mental model</h2>
-<table>
-  <tr><th>Original assumption</th><th>What the code actually says</th><th>Citation</th></tr>
-  <tr>
-    <td>Drive the customer through the installation flow via API calls, starting from <code>customer_id</code> mapped to <code>csp_id</code>.</td>
-    <td>There is <b>no "create install task" API</b>. The install candidate is created by the <code>ALLOCATION_ACCEPTED</code> event (from DAS routing), which carries only <code>allocationId/connectionId/cspId/zoneId</code> — no customer_id, lat-lng, plan, partner, or device.</td>
-    <td><span class="cite">AllocationAccepted.java:3-14</span> <span class="cite">CandidateWorkflowServiceImpl:112-245</span></td>
-  </tr>
-  <tr>
-    <td>Walk the state machine to completion and the customer becomes active.</td>
-    <td>Completion requires <b>OTP verify (T10)</b>, whose active provider calls the external <b>i2e1 happy-code service</b> and only advances on a genuine upstream <code>true</code>. The OTP is never generated or stored on our side, and there is no bypass flag. This is the one transition we cannot drive backend-only — so we <b>do not walk the machine</b>.</td>
-    <td><span class="cite">I2e1BookingHappyCodeOtpAdapter.java:44-68</span> <span class="cite">OtpServiceImpl.java:69-171</span></td>
-  </tr>
-  <tr>
-    <td><b>Confirmed correct</b> — Install completion pays the CSP ₹300 via a recharge whose reference is <code>install:xyz</code>, sent to compensation.</td>
-    <td><b>Verified in prod.</b> The ₹300 is the recharge base payout (P09/C01 = 30000 paise) credited as <code>BASE_PAYOUT_CREDIT</code>/<code>CONNECTION_ENTITLEMENT</code> on a <code>RECHARGE_CONFIRMED</code> posted <b>directly to compensation</b> with <code>recharge_event_ref = INSTALL:&lt;execution_candidate_id&gt;</code>. Compensation does not branch on the prefix (the ref is opaque in code — that's why a pure code-read suggested "no install path"), but the install flow's upstream caller does emit exactly this reference. Net: the trigger is real; we reproduce it with a <code>Customer migration:&lt;id&gt;</code> reference.</td>
-    <td><span class="cite">CompensationParameters.java:24</span> <span class="cite">CompensationEventProcessingServiceImpl.java:50-122</span> <span class="cite">prod data: ENTITLEMENT_LEDGER_ENTRIES / WALLET_LEDGER_ENTRIES</span></td>
-  </tr>
-  <tr>
-    <td>Plan start &amp; expiry are part of the connection.</td>
-    <td>The connection has <b>no plan-start/expiry columns</b> (only <code>plan_id</code>). The plan window lives in CAEO as <code>entitlement_end</code> (expiry only — <b>no start column at all</b>), stored verbatim from a recharge event.</td>
-    <td><span class="cite">V001__create_connections_table.sql</span> <span class="cite">customer-access …Impl.java:247-291</span></td>
-  </tr>
-  <tr>
-    <td>The device just needs to exist in Idle/custodied state.</td>
-    <td>Correct on state (<code>DEPLOYED</code> only transitions from <code>CUSTODIED</code>/<code>IDLE</code>), but the install signal handler resolves the device <b>by device_id only and never checks it belongs to the installing CSP</b>. The seeded custody row's <code>csp_id</code> is what fixes ownership — the script must set it correctly.</td>
-    <td><span class="cite">NetboxCustodyStateMachine.java:23-60</span> <span class="cite">asset-custody …Impl.java:235-269</span></td>
-  </tr>
-  <tr>
-    <td>Force-assign the customer to one chosen CSP (as engineering did before).</td>
-    <td>There is <b>no force-assign API</b> in DAS; <code>cspId</code> is written only by the scoring/capacity-gated routing pipeline. We achieve force-assignment by <b>bypassing routing entirely</b> and seeding the connection + allocation rows directly (capacity caps are moot — the counter is never incremented in code).</td>
-    <td><span class="cite">AllocationServiceImpl.java:37-50</span> <span class="cite">RoutingEngineServiceImpl.java:73</span></td>
-  </tr>
-</table>
-
-<h2>Architecture decision: skip TAS, seed-and-fire</h2>
-<div class="callout">
-  <div class="lbl" style="color:var(--accent)">Why we do not use the install flow at all</div>
-  <p style="margin-top:0">Two facts force this. (1) Install completion is gated on external i2e1 OTP — not drivable backend-only. (2) Event fan-out is <b>autonomous and per-recipient uncontrollable</b>: once <code>CONNECTION_REQUEST</code> is posted, CL emits <code>CL_CONNECTION_REQUESTED</code> → DAS routes → <code>ALLOCATION_ACCEPTED</code> is delivered by the routing registry to <b>every</b> subscriber (including TAS, which then creates an install candidate). You cannot emit "to CL but not TAS".</p>
-  <p>So to create <b>zero install candidates</b> (the chosen option — cleanest data, no orphan stuck-install tasks), connection creation must <b>not</b> enter the event chain. We <b>raw-INSERT</b> the connection (and reconciliation allocation) rows directly, then fire only the activation/recharge events, which reach CAEO/ACS/Quality/Compensation but never TAS.</p>
-  <div class="cites" style="margin-top:6px">
-    <span class="cite">EventSender.java:20-26 (outbox schedule)</span>
-    <span class="cite">HttpRoutingPublisher.java:34-55 (fan-out to all routes)</span>
-    <span class="cite">RegistryRoutingClient.java:27-38 (routes by eventType only)</span>
+<h2>How we're thinking about it</h2>
+<div class="principles">
+  <div class="pc">
+    <div class="num">01</div>
+    <h4>A migration = an install that already happened</h4>
+    <p>On-ground, these customers are already connected. We're only recording that fact in the new system — not re-doing the work.</p>
+  </div>
+  <div class="pc">
+    <div class="num">02</div>
+    <h4>Don't walk the install flow — seed its result</h4>
+    <p>The real install flow can't complete backend-only (its final OTP step needs the external i2e1 service). So we skip it and write the <b>finished</b> state directly.</p>
+  </div>
+  <div class="pc">
+    <div class="num">03</div>
+    <h4>Fire the same events a real install fires</h4>
+    <p>Activation, device-deploy, plan-window and the ₹300 payout all ride on existing events. We send those exact events — so downstream stays consistent.</p>
+  </div>
+  <div class="pc">
+    <div class="num">04</div>
+    <h4>Force-assign to the one chosen CSP</h4>
+    <p>No scoring, no routing. Ops names the CSP + device; we bind the customer to it directly (caps don't apply on this path).</p>
   </div>
 </div>
 
-<h3>Target end-state (5 datastores, 1 wallet credit)</h3>
-<div class="flow">CL  connections          → current_state = ACTIVE          (customer_id, csp_id, zone_id, plan_id, service_address)
-DAS connection_allocations → allocation_state = ACTIVE        (reconciliation: keeps connection visible to re-allocation if CSP later exits)
-ACS netbox_custody         → status = DEPLOYED               (device_id ↔ current_connection_id, csp_id = chosen)
-CAEO customer_access_states → caeo_state = CAEO_STATE_ENABLED  (entitlement_end = Ops plan expiry)
-PAY wallet (compensation)  → +30000 paise (₹300) to chosen CSP</div>
-
-<h2>Ops-supplied input (per customer)</h2>
-<table>
-  <tr><th>Field</th><th>Used where</th><th>Format caution</th></tr>
-  <tr><td class="c"><code>customer_id</code></td><td>CL connection, CAEO, ACS signal</td><td>—</td></tr>
-  <tr><td class="c"><code>lat</code>, <code>lng</code></td><td>Zone resolution (→ <code>zone_id</code>)</td><td>Must fall inside an ACTIVE zone polygon</td></tr>
-  <tr><td class="c"><code>address</code></td><td>CL <code>service_address</code> (jsonb)</td><td>—</td></tr>
-  <tr><td class="c"><code>plan_start</code></td><td>CAEO recharge event (validated, <b>not persisted</b>)</td><td>No DB column exists for start</td></tr>
-  <tr><td class="c"><code>plan_expiry</code></td><td>CAEO <code>entitlement_end</code></td><td>Stored verbatim</td></tr>
-  <tr><td class="c"><code>plan_id</code></td><td>CL connection, CAEO event</td><td>—</td></tr>
-  <tr><td class="c"><code>csp_id</code></td><td>All five datastores</td><td>The <b>6-char CSP short code</b> (e.g. <code>a0b6c9</code>) — verified identical across all 5 stores in prod. Not a UUID.</td></tr>
-  <tr><td class="c"><code>partner_id</code></td><td>(reference only — TAS never persists it; resolved from csp_id via gateway)</td><td>—</td></tr>
-  <tr><td class="c"><code>device_id</code></td><td>ACS custody seed + binding + signal</td><td>Will not pre-exist → SQL insert (Phase 1)</td></tr>
-</table>
-
-<div class="callout good">
-  <div class="lbl">CSP identifier — resolved from prod data</div>
-  <code>csp_id</code> is the <b>6-character CSP short code</b> (e.g. <code>a0b6c9</code>) and is stored <b>identically</b> across <code>connections</code>, <code>connection_allocations</code>, <code>netbox_custody</code>, the compensation entitlement ledger, and the wallet ledger — confirmed by sampling recent live installs. Use the short code everywhere; do <b>not</b> use a gateway UUID. (Note: the prod-branch migration files type a couple of these columns as UUID, but every deployed row holds the short code — trust the live schema, and verify the exact column type on the target DB before bulk insert.) Only <code>connection_id</code>, <code>allocation_id</code>, and <code>execution_candidate_id</code> are UUIDs.
-  <div class="cites" style="margin-top:6px"><span class="cite">prod: CONNECTIONS / CONNECTION_ALLOCATIONS / ENTITLEMENT_LEDGER_ENTRIES / WALLET_LEDGER_ENTRIES</span></div>
+<div class="callout good" style="margin-top:14px">
+  <div class="lbl">Why this is safe — it mirrors what production already does</div>
+  We checked live prod data: every recent real installation ends as an <b>ACTIVE</b> connection paid <b>₹300</b> via a recharge sent <b>straight to compensation</b> (reference <code>INSTALL:&lt;id&gt;</code>), <i>not</i> through the normal recharge gate. Our sequence reproduces that exact end-state — we just write the connection rows instead of having a technician walk the app. We tag our version <code>Customer migration:&lt;id&gt;</code>.
 </div>
 
-<h2>The sequence</h2>
-<div class="legend">
-  <span><span class="dot" style="background:#c9a3ff"></span> Pre-flight check</span>
-  <span><span class="dot" style="background:#ffb86c"></span> SQL insert</span>
-  <span><span class="dot" style="background:#7fb4ff"></span> Event POST <code>/events/*</code></span>
-  <span><span class="dot" style="background:#5fe0a0"></span> API call</span>
-  <span><span class="dot" style="background:#ff8a8a"></span> Bypassed / skipped</span>
+<h2>Critical entities we create / touch</h2>
+<p class="sub" style="margin-bottom:12px">Five datastores + one wallet credit. This is the whole footprint — nothing else is written.</p>
+<div class="entities">
+  <div class="ent pre">
+    <span class="how pre">PRE-REQ</span>
+    <div class="svc">CCS · zones</div>
+    <h4>Zone</h4>
+    <div class="arrow">resolve lat-lng →</div>
+    <span class="state" style="background:#1a1320;color:#c9a3ff;border-color:#43306a">zone_id + CSP eligible</span>
+    <div class="why">Customer must fall inside a zone polygon; chosen CSP must be authorized there (seed if not).</div>
+  </div>
+  <div class="ent sql">
+    <span class="how sql">SQL</span>
+    <div class="svc">ACS · netbox_custody</div>
+    <h4>Device</h4>
+    <div class="arrow">insert →</div>
+    <span class="state">CUSTODIED → DEPLOYED</span>
+    <div class="why">Device won't pre-exist. Seed it owned by the chosen CSP, bound to the connection.</div>
+  </div>
+  <div class="ent sql">
+    <span class="how sql">SQL</span>
+    <div class="svc">CL · connections</div>
+    <h4>Connection</h4>
+    <div class="arrow">insert PENDING_INSTALL →</div>
+    <span class="state">ACTIVE</span>
+    <div class="why">The customer's connection record. Inserted directly so it doesn't spawn an install task.</div>
+  </div>
+  <div class="ent sql">
+    <span class="how sql">SQL</span>
+    <div class="svc">DAS · connection_allocations</div>
+    <h4>Allocation</h4>
+    <div class="arrow">insert →</div>
+    <span class="state">ACTIVE</span>
+    <div class="why">Reconciliation row — keeps the connection visible to re-allocation if the CSP later exits.</div>
+  </div>
+  <div class="ent event">
+    <span class="how event">EVENT</span>
+    <div class="svc">CAEO · customer_access_states</div>
+    <h4>Plan window</h4>
+    <div class="arrow">→</div>
+    <span class="state">ENABLED · entitlement_end</span>
+    <div class="why">Holds the plan expiry (Ops-supplied). Grants the customer's internet entitlement.</div>
+  </div>
+  <div class="ent event">
+    <span class="how event">EVENT</span>
+    <div class="svc">Compensation → Wallet</div>
+    <h4>₹300 payout</h4>
+    <div class="arrow">recharge →</div>
+    <span class="state">+30000 paise to CSP</span>
+    <div class="why">The CSP's install payout, paid direct to compensation — same as a real install.</div>
+  </div>
 </div>
 
-<!-- PHASE 0 -->
+<h2>End-to-end at a glance</h2>
+<div class="flow">PRE   resolve zone (lat-lng) ─ seed CSP zone-eligibility if missing
+ │
+ 1    SQL  insert device         netbox_custody   = CUSTODIED, bound to connection
+ 2    SQL  insert connection      connections      = PENDING_INSTALL
+      SQL  insert allocation      connection_allocations = ACTIVE          (reconciliation)
+ │
+ 3    EVENT customer-installation-confirmed   → connection  PENDING_INSTALL → ACTIVE
+      EVENT customer-installation-signal      → device      → DEPLOYED
+ 4    EVENT customer-recharge-confirmed        → CAEO        → ENABLED (+ plan expiry)
+ 5    EVENT recharge-confirmed (→ compensation)→ wallet      +₹300 to CSP
+ │
+ ✓    Customer is an ACTIVE connection under the chosen CSP. CSP paid ₹300.</div>
+
+<p class="sub">Inputs Ops provides per customer: <code>customer_id</code> · <code>lat,lng</code> · <code>address</code> · <code>plan_id</code> · <code>plan_expiry</code> · <code>csp_id</code> (6-char short code) · <code>device_id</code>. <span style="color:var(--muted)">(<code>plan_start</code> &amp; <code>partner_id</code> are accepted but not persisted — no column / resolved from csp_id.)</span></p>
+
+<h2>The sequence — step by step</h2>
+
 <div class="phase">
-  <div class="head"><div class="n">0</div><div class="t">Pre-flight — validate &amp; seed conditions</div><div class="meta">script reports; halts on hard fails</div></div>
+  <div class="head"><div class="n">0</div><div class="t">Pre-flight</div><div class="meta">validate &amp; seed conditions · halt on hard fails</div></div>
   <div class="body">
     <div class="step">
-      <div class="top"><span class="pill check">CHECK</span><span class="ttl">Dedupe by customer_id</span><span class="svc">CL · query</span></div>
-      <div class="det">Confirm the customer has <b>no existing ACTIVE connection</b>. If one exists, <b>skip</b> the customer — seeding a second ACTIVE row corrupts every read keyed on the customer (the "exactly one ACTIVE" rule is a read-time assertion that throws on duplicates).</div>
-      <div class="cites"><span class="cite">ConnectionQueryServiceImpl.java:23-43</span></div>
+      <div class="top"><span class="pill check">CHECK</span><span class="ttl">No existing ACTIVE connection</span><span class="svc">CL</span></div>
+      <div class="det">Dedupe by <code>customer_id</code>. A second ACTIVE row corrupts every read for that customer → skip if one exists.</div>
     </div>
     <div class="step">
-      <div class="top"><span class="pill check">CHECK</span><span class="ttl">Resolve zone from lat-lng</span><span class="svc">CCS · POST /capacity/zones/resolve</span></div>
-      <div class="det">Point-in-polygon over ACTIVE zone polygons. <b>No nearest-zone fallback</b> — a point outside every polygon returns 404 <code>OUT_OF_COVERAGE</code>. <b>Hard fail:</b> such customers cannot be migrated until a zone polygon covers them (manual). Output <code>zone_id</code> is required by Phases 2 &amp; 3.</div>
-      <div class="cites"><span class="cite">ZoneResolutionServiceImpl.java:48-69</span> <span class="cite">ZoneController.java:89-99</span></div>
+      <div class="top"><span class="pill check">CHECK</span><span class="ttl">Resolve zone from lat-lng</span><span class="svc">CCS · /capacity/zones/resolve</span></div>
+      <div class="det">Point-in-polygon, no fallback → outside all polygons = <code>OUT_OF_COVERAGE</code>. <b>Hard fail</b> (needs a zone polygon first). Yields <code>zone_id</code>.</div>
     </div>
     <div class="step">
-      <div class="top"><span class="pill check">CHECK</span><span class="ttl">Chosen CSP authorized in zone (consistency)</span><span class="svc">CCS · seed if missing</span></div>
-      <div class="det">Not a hard technical gate on the seed path (we skip routing), but for correctness the chosen CSP should be <code>AUTHORIZED</code> in the customer's zone. If not, seed via <code>POST /capacity/zones/{zoneId}/eligibility/seed</code> (inserts <code>csp_zone_eligibility=AUTHORIZED</code> + a P65 cap, and DAS creates the exposure row). Also required if you ever want re-routing to target this CSP after a future exit.</div>
-      <div class="cites"><span class="cite">EligibilityController.java:133-159</span> <span class="cite">EligibilityServiceImpl.java:227-305</span></div>
+      <div class="top"><span class="pill check">CHECK</span><span class="ttl">CSP authorized in zone — seed if missing</span><span class="svc">CCS · /eligibility/seed</span></div>
+      <div class="det">If the chosen CSP isn't authorized for the zone, seed it (<code>AUTHORIZED</code> + exposure row). Needed for correctness &amp; future re-routing.</div>
     </div>
   </div>
 </div>
 
-<!-- PHASE 1 -->
 <div class="phase">
-  <div class="head"><div class="n">1</div><div class="t">Device pre-requisite</div><div class="meta">device does not pre-exist</div></div>
+  <div class="head"><div class="n">1·2</div><div class="t">Seed device + connection (SQL — emits no events)</div><div class="meta">raw insert = no install task created</div></div>
   <div class="body">
     <div class="step">
-      <div class="top"><span class="pill sql">SQL</span><span class="ttl">INSERT netbox_custody (CUSTODIED, bound to connection)</span><span class="svc">ACS · netbox_custody</span></div>
-      <div class="det">Seed the device owned by the chosen CSP, with <code>current_connection_id</code> pre-set so the CL activation binding-guard (Phase 3) passes without a separate <code>DEVICE_BOUND_TO_CONNECTION</code> event. <b>Seed only after the service has booted once</b> (<code>status</code> is an FK to <code>ref_custody_statuses</code>, populated at startup). NOT-NULL-without-default columns: <code>device_id</code>, <code>csp_id</code>, <code>status</code>; the rest default.</div>
-      <div class="fields">INSERT INTO netbox_custody
-  (device_id, csp_id, status, current_connection_id,
-   idle_start_date, idle_days, carry_fee_accrual_units,
-   carry_fee_active, connection_deactivated, version)
-VALUES
-  (:device_id, :csp_short_code, 'CUSTODIED', :connection_id_uuid,
-   now(), 0, 0, false, false, 1);</div>
-      <div class="cites"><span class="cite">V5__create_netbox_custody_table.sql</span> <span class="cite">V8 / V9 / V11 (ALTERs)</span> <span class="cite">NetboxCustodyEntity.java</span></div>
+      <div class="top"><span class="pill sql">SQL</span><span class="ttl">Device → CUSTODIED, bound to connection</span><span class="svc">ACS · netbox_custody</span></div>
+      <div class="code">INSERT netbox_custody (device_id, csp_id, status, current_connection_id, …)
+VALUES (:device_id, :csp_short_code, 'CUSTODIED', :connection_id, …);</div>
+      <div class="det">Seed after the service has booted once (<code>status</code> is an FK to a startup-seeded ref table). <code>csp_id</code> here fixes device ownership — the install signal does not re-check it.</div>
+    </div>
+    <div class="step">
+      <div class="top"><span class="pill sql">SQL</span><span class="ttl">Connection → PENDING_INSTALL</span><span class="svc">CL · connections</span></div>
+      <div class="code">INSERT connections (connection_id, customer_id, csp_id, zone_id, service_address,
+  plan_id, current_state, state_timestamp, …)
+VALUES (:connection_id, :customer_id, :csp_short_code, :zone_id, :addr,
+  :plan_id, 'PENDING_INSTALL', now(), …);</div>
+      <div class="det">Direct insert is the <b>only emission-free way</b> — any HTTP create path would emit an event that spins up a TAS install task. <code>state_timestamp=now()</code> anchors the 72h activation window used next.</div>
+    </div>
+    <div class="step">
+      <div class="top"><span class="pill sql">SQL</span><span class="ttl">Allocation → ACTIVE (reconciliation)</span><span class="svc">DAS · connection_allocations</span></div>
+      <div class="code">INSERT connection_allocations (connection_id, zone_id, csp_id,
+  allocation_state, allocation_event_type)
+VALUES (:connection_id, :zone_id, :csp_short_code, 'ACTIVE', 'NEW_DEMAND');</div>
+      <div class="det">Keeps the connection visible to DAS sweeps so a future CSP-exit can auto-reallocate it. Standalone — no extra dependencies.</div>
     </div>
   </div>
 </div>
 
-<!-- PHASE 2 -->
 <div class="phase">
-  <div class="head"><div class="n">2</div><div class="t">Create connection + reconciliation allocation</div><div class="meta">raw SQL only — emits NO events → NO TAS candidate</div></div>
+  <div class="head"><div class="n">3</div><div class="t">Activate + deploy (events → CL / ACS, never TAS)</div><div class="meta">drives the real state transitions</div></div>
   <div class="body">
     <div class="step">
-      <div class="top"><span class="pill sql">SQL</span><span class="ttl">INSERT connections (PENDING_INSTALL)</span><span class="svc">CL · connections</span></div>
-      <div class="det">Direct insert is the <b>only emission-free way</b> to create the row (every HTTP create path emits <code>CL_CONNECTION_REQUESTED</code>). Set <code>current_state='PENDING_INSTALL'</code> and <code>state_timestamp=now()</code> — the latter anchors the 72h P74 activation window used in Phase 3. <code>csp_id</code> = the CSP <b>short code</b>; <code>connection_id</code> is a UUID.</div>
-      <div class="fields">INSERT INTO connections
-  (connection_id, customer_id, csp_id, zone_id, service_address,
-   plan_id, current_state, state_timestamp,
-   pause_count, retry_count, retry_exhausted,
-   total_active_duration, total_pause_duration, version,
-   created_at, updated_at)
-VALUES
-  (:connection_id_uuid, :customer_id, :csp_short_code, :zone_id, :address_jsonb,
-   :plan_id, 'PENDING_INSTALL', now(),
-   0,0,false, 0,0,1, now(),now());</div>
-      <div class="cites"><span class="cite">V001__create_connections_table.sql:4-31</span> <span class="cite">EventSender.java:20-26 (emit only via handleConnectionRequest)</span></div>
+      <div class="top"><span class="pill event">EVENT</span><span class="ttl">Connection → ACTIVE</span><span class="svc">CL · /events/customer-installation-confirmed</span></div>
+      <div class="code">{ connectionId, sourceSurface:"CUSTOMER_APP", confirmedAt: now() }</div>
+      <div class="det">Flips to ACTIVE (guards: state, source, 72h window, device bound). Auto-creates the CAEO row and notifies DAS + Quality — none reach TAS.</div>
     </div>
     <div class="step">
-      <div class="top"><span class="pill sql">SQL</span><span class="ttl">INSERT connection_allocations (ACTIVE)</span><span class="svc">DAS · connection_allocations</span></div>
-      <div class="det"><b>Reconciliation row</b> (confirmed required). Without it, the migrated connection is invisible to DAS re-allocation sweeps — so if the CSP later exits/is terminated, these connections would <b>not</b> be auto-reallocated. A raw <code>ACTIVE</code> row with <code>csp_id</code>+<code>zone_id</code> is found by the enforcement-termination reallocation query and is standalone (no exposure/eligibility FK). <code>csp_id</code> = short code; <code>allocation_event_type</code> is NOT NULL with no default (<code>'NEW_DEMAND'</code> is a valid live value).</div>
-      <div class="fields">INSERT INTO connection_allocations
-  (connection_id, zone_id, csp_id,
-   allocation_state, allocation_event_type)
-VALUES
-  (:connection_id_uuid, :zone_id, :csp_short_code,
-   'ACTIVE', 'NEW_DEMAND');
--- id, retry_count, parallel_install_warning, version, timestamps: defaults</div>
-      <div class="cites"><span class="cite">V4__create_connection_allocation_table.sql:6-40</span> <span class="cite">handleEnforcementPostureUpdated:118-125</span> <span class="cite">AllocationStateMachine.java:19-21</span></div>
+      <div class="top"><span class="pill event">EVENT</span><span class="ttl">Device → DEPLOYED</span><span class="svc">ACS · /events/asset-custody/customer-installation</span></div>
+      <div class="code">{ deviceId, cspId, customerId, connectionId, installedAt: now() }</div>
+      <div class="det">Moves the seeded device to DEPLOYED and stamps the customer/connection.</div>
     </div>
   </div>
 </div>
 
-<!-- PHASE 3 -->
 <div class="phase">
-  <div class="head"><div class="n">3</div><div class="t">Activate the connection + deploy the device</div><div class="meta">events → CL / ACS only (never TAS)</div></div>
+  <div class="head"><div class="n">4·5</div><div class="t">Plan window + ₹300 payout (events)</div><div class="meta">same path prod uses for real installs</div></div>
   <div class="body">
     <div class="step">
-      <div class="top"><span class="pill event">EVENT</span><span class="ttl">POST /events/customer-installation-confirmed</span><span class="svc">CL · T2 PENDING_INSTALL → ACTIVE</span></div>
-      <div class="det">Flips the connection to <b>ACTIVE</b>. Guards read: state==PENDING_INSTALL, <code>sourceSurface=="CUSTOMER_APP"</code>, <code>confirmedAt</code> within 72h of <code>state_timestamp</code>, and ACS device-binding present (satisfied by Phase 1's <code>current_connection_id</code>). On success CL emits <code>CL_CONNECTION_ACTIVATED</code> → <b>CAEO</b> (auto-creates the access row in <code>BLOCKED</code>) + <b>DAS</b>, and <code>CL_INSTALLATION_QUALITY_SIGNAL</code> → Quality. <b>None reach TAS.</b></div>
-      <div class="fields">{ "eventId": "...", "connectionId": :connection_id,
-  "sourceSurface": "CUSTOMER_APP", "confirmedAt": now() }   // ≤ state_timestamp + 72h</div>
-      <div class="cites"><span class="cite">customer-installation-confirmed → InboundEventProcessingServiceImpl.java:209-287</span> <span class="cite">ConnectionGuards.java:107-117 (P74)</span> <span class="cite">ConnectionLifecycleParameters.java:23 (72h)</span></div>
+      <div class="top"><span class="pill event">EVENT</span><span class="ttl">Plan window → ENABLED</span><span class="svc">CAEO · /events/customer-recharge-confirmed</span></div>
+      <div class="code">{ connectionId, customerId, planId, entitlementEnd: :plan_expiry,
+  paymentReferenceId: "Customer migration:"+:connection_id, … }</div>
+      <div class="det">Stores <code>entitlement_end</code> = plan expiry verbatim and enables access. (Recommended: raw-insert this row instead — avoids an async race + a customer_id quirk.)</div>
     </div>
     <div class="step">
-      <div class="top"><span class="pill event">EVENT</span><span class="ttl">POST /events/asset-custody/customer-installation (CUSTOMER_INSTALLATION_SIGNAL)</span><span class="svc">ACS · CUSTODIED → DEPLOYED</span></div>
-      <div class="det">Moves the device to <b>DEPLOYED</b> and stamps <code>customer_id</code>/<code>connection_id</code>. Requires an active custody row (Phase 1). Note the handler does <b>not</b> verify the device's CSP matches the event CSP — ownership is whatever Phase 1 seeded.</div>
-      <div class="fields">{ "deviceId": :device_id, "cspId": :csp_short_code,
-  "customerId": :customer_id, "connectionId": :connection_id_uuid,
-  "installedAt": now() }</div>
-      <div class="cites"><span class="cite">asset-custody InboundEventProcessingServiceImpl.java:235-269</span> <span class="cite">EventTypes.java:43</span></div>
+      <div class="top"><span class="pill event">EVENT</span><span class="ttl">Pay CSP ₹300</span><span class="svc">Compensation · /events/recharge-confirmed</span></div>
+      <div class="code">{ cspId, connectionId, eventType:"RECHARGE_CONFIRMED",
+  rechargeReferenceId: "Customer migration:"+:connection_id, … }</div>
+      <div class="det">Credits a flat 30000 paise to the CSP wallet — posted <b>direct to compensation</b>, bypassing the recharge gate (which needs a PAUSED connection). Auto-provisions the CSP's compensation posture if absent. Exactly the prod install-payout path.</div>
     </div>
   </div>
 </div>
 
-<!-- PHASE 4 -->
-<div class="phase">
-  <div class="head"><div class="n">4</div><div class="t">Set the plan window</div><div class="meta">CAEO entitlement</div></div>
-  <div class="body">
-    <div class="step">
-      <div class="top"><span class="pill event">EVENT</span><span class="ttl">POST /events/customer-recharge-confirmed</span><span class="svc">CAEO · BLOCKED → ENABLED</span></div>
-      <div class="det">Flips the access row to <b>ENABLED</b> and stores <code>entitlement_end = plan_expiry</code> <b>verbatim</b> (CAEO does not derive it from the plan). <code>entitlementStart</code> is required by validation but <b>discarded</b> (no column). <b>Ordering dependency:</b> the CAEO row is auto-created by Phase 3's <code>CL_CONNECTION_ACTIVATED</code> over the async outbox — this handler <b>no-ops if the row is absent</b>. The script must wait for / verify the CAEO row exists before firing this (or raw-insert the CAEO row directly).</div>
-      <div class="fields">{ "eventId":"...", "connectionId": :connection_id, "customerId": :customer_id,
-  "planId": :plan_id, "amountPaid": :amount,
-  "entitlementStart": :plan_start,   // discarded
-  "entitlementEnd": :plan_expiry,    // → entitlement_end (verbatim)
-  "paymentReferenceId": "Customer migration:" + :connection_id_uuid,
-  "timestamp": now() }</div>
-      <div class="cites"><span class="cite">customer-access InboundEventProcessingServiceImpl.java:247-291</span> <span class="cite">CustomerRechargeConfirmed.java:8-19</span></div>
-    </div>
-    <div class="callout warn" style="margin:12px 0 4px">
-      <div class="lbl">CAEO customer_id quirk</div>
-      If the CAEO row is auto-created by <code>CL_CONNECTION_ACTIVATED</code>, its <code>customer_id</code> column is set to the <b>cspId</b> (the activation payload has no customerId field). If the real customer_id must be present in CAEO, raw-insert the <code>customer_access_states</code> row instead (<code>caeo_state='CAEO_STATE_ENABLED'</code>, <code>entitlement_end=:plan_expiry</code>, <code>cumulative_supply_disruption=0</code>, <code>version=1</code>).
-      <div class="cites" style="margin-top:6px"><span class="cite">customer-access …Impl.java:71</span> <span class="cite">V4__create_customer_access_states_table.sql:6-25</span></div>
-    </div>
-  </div>
+<h2>What we deliberately bypass</h2>
+<div class="chips">
+  <span class="chip"><b>Install state machine</b> — seed the result instead (avoids the i2e1-OTP wall + no orphan task)</span>
+  <span class="chip"><b>OTP / Aadhaar / security fee</b> — never entered</span>
+  <span class="chip"><b>DAS routing &amp; scoring</b> — force-assign the chosen CSP</span>
+  <span class="chip"><b>RV recharge gate</b> — pay direct to compensation (same as prod installs)</span>
+  <span class="chip"><b>Remote internet provisioning</b> — already done on-ground; never blocks activation</span>
 </div>
 
-<!-- PHASE 5 -->
-<div class="phase">
-  <div class="head"><div class="n">5</div><div class="t">Pay the CSP ₹300</div><div class="meta">direct to compensation — bypasses RV</div></div>
-  <div class="body">
-    <div class="step">
-      <div class="top"><span class="pill event">EVENT</span><span class="ttl">POST /events/recharge-confirmed</span><span class="svc">Compensation · +30000 paise → CSP wallet</span></div>
-      <div class="det">Posting <code>RECHARGE_CONFIRMED</code> <b>directly to compensation</b> (not via RV) credits the flat <b>30000 paise (₹300)</b> to the chosen CSP's wallet — this is the <b>same path prod uses for the install payout</b> (verified: live install payouts use ref <code>INSTALL:&lt;id&gt;</code> on an ACTIVE connection). It <b>bypasses the RV Gate-1 PAUSED requirement</b> (that guard lives only in RV; a freshly-ACTIVE connection would be rejected by RV) and <b>auto-provisions the CSP compensation posture</b> if missing. The amount is a config constant, independent of payload. Set the reference to <code>Customer migration:&lt;connection_id&gt;</code> — the prefix is a traceable label (opaque to compensation) and the idempotency key is <code>rechargeReferenceId + ":" + connectionId</code>, so this is unique per payout.</div>
-      <div class="fields">{ "eventId":"...", "cspId": :csp_short_code, "connectionId": :connection_id_uuid,
-  "eventType":"RECHARGE_CONFIRMED",
-  "rechargeReferenceId": "Customer migration:" + :connection_id_uuid,
-  "confirmationTimestamp": now(), "timestamp": now() }
-// headers: X-Correlation-Id, X-Causation-Event-Id, X-Source-Service, X-Schema-Version</div>
-      <div class="cites"><span class="cite">CompensationEventProcessingServiceImpl.java:50-122</span> <span class="cite">requirePosture :778-795 (auto-provision)</span> <span class="cite">CompensationParameters.java:24 (30000 paise)</span> <span class="cite">payment-settlement …Impl.java:392-437</span></div>
-    </div>
-  </div>
-</div>
-
-<h2>What we bypass (and why it's safe)</h2>
-<table>
-  <tr><th>Bypassed</th><th>Normally</th><th>Why safe to skip</th></tr>
-  <tr><td><span class="pill skip">SKIP</span> Remote internet provisioning</td><td>Legacy <code>BOOKING_CREATE_ACCOUNT</code> fired at the SPEED_TEST step provisions the router</td><td>Already done on-ground pre-migration. The publish is <code>AFTER_COMMIT</code> + exceptions swallowed — never gates activation. No synchronous provisioning call exists anywhere in the flow. <span class="cite">BookingInstallationEventBridge:201-244</span></td></tr>
-  <tr><td><span class="pill skip">SKIP</span> Entire TAS install state machine</td><td>14 states / 8 on-site steps driven by technician + customer apps</td><td>We seed the end-state directly. Skipping avoids the i2e1-OTP wall and creates no orphan install candidate. <span class="cite">InstallationStateMachine.java</span></td></tr>
-  <tr><td><span class="pill skip">SKIP</span> OTP / Aadhaar / security fee</td><td>Customer OTP via i2e1; KYC photos; fee webhook</td><td>Not reached — we never enter the install flow. (Were we to walk it, OTP is the only un-fabricable step.) <span class="cite">OtpServiceImpl.java:69-171</span></td></tr>
-  <tr><td><span class="pill skip">SKIP</span> DAS routing &amp; <code>ALLOCATION_ACCEPTED</code></td><td>Scoring + capacity-gated CSP selection, then fan-out to CL+TAS</td><td>Routing is the only thing that creates a TAS candidate and the only cap enforcer (and the cap counter is never incremented anyway). We force-assign via raw inserts. <span class="cite">RoutingEngineServiceImpl.java:73</span></td></tr>
-  <tr><td><span class="pill skip">SKIP</span> RV recharge validation</td><td><code>RECHARGE_CONFIRMED</code> via RV requires the connection to be PAUSED</td><td>We post straight to compensation — the <b>same route prod uses for the install payout</b> (live install payouts land on ACTIVE connections, so they already bypass RV). Sidesteps the PAUSED gate. <span class="cite">RechargeGuards.java:63-67</span> <span class="cite">prod data</span></td></tr>
-</table>
-
-<h2>Trade-off: event/API POST vs direct SQL insert</h2>
-<p>Several steps can be done <b>either</b> as an event POST to a service's <code>/events/*</code> endpoint <b>or</b> as a direct SQL insert. The choice is not cosmetic — it changes idempotency, side-effects, and how much state-machine validation you get. The table picks a side per step; the governing rule: <b>use SQL where an event would create an unwanted side-effect (a TAS candidate) or where the event path can't carry a field we need; use the event where it correctly drives a state transition we want plus its downstream auto-creates.</b></p>
-<table>
-  <tr><th>Step</th><th>Chosen</th><th>Why this side</th><th>Trade-off of the other side</th></tr>
-  <tr><td>Connection creation</td><td class="c"><span class="pill sql">SQL</span></td><td>Every CL HTTP create path emits <code>CL_CONNECTION_REQUESTED</code> → DAS routing → <b>a TAS install candidate</b>. SQL is the only emission-free way.</td><td>Event (<code>CONNECTION_REQUEST</code>) would create the orphan install candidate we explicitly chose to avoid.</td></tr>
-  <tr><td>DAS allocation row</td><td class="c"><span class="pill sql">SQL</span></td><td>No force-assign/seed API exists; routing (the only writer) would again spawn a TAS candidate and capacity-gate the CSP.</td><td>Event/routing = TAS candidate + scoring; not viable for force-assign.</td></tr>
-  <tr><td>Activation (→ ACTIVE)</td><td class="c"><span class="pill event">EVENT</span></td><td>The T2 transition + its useful downstream (auto-creates the CAEO row, moves the DAS allocation, emits the quality signal) only happen through the event handler. None of these reach TAS.</td><td>SQL would set <code>current_state=ACTIVE</code> but skip CAEO row creation and the DAS/quality emissions — you'd then have to hand-seed CAEO too.</td></tr>
-  <tr><td>Device → DEPLOYED</td><td class="c"><span class="pill event">EVENT</span></td><td><code>CUSTOMER_INSTALLATION_SIGNAL</code> runs the custody state-machine transition + stamps customer/connection + emits <code>CUSTODY_STATE_CHANGED</code>.</td><td>SQL flip to <code>DEPLOYED</code> would skip the transition guard + the downstream custody event.</td></tr>
-  <tr><td>Plan window (CAEO)</td><td class="c"><span class="pill event">EVENT</span> <span style="color:var(--muted)">or</span> <span class="pill sql">SQL</span></td><td><b>Genuine choice.</b> Event (<code>CUSTOMER_RECHARGE_CONFIRMED</code>) is clean but (a) no-ops if the CAEO row hasn't landed yet over the async outbox, and (b) the auto-created row sets <code>customer_id=cspId</code>. <b>Recommended: raw-insert</b> the <code>customer_access_states</code> row — full control of <code>customer_id</code> + no ordering race.</td><td>Event = simpler payload but async-ordering fragility + the customer_id quirk.</td></tr>
-  <tr><td>₹300 payout</td><td class="c"><span class="pill event">EVENT</span></td><td><code>RECHARGE_CONFIRMED</code> → compensation runs posture auto-provision, amount derivation, ledger write, and the wallet-credit emission. Matches prod exactly.</td><td>SQL into the ledger + wallet would bypass posture provisioning and balance bookkeeping — fragile, not recommended.</td></tr>
-</table>
-
-<h2>Residual risks &amp; cautions</h2>
-<table>
-  <tr><th>#</th><th>Risk</th><th>Mitigation</th></tr>
-  <tr><td>1</td><td><b>CSP-id format</b> — <span style="color:var(--green)">resolved</span>: it's the 6-char short code in every store (prod-verified). Residual risk only if a target DB column is still UUID-typed.</td><td>Use the CSP short code throughout. Verify each column's deployed type once on the target DB before the bulk run.</td></tr>
-  <tr><td>2</td><td><b>CAEO async ordering</b> — recharge-confirmed no-ops if the CAEO row (created by CL activation over the outbox) hasn't landed yet.</td><td>Poll for the CAEO row before Phase 4, or raw-insert the <code>customer_access_states</code> row directly (also fixes the customer_id quirk).</td></tr>
-  <tr><td>3</td><td><b>Raw inserts bypass state-machine guards</b> entirely — the script is the only correctness check.</td><td>Validate every field (state strings, enum FKs, UUIDs, jsonb) pre-insert; run in a transaction per customer; dry-run on staging first.</td></tr>
-  <tr><td>4</td><td><b>Idempotency / re-runs</b> — partial failure mid-sequence could double-insert.</td><td>Dedupe by customer_id (Phase 0a); unique <code>connection_id</code> guards CL/DAS; unique <code>rechargeReferenceId</code> guards the payout; make the whole per-customer run idempotent.</td></tr>
-  <tr><td>5</td><td><b>Audit gap</b> — no TAS install record, step history, or incentive-eval row for migrated customers.</td><td>Accepted trade-off of skip-TAS. ₹300 is paid via the direct recharge route instead of the install incentive signal. Tag seeded rows (e.g. correlation_id) for traceability.</td></tr>
-  <tr><td>6</td><td><b>Out-of-coverage lat-lng</b> — no zone polygon → cannot resolve <code>zone_id</code>.</td><td>Hard fail in Phase 0b; route these customers to a manual zone-polygon exercise before migration.</td></tr>
-  <tr><td>7</td><td><b>Device CSP ownership not validated</b> by the install signal handler.</td><td>Phase 1 must set <code>netbox_custody.csp_id</code> = chosen CSP exactly; it determines custody ownership.</td></tr>
-</table>
-
-<h2>Decisions locked &amp; remaining items</h2>
+<h2>Decisions &amp; open items</h2>
 <table>
   <tr><th>Item</th><th>Status</th></tr>
-  <tr><td>Compensation / connection <code>csp_id</code> format</td><td><span style="color:var(--green)">✓ Resolved</span> — 6-char short code everywhere (prod-verified).</td></tr>
-  <tr><td>₹300 payout to the CSP</td><td><span style="color:var(--green)">✓ Locked</span> — yes, trigger it (mirrors the prod install payout).</td></tr>
+  <tr><td><code>csp_id</code> format</td><td><span style="color:var(--green)">✓ Resolved</span> — 6-char short code everywhere (prod-verified).</td></tr>
+  <tr><td>Pay ₹300 to the CSP</td><td><span style="color:var(--green)">✓ Locked</span> — yes (mirrors prod install payout).</td></tr>
   <tr><td>DAS reconciliation allocation row</td><td><span style="color:var(--green)">✓ Locked</span> — yes, seed it.</td></tr>
-  <tr><td>Recharge / payment reference id</td><td><span style="color:var(--green)">✓ Locked</span> — <code>Customer migration:&lt;connection_id&gt;</code>.</td></tr>
-  <tr><td>CAEO seeding method</td><td><span style="color:var(--amber)">Recommended</span> — raw-insert <code>customer_access_states</code> (avoids the async race + customer_id quirk). Confirm.</td></tr>
-  <tr><td><code>amountPaid</code> value for the CAEO event (stored, non-functional)</td><td><span style="color:var(--amber)">Open</span> — set to the migrated plan's amount or a sentinel.</td></tr>
+  <tr><td>Recharge / payment reference</td><td><span style="color:var(--green)">✓ Locked</span> — <code>Customer migration:&lt;connection_id&gt;</code>.</td></tr>
+  <tr><td>CAEO seeding method</td><td><span style="color:var(--amber)">Recommend raw-insert</span> — confirm.</td></tr>
+  <tr><td><code>amountPaid</code> on the CAEO event (stored, non-functional)</td><td><span style="color:var(--amber)">Open</span> — plan amount or sentinel.</td></tr>
 </table>
 
+<h2>Risks to be aware of</h2>
+<table>
+  <tr><th>Risk</th><th>Mitigation</th></tr>
+  <tr><td>Raw inserts skip all state-machine guards — the script is the only safety net.</td><td>Validate every field; one transaction per customer; dry-run on staging.</td></tr>
+  <tr><td>Re-runs / partial failure could double-write.</td><td>Dedupe by customer_id; unique <code>connection_id</code> + reference make it idempotent.</td></tr>
+  <tr><td>Out-of-coverage lat-lng can't resolve a zone.</td><td>Hard-fail in pre-flight; route to a manual zone exercise.</td></tr>
+  <tr><td>No TAS install record / step history for migrated customers.</td><td>Accepted trade-off; tag seeded rows for traceability.</td></tr>
+</table>
+
+<details>
+  <summary>Appendix — evidence &amp; key citations (for the technical reviewer)</summary>
+  <p><b>Prod data (live, DB 113, 2026-06-27):</b> 12 most-recent install-completed connections — all <code>connection.current_state = ACTIVE</code>, compensation <code>BASE_PAYOUT_CREDIT</code> 30000 paise (<code>credit_type=CONNECTION_ENTITLEMENT</code>, ref <code>INSTALL:&lt;execution_candidate_id&gt;</code>), matching wallet <code>BASE_PAYOUT</code> 30000; connection never PAUSED when paid ⇒ payout reached compensation directly. <code>csp_id</code> = 6-char short code across all five stores.</p>
+  <p><b>Why the install flow can't be walked:</b> completion gates on OTP verify, whose active provider calls i2e1 and only advances on a real upstream <code>true</code> — no stored OTP, no bypass. <span class="cite">OtpServiceImpl.java:69-171</span> <span class="cite">I2e1BookingHappyCodeOtpAdapter.java:44-68</span></p>
+  <p><b>Why connection creation must be SQL:</b> every CL create path emits <code>CL_CONNECTION_REQUESTED</code> → DAS routing → a TAS install candidate; fan-out is by event-type to all subscribers (can't withhold from TAS). <span class="cite">EventSender.java:20-26</span> <span class="cite">HttpRoutingPublisher.java:34-55</span></p>
+  <p><b>Activation:</b> T2 <code>PENDING_INSTALL→ACTIVE</code>, 72h P74 window, device-binding guard; emits <code>CL_CONNECTION_ACTIVATED</code> (→ CAEO/DAS, not TAS). <span class="cite">connection_lifecycle …Impl.java:209-287</span> <span class="cite">ConnectionLifecycleParameters.java:23</span></p>
+  <p><b>₹300:</b> flat 30000 paise (P09/C01) on recharge-confirmed; direct-to-compensation skips RV's PAUSED gate; posture auto-provisioned. <span class="cite">CompensationParameters.java:24</span> <span class="cite">CompensationEventProcessingServiceImpl.java:50-122</span> <span class="cite">RechargeGuards.java:63-67</span></p>
+  <p><b>CAEO plan window:</b> <code>entitlement_end</code> stored verbatim; no <code>entitlement_start</code> column. <span class="cite">customer-access …Impl.java:247-291</span></p>
+</details>
+
 <footer>
-  Customer Migration to Existing CSPs — Backend Seeding Approach · Draft v1.1 · Generated 2026-06-27 · Code citations against csp-os-yaml @ prod (HEAD <code>eddd75d7e</code>); behavioural facts cross-checked against live prod data (analytics DB 113). Approach-level only; implementation (script language, batching, rollback) out of scope.
+  Customer Migration to Existing CSPs · Draft v2 · 2026-06-27 · Code cited @ csp-os-yaml prod (HEAD <code>eddd75d7e</code>), cross-checked vs live prod data (DB 113). Approach-level only.
 </footer>
 
 </div>
