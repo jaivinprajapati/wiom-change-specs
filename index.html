@@ -35,8 +35,8 @@
 
   <ul class="specs">
     <li style="border-left-color:#b42318;"><a href="specs/acs-state-machine-v1/index.html">
-      <div class="spec-title">Asset Custody OS — Ground-Reality State Machine (V1: What Exists)</div>
-      <div class="spec-sub">System map · 2026-06-29 · <b>Not a change spec — descriptive.</b> The live device/netbox custody state machine rebuilt from <code>csp-os-yaml @ prod</code> (10 states, every transition labelled with the ground-level trigger, not the API name) · money downstream traced into Compensation + Payment-Settlement (carry fee, recovery payout, ₹200 return credit, write-off liability) · <b>8 cited gaps</b> incl. ① ≥₹20k loss liability computed but booked ₹0, ② churn-recovery has no auto-LOST timeout, ③ carry fee double-booked, ④ deactivate-and-return endpoint throws, ⑤ no CSP exposure system anywhere · every fact carries a file:line citation, no inferences · proposed behaviour fenced into §8</div>
+      <div class="spec-title">Asset Custody OS — State Machine &amp; Scenario Gaps (review doc)</div>
+      <div class="spec-sub">v2 · 2026-06-29 · <b>Review doc, not a change spec.</b> The live device/netbox custody machine (10 states) drawn as a <b>current → target</b> pair, with the gaps drawn on the machine (red = missing transition, amber = needs modification, blue = spec-only state) · scenario-driven, not bug-hunting · 5 gaps: G1 state follows CSP ISP expiry not customer plan cycle · G2 CRP→DEPLOYED (recharge + continue) missing · G3 LOST→DEPLOYED missing · G4 no PUT-cancel without recharge · G5 no verified "CSP keeps device free" path · integrates the warehouse-return / re-dispatch / rescue-intent spec states</div>
     </a></li>
     <li><a href="specs/customer-migration-existing-csp/customer-migration-existing-csp.html">
       <div class="spec-title">Customer Migration to Existing CSPs — Backend Seeding Approach</div>
