@@ -31,8 +31,9 @@
   .legend span{display:inline-flex;align-items:center;gap:7px;}
   .ln{width:26px;height:0;border-top:3px solid;display:inline-block;}
   .sw{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15);}
-  .note{border:1px solid var(--rule);border-left:4px solid var(--blue);background:var(--surface);border-radius:6px;padding:11px 15px;margin:12px 0;font-size:13.5px;}
-  .note.own{border-left-color:var(--amber);background:var(--amberSoft);}
+  .note{border:1px solid var(--rule);border-left:4px solid var(--blue);background:var(--surface);border-radius:6px;padding:12px 16px;margin:14px 0;font-size:13.5px;}
+  .note.key{border-left-color:var(--green);background:var(--greenSoft);}
+  .note h4{margin:0 0 6px;font-size:14px;}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0;}
   @media(max-width:740px){.cols{grid-template-columns:1fr;}}
   .panel{background:var(--surface);border:1px solid var(--rule);border-radius:7px;padding:12px 15px;}
@@ -65,7 +66,7 @@
   <div class="eyebrow">Wiom · Asset Custody OS · review doc</div>
   <h1>Device / NetBox Custody — Machine, Specs &amp; Open Gaps</h1>
   <div class="meta">
-    <span class="pill">v3 · 2026-06-29</span>
+    <span class="pill">v4 · 2026-06-29</span>
     <span class="pill code">csp-os-yaml @ prod</span>
     <span class="pill">Current = live code</span>
     <span class="pill">Designed = + your 3 specs</span>
@@ -75,18 +76,15 @@
 
 <!-- OBJECTIVE -->
 <h2><span class="n">1</span>Objective</h2>
-<p>Show the custody machine in three layers: <b>what runs today</b>, <b>what the specs already design on top of it</b>, and <b>what is still open</b> — covered by no spec. The point is to separate "already solved" from "genuinely missing" so the review focuses only on the latter.</p>
+<p>Show the custody machine in three layers — <b>what runs today</b>, <b>what the specs already design on top</b>, and <b>what is still open</b> — so the review focuses only on the genuinely-missing items.</p>
 
 <!-- APPROACH -->
 <h2><span class="n">2</span>Approach</h2>
-<p>The current machine is read from live code. The designed machine is the canonical state machine in the <b>warehouse-return</b> and <b>re-dispatch</b> specs (plus the connection-side <b>rescue-intent</b> spec), drawn on top in blue. Whatever neither the code nor a spec expresses is an open gap (red = missing edge, amber = needs modification).</p>
-<div class="note own">
-  <b>Correction from the prior cut:</b> two transitions were mis-filed. <code>CRP→DEPLOYED</code> is <b>not</b> an open gap — it is already designed as <b>T_REC_6 rescue</b> in your spec. And <code>RETURNED</code> is reachable from <b>every</b> state in your warehouse-return spec ("accept returns from any state") — the earlier diagram drew only one of those edges. Both are now correctly shown as <span style="color:var(--blue);font-weight:600">spec (blue)</span>, leaving four genuinely-open items.
-</div>
+<p>Current machine = live code. Designed machine = the canonical state machine in the <b>warehouse-return</b> + <b>re-dispatch</b> specs and the connection-side <b>rescue-intent</b> spec, drawn on top in blue. Anything neither the code nor a spec expresses is an open gap: <span style="color:var(--red);font-weight:600">red = missing edge</span>, <span style="color:var(--amber);font-weight:600">amber = needs modification</span>.</p>
 
 <!-- CURRENT -->
 <h2><span class="n">3</span>Layer 1 — the current machine (live)</h2>
-<p>Ten states. Entry is <code>CUSTODIED</code>. Terminals <code>RETURNED</code> / <code>DAMAGED</code> / <code>WRITTEN_OFF</code>. Today <code>RETURNED</code> is reachable <b>only</b> from <code>RETRIEVAL_PENDING</code>, and <code>IDLE</code> only from <code>CUSTOMER_RECOVERY_PENDING</code>.</p>
+<p>Ten states. Entry is <code>CUSTODIED</code>. Terminals <code>RETURNED</code> / <code>DAMAGED</code> / <code>WRITTEN_OFF</code>. Today <code>RETURNED</code> is reachable only from <code>RETRIEVAL_PENDING</code>, and <code>IDLE</code> only from <code>CUSTOMER_RECOVERY_PENDING</code>.</p>
 <div class="states">
   <span class="st">CUSTODIED</span><span class="st">DEPLOYED</span><span class="st">IDLE</span>
   <span class="st">CUSTOMER_RECOVERY_PENDING</span><span class="st">RETRIEVAL_PENDING</span><span class="st">REASSIGNED</span>
@@ -107,7 +105,7 @@ flowchart LR
   DEP -->|faulty swap| DEP
   DEP -->|reallocate| REA[REASSIGNED]
   REA --> CUST
-  CRP -->|recovered| IDLE
+  CRP -->|device recovered| IDLE
   CRP -->|declared lost| LOST
   RP -->|handover| RET[RETURNED]
   RP -->|damaged| DAM[DAMAGED]
@@ -139,12 +137,12 @@ flowchart LR
   IDLE[IDLE] -->|re-install| DEP
   IDLE --> RP
   IDLE --> LOST
-  DEP -->|OG1 plan cycle not ISP| CRP[CUSTOMER_RECOVERY_PENDING]
+  DEP -->|Gap1 plan cycle not ISP| CRP[CUSTOMER_RECOVERY_PENDING]
   DEP -->|swap-out / recall| RP
   DEP -->|faulty swap| DEP
   DEP -->|reallocate| REA[REASSIGNED]
   REA --> CUST
-  CRP -->|recovered| IDLE
+  CRP -->|device recovered| IDLE
   CRP -->|declared lost| LOST
   RP -->|handover| RET[RETURNED]
   RP -->|damaged| DAM[DAMAGED]
@@ -152,11 +150,11 @@ flowchart LR
   RP -->|write-off| WO[WRITTEN_OFF]
   LOST --> WO
   PCR[PENDING_CSP_RECEIPT] -->|receipt| CUST
-  CRP -->|T_REC_6 rescue, recharge and continue| DEP
-  CRP -->|T_REC_4 exit| RP
-  CRP -->|T_REC_3 internal| RET
-  LOST -->|late recovery| RH[RECOVERY_HOLD]
-  RH -->|handover late| RET
+  CRP -->|customer recharged, continue| DEP
+  CRP -->|CSP exits during recovery| RP
+  CRP -->|internal team to warehouse| RET
+  LOST -->|recovered late| RH[RECOVERY_HOLD]
+  RH -->|handed over late| RET
   LOST -->|3PL recovered| RET
   PCR --> RET
   CUST --> RET
@@ -164,10 +162,11 @@ flowchart LR
   DEP --> RET
   DAM --> RET
   WO --> RET
-  RET -->|episode close| WI[WIOM_INVENTORY]
-  WI -->|re-dispatch| PCR
-  LOST -.->|OG2 redeploy found device| DEP
-  DEP -.->|OG4 CSP keeps, verified| IDLE
+  RET -->|re-dispatch| WI[WIOM_INVENTORY]
+  WI --> PCR
+  LOST -.->|Gap2 customer recharged| DEP
+  DEP -.->|Gap4 CSP claims device, verified| IDLE
+  RP -.->|Gap4 verified claim| IDLE
   classDef spec fill:#eef2f9,stroke:#1f3c6e,color:#1f3c6e;
   classDef term fill:#fdecea,stroke:#b42318,color:#7a1d14;
   class PCR,RH,WI spec;
@@ -175,29 +174,35 @@ flowchart LR
   linkStyle default stroke:#5b5b5b,stroke-width:1.4px;
   linkStyle 7 stroke:#b45309,stroke-width:3px;
   linkStyle 19,20,21,22,23,24,25,26,27,28,29,30,31,32,33 stroke:#1f3c6e,stroke-width:1.3px,stroke-dasharray:3 3;
-  linkStyle 34,35 stroke:#b42318,stroke-width:3px;
+  linkStyle 34,35,36 stroke:#b42318,stroke-width:3px;
 </pre>
 </div>
-<p class="cap">The blue fan into RETURNED is the warehouse-return "accept from any state" capability; blue PENDING_CSP_RECEIPT / RECOVERY_HOLD / WIOM_INVENTORY are the spec-only states. Red dashed and the amber edge are the only items below.</p>
+<p class="cap">The blue fan into RETURNED is the warehouse "accept from any state" capability. The red fan into IDLE (Gap 4) is its CSP-claim counterpart — same shape, different trust model (below). Blue PENDING_CSP_RECEIPT / RECOVERY_HOLD / WIOM_INVENTORY are spec-only states.</p>
+
+<div class="note key">
+  <h4>Why IDLE is not the same as RETURNED — two ways out of active service, two trust models</h4>
+  <b>RETURNED</b> = Wiom physically holds the asset at the warehouse. It is self-verifying: nothing more to check, no further action. <br>
+  <b>IDLE</b> = a <i>CSP claims</i> it holds the device. The claim must be <b>verified</b>, and moving to IDLE must also fire the <b>cross-cutting actions the normal path would have done</b> — close the open NBREC pickup task, deactivate the connection in CLOS, and so on. Example: a direct <code>CRP→IDLE</code> that skips the NBREC recovery-confirmation still has to close NBREC and deactivate the connection. That is what makes the IDLE accept-all (Gap 4) different from the RETURNED accept-all.
+</div>
 
 <div class="cols">
   <div class="panel spec">
     <h3>Already designed in your specs (blue) — not gaps</h3>
     <ul>
-      <li><b>RETURNED from any state</b> — warehouse-return accept-all (10 source states).</li>
-      <li><b>CRP → DEPLOYED</b> — <code>T_REC_6</code> rescue (recharge &amp; continue). Connection side handled by rescue-intent (<code>PENDING_DEACTIVATION→ACTIVE</code>).</li>
-      <li><b>CRP → RETRIEVAL_PENDING</b> (<code>T_REC_4</code>) and <b>CRP → RETURNED</b> (<code>T_REC_3</code>).</li>
-      <li><b>LOST → RECOVERY_HOLD → RETURNED</b> — late recovery.</li>
-      <li><b>RETURNED → WIOM_INVENTORY → PENDING_CSP_RECEIPT</b> — re-dispatch (new episode).</li>
+      <li><b>RETURNED from any state</b> — warehouse accept-all (Wiom physically has the device).</li>
+      <li><b>CRP → DEPLOYED</b> — customer recharged and continues (rescue). Connection side: recharge reactivates the connection.</li>
+      <li><b>CRP → RETRIEVAL_PENDING</b> (CSP exits mid-recovery) and <b>CRP → RETURNED</b> (internal team returns it direct).</li>
+      <li><b>LOST → RECOVERY_HOLD → RETURNED</b> — device recovered late, handed to warehouse.</li>
+      <li><b>RETURNED → WIOM_INVENTORY → PENDING_CSP_RECEIPT</b> — re-dispatched to a new CSP.</li>
     </ul>
   </div>
   <div class="panel open">
     <h3>Still open — no spec covers these</h3>
     <ul>
-      <li><b>OG1</b> · state should follow customer plan cycle, not CSP ISP expiry <i>(modify)</i>.</li>
-      <li><b>OG2</b> · <code>LOST → DEPLOYED</code> — put a found device back into service directly.</li>
-      <li><b>OG3</b> · cancel a PUT without recharging again <i>(PUT layer, not a custody edge)</i>.</li>
-      <li><b>OG4</b> · verified path for a CSP to keep a device free (<code>any → IDLE/CUSTODIED</code>).</li>
+      <li><b>Gap 1</b> · state should follow the customer's plan cycle, not CSP ISP expiry <i>(modify)</i>.</li>
+      <li><b>Gap 2</b> · <code>LOST → DEPLOYED</code> — customer recharged, continue on the same device.</li>
+      <li><b>Gap 3</b> · cancel a PUT without recharging again <i>(PUT layer)</i>.</li>
+      <li><b>Gap 4</b> · move to IDLE from any active state on a <b>verified</b> CSP claim, firing the cross-cutting actions.</li>
     </ul>
   </div>
 </div>
@@ -206,44 +211,44 @@ flowchart LR
 <h2><span class="n">5</span>The four open gaps</h2>
 
 <div class="gap mod">
-  <span class="gid">OG1 · modify</span> <span class="edge">DEPLOYED → CRP</span>
+  <span class="gid">Gap 1 · modify</span> <span class="edge">DEPLOYED → CRP</span>
   <h4>Device state follows the connection (CSP ISP expiry), not the customer's plan cycle</h4>
   <div class="row"><span class="k">Scenario</span><span class="v">A paying customer is mid plan cycle, but the CSP's own ISP window lapses and the device is dragged toward recovery.</span></div>
-  <div class="row"><span class="k">Today</span><span class="v">The DEPLOYED→recovery move is anchored to the connection/ISP deactivation, not the customer.</span></div>
-  <div class="row"><span class="k">Needed</span><span class="v">Anchor custody state to the customer's plan cycle so a live customer is never affected by a CSP-side expiry. (Rescue-intent only aligns the connection on a recharge; it doesn't re-anchor custody.)</span></div>
+  <div class="row"><span class="k">Today</span><span class="v">The move out of DEPLOYED is anchored to the connection/ISP deactivation, not to the customer.</span></div>
+  <div class="row"><span class="k">Needed</span><span class="v">Anchor custody state to the customer's plan cycle so a live customer is never affected by a CSP-side expiry.</span></div>
 </div>
 
 <div class="gap">
-  <span class="gid">OG2 · missing</span> <span class="edge">LOST → DEPLOYED</span>
-  <h4>A found device put straight back into service</h4>
-  <div class="row"><span class="k">Scenario</span><span class="v">A device marked LOST turns up with the customer still live (or willing to continue) — no warehouse round-trip wanted.</span></div>
-  <div class="row"><span class="k">Today</span><span class="v">LOST goes only to WRITTEN_OFF, or (per spec) to RETURNED via RECOVERY_HOLD — both routes pull it out of the field.</span></div>
-  <div class="row"><span class="k">Needed</span><span class="v">A recovery edge LOST→DEPLOYED (and/or LOST→IDLE) so a found device re-enters the active fleet directly.</span></div>
+  <span class="gid">Gap 2 · missing</span> <span class="edge">LOST → DEPLOYED</span>
+  <h4>Customer recharged on a device that was marked lost</h4>
+  <div class="row"><span class="k">Scenario</span><span class="v">A device is marked LOST; the customer then recharges and wants to keep using it.</span></div>
+  <div class="row"><span class="k">Today</span><span class="v">LOST goes only to WRITTEN_OFF, or (per spec) to RETURNED via RECOVERY_HOLD — there is no way back to live.</span></div>
+  <div class="row"><span class="k">Needed</span><span class="v">A LOST→DEPLOYED edge on a recharge, so the customer simply continues on the same device.</span></div>
 </div>
 
 <div class="gap">
-  <span class="gid">OG3 · missing</span> <span class="edge">PUT layer</span>
+  <span class="gid">Gap 3 · missing</span> <span class="edge">PUT layer</span>
   <h4>No way to cancel a PUT without recharging again</h4>
   <div class="row"><span class="k">Scenario</span><span class="v">Customer raised a PUT while their plan was still active (e.g. a service issue), then wants to continue.</span></div>
-  <div class="row"><span class="k">Today</span><span class="v">The only way to clear a PUT is to recharge again — there is no "cancel the PUT, I'm staying" option. (Rescue-intent's path requires paying post-facto; it does not cover cancelling without payment.)</span></div>
+  <div class="row"><span class="k">Today</span><span class="v">The only way to clear a PUT is to recharge again — there is no "cancel the PUT, I'm staying" option.</span></div>
   <div class="row"><span class="k">Needed</span><span class="v">Let a customer withdraw an open PUT and stay live without paying twice.</span></div>
 </div>
 
 <div class="gap">
-  <span class="gid">OG4 · missing</span> <span class="edge">any → IDLE / CUSTODIED</span>
-  <h4>CSP wants to keep a device free — no verified provision</h4>
-  <div class="row"><span class="k">Scenario</span><span class="v">A CSP ends up holding a device (from any state) and wants to retain it as free stock rather than return it.</span></div>
-  <div class="row"><span class="k">Today</span><span class="v">No "keep it" route; idle stock only arises via the churn→recovery path.</span></div>
-  <div class="row"><span class="k">Needed</span><span class="v">A verification-gated retention edge into IDLE/CUSTODIED so a CSP can legitimately keep a device, after verified means.</span></div>
+  <span class="gid">Gap 4 · missing</span> <span class="edge">any active → IDLE</span>
+  <h4>A CSP can claim it holds a device — verified, with cross-cutting actions</h4>
+  <div class="row"><span class="k">Scenario</span><span class="v">A CSP says it has the device (from DEPLOYED, CRP, RETRIEVAL_PENDING, etc.) and wants it as free stock — the IDLE counterpart of the warehouse accept-all.</span></div>
+  <div class="row"><span class="k">Today</span><span class="v">IDLE is reachable only via the full CRP→IDLE recovery-confirmation; there is no general claim path from other states.</span></div>
+  <div class="row"><span class="k">Needed</span><span class="v">Allow any active state (not LOST / DAMAGED / RETURNED) → IDLE on a <b>verified</b> claim, and fire the cross-cutting actions — close NBREC, deactivate the connection in CLOS, etc. Unlike RETURNED, the CSP claim is not self-verifying.</span></div>
 </div>
 
 <!-- NOTES -->
-<h2><span class="n">6</span>Notes &amp; corrections</h2>
-<p><b>Exposure.</b> A CSP exposure table exists in the payment-settlement DB. (The exposure visible in code is <code>csp_zone_exposures</code> in demand-allocation — capacity/eligibility bands per CSP×zone, a different axis from device liability.) Open question for later: whether custody-driven device exposure is kept in step with that table.</p>
-<p><b>Scope.</b> This is a system-design / scenario-completeness review — implementation defects are out of scope. Money is raised only where a scenario demands it (e.g. OG3: continuing must not force a re-payment).</p>
+<h2><span class="n">6</span>Notes</h2>
+<p><b>Exposure.</b> A CSP exposure table exists in the payment-settlement DB. (The exposure visible in code is <code>csp_zone_exposures</code> in demand-allocation — capacity/eligibility bands per CSP×zone, a different axis from device liability.) Open question: whether custody-driven device exposure is kept in step with it.</p>
+<p><b>Scope.</b> System-design / scenario-completeness review — implementation defects are out of scope. Money is raised only where a scenario demands it (e.g. Gap 3: continuing must not force a re-payment).</p>
 
 <footer>
-  Wiom · Asset Custody OS · machine, specs &amp; open gaps · v3 · 2026-06-29 ·
+  Wiom · Asset Custody OS · machine, specs &amp; open gaps · v4 · 2026-06-29 ·
   current from <a href="https://github.com/wiom-tech/csp-os-yaml/tree/prod/services">csp-os-yaml @ prod</a> ·
   designed from <a href="../device-warehouse-return/device-warehouse-return_change_spec.html">warehouse-return</a> / <a href="../device-redispatch/device-redispatch_change_spec.html">re-dispatch</a> / <a href="../rescue-intent-transition/rescue-intent-transition_change_spec.html">rescue-intent</a>.
 </footer>
