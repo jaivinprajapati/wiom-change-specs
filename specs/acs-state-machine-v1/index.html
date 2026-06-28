@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asset Custody OS — Ground-Reality State Machine (V1: What Exists)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#fafaf9; --surface:#fff; --ink:#16181d; --muted:#6b6b6b; --rule:#e6e6e2;
+    --blue:#1f3c6e; --blueSoft:#eef2f9; --green:#1b7a4b; --greenSoft:#e9f6ee;
+    --amber:#b45309; --amberSoft:#fdf3e3; --red:#b42318; --redSoft:#fdecea;
+    --grey:#5b5b5b; --greySoft:#f1f1ef; --purple:#6b3fa0; --purpleSoft:#f2ecfa;
+    --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.55;color:var(--ink);background:var(--bg);}
+  main{max-width:1080px;margin:0 auto;padding:44px 24px 120px;}
+  header.doc{border-bottom:2px solid var(--ink);padding-bottom:20px;margin-bottom:10px;}
+  .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);}
+  h1{font-size:31px;margin:6px 0 8px;line-height:1.2;}
+  .lede{color:var(--muted);margin:0;max-width:80ch;}
+  .meta{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;}
+  .pill{font-size:12px;padding:3px 9px;border-radius:20px;background:var(--greySoft);color:var(--grey);border:1px solid var(--rule);}
+  .pill.code{font-family:var(--mono);}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--blue);margin:48px 0 6px;border-top:1px solid var(--rule);padding-top:22px;}
+  h2 .n{color:var(--muted);font-weight:600;margin-right:8px;}
+  h3{font-size:17px;margin:26px 0 8px;}
+  p{max-width:84ch;}
+  code,.cite{font-family:var(--mono);font-size:12.5px;}
+  .cite{display:inline-block;background:var(--blueSoft);color:var(--blue);border:1px solid #d7e0f0;border-radius:4px;padding:0 5px;margin:1px 2px;white-space:nowrap;}
+  .cite.x{background:var(--redSoft);color:var(--red);border-color:#f3cfcb;}
+  .callout{border:1px solid var(--rule);border-left:4px solid var(--blue);background:var(--surface);border-radius:6px;padding:14px 18px;margin:16px 0;}
+  .callout.warn{border-left-color:var(--amber);background:var(--amberSoft);}
+  .callout.danger{border-left-color:var(--red);background:var(--redSoft);}
+  .callout.fact{border-left-color:var(--green);background:var(--greenSoft);}
+  .callout h4{margin:0 0 6px;font-size:14px;}
+  .grid-states{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:18px 0;}
+  .state-card{background:var(--surface);border:1px solid var(--rule);border-radius:7px;padding:12px 14px;border-top:3px solid var(--grey);}
+  .state-card.live{border-top-color:var(--green);}
+  .state-card.terminal{border-top-color:var(--red);}
+  .state-card.transient{border-top-color:var(--purple);}
+  .state-card .nm{font-family:var(--mono);font-weight:700;font-size:13.5px;letter-spacing:-.2px;}
+  .state-card .role{font-size:12px;color:var(--muted);margin:2px 0 8px;text-transform:uppercase;letter-spacing:.04em;}
+  .state-card .desc{font-size:13.5px;}
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13.5px;background:var(--surface);}
+  th,td{border:1px solid var(--rule);padding:8px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--greySoft);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--grey);position:sticky;top:0;}
+  td .mono{font-family:var(--mono);font-size:12.5px;}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.03em;}
+  .tag.money{background:var(--greenSoft);color:var(--green);}
+  .tag.gap{background:var(--redSoft);color:var(--red);}
+  .tag.cron{background:var(--amberSoft);color:var(--amber);}
+  .tag.api{background:var(--blueSoft);color:var(--blue);}
+  .tag.event{background:var(--purpleSoft);color:var(--purple);}
+  .tag.manual{background:var(--greySoft);color:var(--grey);}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0;font-size:12.5px;color:var(--muted);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .sw{width:13px;height:13px;border-radius:3px;display:inline-block;}
+  .diagram-wrap{background:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:14px;overflow-x:auto;margin:16px 0;}
+  .gap{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--red);border-radius:6px;padding:14px 18px;margin:14px 0;}
+  .gap .gid{font-family:var(--mono);font-weight:700;color:var(--red);font-size:13px;}
+  .gap h4{margin:4px 0 8px;font-size:16px;}
+  .gap .ev{font-size:13px;color:var(--ink);}
+  .gap .impact{font-size:13px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule);color:var(--grey);}
+  .sev{float:right;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;}
+  .sev.high{background:var(--redSoft);color:var(--red);}
+  .sev.med{background:var(--amberSoft);color:var(--amber);}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:760px){.twocol{grid-template-columns:1fr;}}
+  footer{margin-top:60px;padding-top:18px;border-top:1px solid var(--rule);font-size:12px;color:var(--muted);}
+  a{color:var(--blue);}
+  .nb{font-size:12.5px;color:var(--muted);font-style:italic;}
+  .toc{columns:2;font-size:13.5px;margin:10px 0 0;}
+  @media(max-width:600px){.toc{columns:1;}}
+  .toc a{display:block;padding:2px 0;text-decoration:none;}
+</style>
+</head>
+<body>
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Asset Custody OS · System map (not a change spec)</div>
+  <h1>Device / NetBox Asset Custody — Ground-Reality State Machine</h1>
+  <p class="lede"><b>V1 — What exists in production today.</b> Reconstructed entirely from the live <code>csp-os-yaml</code> codebase (prod branch). Every state, transition, ground-level trigger, money consequence and gap below carries a <span class="cite">file:line</span> citation. No inferences — where the code does nothing, this says so. Proposed/future behaviour (the three change specs) is fenced off into §8 so V1 stays purely descriptive.</p>
+  <div class="meta">
+    <span class="pill">Doc date · 2026-06-29</span>
+    <span class="pill code">repo wiom-tech/csp-os-yaml @ prod</span>
+    <span class="pill code">commit eddd75d7 (2026-05-05)</span>
+    <span class="pill">Service · csp-asset-custody-service (ACS)</span>
+    <span class="pill">Custody OS v1.11.1</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#tldr">0 · Read-this-first (headline gaps)</a>
+  <a href="#states">1 · The 10 custody states</a>
+  <a href="#diagram">2 · State machine diagram</a>
+  <a href="#transitions">3 · Transitions × ground triggers</a>
+  <a href="#money">4 · Money downstream (the repercussions)</a>
+  <a href="#orders">5 · Device-order sub-machine</a>
+  <a href="#carry">6 · Carry-fee accrual engine</a>
+  <a href="#gaps">7 · Gaps (V1 highlight)</a>
+  <a href="#proposed">8 · Live vs Proposed (the 3 specs)</a>
+  <a href="#params">9 · Parameters &amp; citation index</a>
+</nav>
+
+<!-- ============ 0 TL;DR ============ -->
+<h2 id="tldr"><span class="n">0</span>Read-this-first — the headline gaps</h2>
+<p>Five facts a reader should leave with. Each is proven below; this is the elevator version.</p>
+
+<div class="callout danger">
+  <h4>① A device lost in a CSP's custody is never actually charged.</h4>
+  Write-off computes a liability of <b>≥ ₹20,000</b> (device value + capped carry fee) <span class="cite">CustodyStateServiceImpl.java:211</span> and emits <code>ASSET_LIABILITY_SETTLED</code>. The only consumer (Payment-Settlement) is called with <code>depositApplied = 0L, residual = 0L</code> hard-coded <span class="cite x">InboundEventProcessingServiceImpl.java:237-246 (PAY)</span>, so it writes a <b>₹0</b> <code>DEPOSIT_FORFEITURE</code> row and no liability row; the real amount is only logged <span class="cite x">DepositServiceImpl.java:197-220 (PAY)</span>. Compensation does not consume the event at all.
+</div>
+<div class="callout danger">
+  <h4>② A churned device can sit in recovery limbo forever.</h4>
+  <code>CUSTOMER_RECOVERY_PENDING → LOST</code> (the 30-day timeout, "T_REC_4") is a <i>declared</i> transition <span class="cite">NetboxCustodyStateMachine.java:44-47</span> with <b>no writer</b>. The params <code>recoveryMaxWindowSeconds</code>/<code>recoveryWindowSeconds</code> exist <span class="cite">AssetCustodyParameters.java:50-54</span> but are read by no Java code, and no batch trigger evaluates it <span class="cite">BatchTriggerController.java:26-64</span>. Exit is only <i>forward</i> (recovery confirmed → IDLE) or a manual ops loss declaration.
+</div>
+<div class="callout warn">
+  <h4>③ Carry fee is booked twice, two different ways, off one event.</h4>
+  One daily <code>CUSTODY_CARRY_FEE_ACCRUED</code> is consumed by <b>both</b> Compensation (entitlement ledger, flat −1×daily-rate, threshold-gated) <span class="cite">CompensationEventProcessingServiceImpl.java:229-252</span> <b>and</b> Payment-Settlement (wallet ledger, amount = device count, no threshold) <span class="cite">InboundEventProcessingServiceImpl.java:157-171 (PAY)</span>.
+</div>
+<div class="callout warn">
+  <h4>④ There is no CSP "exposure" accounting anywhere.</h4>
+  <code>CSP_EXPOSURE_CHANGED</code> / <code>csp_exposure</code> appears in <b>zero files</b> across all 18 services (repo-wide grep). The exposure invariants the specs assume (+1 at CUSTODIED, −1 at RETURNED/LOST) are not implemented in V1.
+</div>
+<div class="callout danger">
+  <h4>⑤ The "deactivate &amp; return" CSP action is broken.</h4>
+  The wired endpoint <span class="cite">CustodyStateController.java:59-67</span> calls <code>deactivateAndReturn()</code>, whose first step is <code>DEPLOYED → IDLE</code> <span class="cite x">CustodyStateServiceImpl.java:350</span> — an edge <b>removed in v1.11</b>. It throws <code>InvalidTransitionException</code> for every input.
+</div>
+
+<!-- ============ 1 STATES ============ -->
+<h2 id="states"><span class="n">1</span>The 10 custody states</h2>
+<p>The custody enum has exactly <b>10</b> values <span class="cite">CustodyStatus.java:3-14</span>. (Note: stale internal docs/specs reference 12 — there is no <code>PENDING_CSP_RECEIPT</code> and no <code>RECOVERY_HOLD</code> in live code.) Terminal states are <code>RETURNED</code>, <code>DAMAGED</code>, <code>WRITTEN_OFF</code> <span class="cite">NetboxCustodyStateMachine.java:63-67</span>.</p>
+
+<div class="legend">
+  <span><span class="sw" style="background:var(--green)"></span>active / resting</span>
+  <span><span class="sw" style="background:var(--purple)"></span>transient (pass-through)</span>
+  <span><span class="sw" style="background:var(--red)"></span>terminal</span>
+</div>
+
+<div class="grid-states">
+  <div class="state-card live"><div class="nm">CUSTODIED</div><div class="role">With CSP · never deployed</div><div class="desc">Fresh stock the CSP holds. Entry state on order-receipt and on allocation. Idle counter runs.</div></div>
+  <div class="state-card live"><div class="nm">DEPLOYED</div><div class="role">At a customer · live</div><div class="desc">Device installed and serving a customer. Idle counter paused/reset.</div></div>
+  <div class="state-card live"><div class="nm">IDLE</div><div class="role">With CSP · was deployed</div><div class="desc">Back with the CSP after a customer journey. <b>Only reachable from CUSTOMER_RECOVERY_PENDING</b> in V1 — DEPLOYED→IDLE was removed.</div></div>
+  <div class="state-card live"><div class="nm">CUSTOMER_RECOVERY_PENDING</div><div class="role">At ex-customer · pickup open</div><div class="desc">Customer deactivated (churn / disconnect); device still physically at the customer, awaiting recovery. Idle counter paused.</div></div>
+  <div class="state-card live"><div class="nm">RETRIEVAL_PENDING</div><div class="role">Returning to Wiom warehouse</div><div class="desc">CSP→Wiom handover in flight. The single gateway into all terminal outcomes. Idle counter paused.</div></div>
+  <div class="state-card transient"><div class="nm">REASSIGNED</div><div class="role">Transient · changing CSP</div><div class="desc">Pass-through during CSP-to-CSP reallocation; immediately re-stamped to CUSTODIED under the new CSP in the same transaction.</div></div>
+  <div class="state-card terminal"><div class="nm">RETURNED</div><div class="role">Terminal · back at warehouse, OK</div><div class="desc">Physically handed over &amp; functional. Triggers the only "happy" deposit credit.</div></div>
+  <div class="state-card terminal"><div class="nm">DAMAGED</div><div class="role">Terminal · back, damaged</div><div class="desc">QC classified it damaged during retrieval.</div></div>
+  <div class="state-card terminal"><div class="nm">LOST</div><div class="role">Soft-terminal · unrecovered</div><div class="desc">Declared lost or timed out of retrieval. Only onward edge is WRITTEN_OFF.</div></div>
+  <div class="state-card terminal"><div class="nm">WRITTEN_OFF</div><div class="role">Terminal · accounting close</div><div class="desc">Liability "settled" (computed; see Gap ①). Final.</div></div>
+</div>
+
+<!-- ============ 2 DIAGRAM ============ -->
+<h2 id="diagram"><span class="n">2</span>State-machine diagram</h2>
+<p>Edges below are <b>exactly</b> the valid transitions in <span class="cite">NetboxCustodyStateMachine.java:25-60</span>, labelled with the <b>ground-level</b> reason (not the API/event name). Dashed red = a declared edge with <b>no writer</b>. The double-bordered note marks the broken endpoint.</p>
+
+<div class="diagram-wrap">
+<pre class="mermaid">
+stateDiagram-v2
+  direction LR
+  [*] --> CUSTODIED: order received / device assigned to CSP
+  CUSTODIED --> DEPLOYED: customer install completed
+  CUSTODIED --> RETRIEVAL_PENDING: CSP / exit recall
+  CUSTODIED --> LOST: CSP declares lost
+  IDLE --> DEPLOYED: re-install for a customer
+  IDLE --> RETRIEVAL_PENDING: CSP / exit recall
+  IDLE --> LOST: CSP declares lost
+  DEPLOYED --> CUSTOMER_RECOVERY_PENDING: customer churned / disconnected
+  DEPLOYED --> RETRIEVAL_PENDING: device swap-out / exit recall
+  DEPLOYED --> DEPLOYED: faulty-device swap (atomic)
+  DEPLOYED --> REASSIGNED: customer reallocated to another CSP
+  REASSIGNED --> CUSTODIED: re-stamped under new CSP (same txn)
+  CUSTOMER_RECOVERY_PENDING --> IDLE: device physically recovered
+  CUSTOMER_RECOVERY_PENDING --> LOST: 30-day timeout — NO WRITER
+  RETRIEVAL_PENDING --> RETURNED: handed to warehouse, functional
+  RETRIEVAL_PENDING --> DAMAGED: QC marks damaged
+  RETRIEVAL_PENDING --> LOST: 30-day retrieval timeout
+  RETRIEVAL_PENDING --> WRITTEN_OFF: 90-day write-off / CSP exit
+  LOST --> WRITTEN_OFF: 90-day write-off / CSP exit
+  RETURNED --> [*]
+  DAMAGED --> [*]
+  WRITTEN_OFF --> [*]
+  note right of CUSTOMER_RECOVERY_PENDING
+    The →LOST timeout edge is declared
+    but has no code that fires it (Gap 1)
+  end note
+  note right of DEPLOYED
+    "deactivate-and-return" API tries
+    DEPLOYED→IDLE (removed v1.11) → throws (Gap 5)
+  end note
+</pre>
+</div>
+<p class="nb">Reachability fact worth noting: <code>IDLE</code> has exactly one inbound edge — <code>CUSTOMER_RECOVERY_PENDING → IDLE</code>. A device cannot become IDLE from DEPLOYED or CUSTODIED directly. So "idle stock that was once deployed" can only arise via the churn→recovery path.</p>
+
+<!-- ============ 3 TRANSITIONS ============ -->
+<h2 id="transitions"><span class="n">3</span>Transitions × ground-level triggers</h2>
+<p>What really happens on the ground for each edge, who fires it, and the money it sets off. <span class="tag api">API</span> = CSP/ops action · <span class="tag event">EVENT</span> = inbound from another OS · <span class="tag cron">CRON</span> = scheduled sweep · <span class="tag manual">EXTERNAL</span> = no in-repo emitter (manual/ops today).</p>
+
+<table>
+<thead><tr><th>From → To</th><th>Trigger type</th><th>Ground reality</th><th>Writer (ACS)</th><th>Money set off</th></tr></thead>
+<tbody>
+<tr>
+  <td class="mono">∅ → CUSTODIED</td><td><span class="tag api">API</span></td>
+  <td>CSP confirms receipt of a dispatched order. One custody row minted per approved unit.</td>
+  <td><span class="cite">DeviceOrderServiceImpl.java:133-181</span></td>
+  <td>— (device IDs are fresh UUIDs, see Gap ⑨)</td>
+</tr>
+<tr>
+  <td class="mono">∅ → CUSTODIED</td><td><span class="tag manual">EXTERNAL</span></td>
+  <td>A netbox is assigned to a CSP. <code>NETBOX_ASSIGNMENT_SIGNAL</code> — no emitter in repo; manual/ops until Allocation OS.</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:161-195</span><br><span class="cite">docs/os/…agent-decisions.md:107</span></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td class="mono">CUSTODIED/IDLE → DEPLOYED</td><td><span class="tag event">EVENT</span></td>
+  <td>Installation completed — partner verifies the install OTP at the customer's door.</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:235-269</span><br>emit: <span class="cite">csp-tas-service OtpServiceImpl.java:116</span></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td class="mono">DEPLOYED → CUSTOMER_RECOVERY_PENDING</td><td><span class="tag event">EVENT</span></td>
+  <td><b>Customer churned</b> — stopped recharging past the pause window (or disconnected). CL deactivates the connection; device is still at the customer. Spawns a TAS pickup task.</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:34-83</span><br>emit: <span class="cite">csp-connection-lifecycle …Impl.java:875</span></td>
+  <td>Idle counter <b>paused</b> <span class="cite">NetboxCustodyStateMachine.java:95-100</span> → no carry fee accrues here</td>
+</tr>
+<tr>
+  <td class="mono">CUSTOMER_RECOVERY_PENDING → IDLE</td><td><span class="tag event">EVENT</span></td>
+  <td><b>Device physically recovered</b> — CSP picks it up from the customer (or Wiom internal team does). Confirmed in the TAS pickup task.</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:382-436</span><br>emit: <span class="cite">csp-tas-service CandidateCommandServiceImpl.java:187-215</span></td>
+  <td><span class="tag money">+ payout</span> CSP_PICKUP / CUSTOMER_RETURN → recovery-payout credit (Compensation). INTERNAL_TEAM → no payout.</td>
+</tr>
+<tr>
+  <td class="mono">CUSTOMER_RECOVERY_PENDING → LOST</td><td><span class="tag gap">NO WRITER</span></td>
+  <td>Intended: 30-day recovery window expires, or CSP reports irrecoverable. <b>Nothing fires this automatically.</b> Only a manual ops loss-declaration can.</td>
+  <td><span class="cite x">declared NetboxCustodyStateMachine.java:44-47, no writer</span></td>
+  <td>None — see Gap ①/②</td>
+</tr>
+<tr>
+  <td class="mono">DEPLOYED → DEPLOYED</td><td><span class="tag event">EVENT</span></td>
+  <td><b>Faulty-device swap</b> — CSP resolves a hardware/connectivity complaint by replacing the netbox. Old device → RETRIEVAL_PENDING, new device CUSTODIED/IDLE → DEPLOYED, atomically.</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:304-378</span><br>emit: <span class="cite">csp-support-resolution DeviceSwapServiceImpl.java:149-159</span></td>
+  <td>— (old device then follows the retrieval path)</td>
+</tr>
+<tr>
+  <td class="mono">DEPLOYED → REASSIGNED → CUSTODIED</td><td><span class="tag manual">EXTERNAL</span></td>
+  <td>Customer/connection reallocated to a different CSP; device follows to the new custodian. <code>REALLOCATION_INITIATED</code> — no emitter in repo. Guard: connection must already be deactivated.</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:85-134</span></td>
+  <td>Idle days &amp; carry-fee accrual <b>reset to 0</b> on REASSIGNED <span class="cite">…:105-108</span></td>
+</tr>
+<tr>
+  <td class="mono">any active → RETRIEVAL_PENDING</td><td><span class="tag api">API</span></td>
+  <td>CSP initiates a device return (single or batch). Physical handover to Wiom begins; a 30-day / 90-day clock starts.</td>
+  <td><span class="cite">CustodyStateServiceImpl.java:88-109, 315-341</span></td>
+  <td>Idle counter paused</td>
+</tr>
+<tr>
+  <td class="mono">any active → RETRIEVAL_PENDING</td><td><span class="tag manual">EXTERNAL</span></td>
+  <td>CSP is exiting the platform; an individual device is recalled. <code>EXIT_TRIGGERED_RETRIEVAL</code> — no emitter in repo.</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:197-231</span></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td class="mono">DEPLOYED → IDLE → RETRIEVAL_PENDING</td><td><span class="tag gap">BROKEN</span></td>
+  <td>"Deactivate &amp; return" a still-deployed device in one call. <b>Throws</b> — first hop DEPLOYED→IDLE is not a valid edge.</td>
+  <td><span class="cite x">CustodyStateServiceImpl.java:343-378</span> · ep <span class="cite x">CustodyStateController.java:59-67</span></td>
+  <td>None (request 500s) — Gap ⑤</td>
+</tr>
+<tr>
+  <td class="mono">RETRIEVAL_PENDING → RETURNED</td><td><span class="tag api">API</span></td>
+  <td>Device physically handed to the Wiom warehouse and accepted as functional (ops confirm).</td>
+  <td><span class="cite">CustodyStateServiceImpl.java:111-131</span></td>
+  <td><span class="tag money">+ ₹200</span> deposit credit (DEVICE_RETURN_CREDIT, Payment-Settlement) — only on RETURNED+FUNCTIONAL</td>
+</tr>
+<tr>
+  <td class="mono">RETRIEVAL_PENDING → DAMAGED</td><td><span class="tag api">API</span></td>
+  <td>QC inspection during retrieval marks the device damaged. (Classification allowed <b>only</b> in RETRIEVAL_PENDING.)</td>
+  <td><span class="cite">CustodyStateServiceImpl.java:133-169</span></td>
+  <td><span class="tag money">claim</span> DAMAGE_CLAIM booked at <b>₹0</b> in practice (Gap ⑥)</td>
+</tr>
+<tr>
+  <td class="mono">any active → LOST</td><td><span class="tag api">API</span></td>
+  <td>CSP declares a device lost (must supply timestamp + circumstances + confirmation).</td>
+  <td><span class="cite">CustodyStateServiceImpl.java:61-86</span></td>
+  <td><span class="tag money">claim</span> LOSS forfeiture booked at <b>₹0</b> in practice (Gap ⑥)</td>
+</tr>
+<tr>
+  <td class="mono">RETRIEVAL_PENDING → LOST</td><td><span class="tag cron">CRON</span></td>
+  <td>Device stuck in return-limbo &gt; 30 days (P20). Swept to LOST.</td>
+  <td><span class="cite">CustodyStateServiceImpl.java:171-193</span> · trig <span class="cite">BatchTriggerController.java:42-48</span></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td class="mono">RETRIEVAL_PENDING → WRITTEN_OFF</td><td><span class="tag cron">CRON</span></td>
+  <td>Device in return-limbo &gt; 90 days. Auto write-off.</td>
+  <td><span class="cite">CustodyStateServiceImpl.java:195-243</span> · trig <span class="cite">BatchTriggerController.java:50-56</span></td>
+  <td><span class="tag money">liability</span> computes ≥₹20,000 then books <b>₹0</b> (Gap ①)</td>
+</tr>
+<tr>
+  <td class="mono">RETRIEVAL_PENDING → WRITTEN_OFF (mass)</td><td><span class="tag event">EVENT</span></td>
+  <td>CSP exit settlement completes → every RETRIEVAL_PENDING device of that CSP is written off at once.</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:136-157</span><br>emit: <span class="cite">csp-payment-settlement WalletServiceImpl.java:914</span></td>
+  <td><span class="tag money">liability</span> same ₹0 outcome per device (Gap ①)</td>
+</tr>
+<tr>
+  <td class="mono">LOST → WRITTEN_OFF</td><td><span class="tag cron">CRON</span> / <span class="tag event">EVENT</span></td>
+  <td>A LOST device is written off by the same 90-day sweep / exit completion.</td>
+  <td><span class="cite">executeWriteOff CustodyStateServiceImpl.java:207-243</span></td>
+  <td><span class="tag money">liability</span> ₹0 outcome (Gap ①)</td>
+</tr>
+</tbody>
+</table>
+
+<!-- ============ 4 MONEY ============ -->
+<h2 id="money"><span class="n">4</span>Money downstream — the actual repercussions</h2>
+<p>ACS itself holds <b>no money</b>; it only emits events. The real ledger writes happen in Compensation (COMP) and Payment-Settlement (PAY). This is the complete, verified consumer map for every ACS money-bearing event. "No consumer" means a repo-wide search found none — the event is fire-and-forget.</p>
+
+<table>
+<thead><tr><th>ACS event (emitted on…)</th><th>Consumer</th><th>Ledger write</th><th>Amount &amp; sign</th><th>Citation</th></tr></thead>
+<tbody>
+<tr>
+  <td><code>CUSTODY_CARRY_FEE_ACCRUED</code><br><span class="nb">daily, per CSP</span></td>
+  <td>COMP</td>
+  <td><code>entitlement_ledger_entries</code> · <code>CARRY_FEE_DEBIT</code></td>
+  <td><b>−1 × daily-rate</b> (flat, regardless of device count); skipped unless count &gt; idle threshold</td>
+  <td><span class="cite">CompensationEventProcessingServiceImpl.java:219-252</span></td>
+</tr>
+<tr>
+  <td><code>CUSTODY_CARRY_FEE_ACCRUED</code><br><span class="nb">same event</span></td>
+  <td>PAY <span class="tag gap">dup</span></td>
+  <td><code>wallet_ledger_entries</code> · <code>CARRY_FEE</code>; overflow → <code>liability_ledger_entries</code> · <code>CARRY_FEE_OVERFLOW</code></td>
+  <td><b>− totalAccrualUnits</b> (= count of accruing devices, treated as paise); no threshold gate</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:143-174 (PAY)</span><br><span class="cite">WalletServiceImpl.java:779-836 (PAY)</span></td>
+</tr>
+<tr>
+  <td><code>DEVICE_RECOVERY_CONFIRMED</code><br><span class="nb">CUSTOMER_RECOVERY_PENDING→IDLE</span></td>
+  <td>COMP</td>
+  <td><code>entitlement_ledger_entries</code> · <code>RECOVERY_PAYOUT_CREDIT</code> → emits <code>COMP_RECOVERY_PAYOUT_ISSUED</code></td>
+  <td><b>+ recovery-payout</b> (flat); <b>only</b> for CSP_PICKUP / CUSTOMER_RETURN. INTERNAL_TEAM → nothing.</td>
+  <td><span class="cite">CompensationEventProcessingServiceImpl.java:521-600</span></td>
+</tr>
+<tr>
+  <td><code>CUSTODY_STATE_CHANGED</code><br><span class="nb">every transition</span></td>
+  <td>PAY</td>
+  <td><code>deposit_ledger_entries</code> · <code>DEVICE_RETURN_CREDIT</code></td>
+  <td><b>+ ₹200</b> default — <b>but only</b> when newState=RETURNED &amp; condition=FUNCTIONAL. Every other transition is a no-op.</td>
+  <td><span class="cite">InboundEventProcessingServiceImpl.java:108-141 (PAY)</span><br><span class="cite">DepositServiceImpl.java:90-120, 312-318 (PAY)</span></td>
+</tr>
+<tr>
+  <td><code>CUSTODY_CONDITION_CLASSIFIED</code><br><span class="nb">DAMAGED / LOST classify</span></td>
+  <td>PAY</td>
+  <td>DAMAGED → <code>DAMAGE_CLAIM</code> · LOST → <code>DEPOSIT_FORFEITURE</code> (+ overflow rows)</td>
+  <td><b>₹0</b> — handler passes <code>0L</code> as the claim amount <span class="cite x">InboundEventProcessingServiceImpl.java:199, 209 (PAY)</span></td>
+  <td><span class="cite">…:176-218 (PAY)</span></td>
+</tr>
+<tr>
+  <td><code>ASSET_LIABILITY_SETTLED</code><br><span class="nb">on write-off, ≥₹20k</span></td>
+  <td>PAY</td>
+  <td><code>deposit_ledger_entries</code> · <code>DEPOSIT_FORFEITURE</code>; <b>no</b> liability row</td>
+  <td><b>₹0</b> — <code>depositApplied=0L, residual=0L</code> hard-coded; <code>totalLiability</code> only logged</td>
+  <td><span class="cite x">InboundEventProcessingServiceImpl.java:237-246 (PAY)</span><br><span class="cite x">DepositServiceImpl.java:192-225 (PAY)</span></td>
+</tr>
+<tr>
+  <td><code>ASSET_LIABILITY_SETTLED</code></td>
+  <td>COMP</td>
+  <td colspan="2"><b>No consumer.</b> Compensation does not subscribe; the loss liability never becomes a CSP earnings debit.</td>
+  <td><span class="cite x">grep: 0 matches in csp-compensation-service</span></td>
+</tr>
+<tr>
+  <td><code>DEVICE_WRITE_OFF_CONFIRMED</code> · <code>DEVICE_SWAP_COMPLETED</code> · <code>CUSTODY_CONFIRMED</code> · <code>CUSTODY_PATTERN_*</code></td>
+  <td>COMP &amp; PAY</td>
+  <td colspan="2"><b>No consumer in either money service.</b> Fire-and-forget.</td>
+  <td><span class="cite x">grep: 0 matches</span></td>
+</tr>
+</tbody>
+</table>
+
+<div class="callout fact">
+  <h4>So, "a device is lost in custody of a CSP — what are the repercussions?" (the worked example)</h4>
+  <b>Ground sequence:</b> customer churns → device sits in <code>CUSTOMER_RECOVERY_PENDING</code> → if recovered it goes IDLE (and the CSP <i>earns</i> a recovery payout); if <b>not</b> recovered it… stays there (Gap ②), because nothing times it out. The only way it advances is a CSP/ops <b>manual loss declaration</b> → <code>LOST</code> → 90-day sweep → <code>WRITTEN_OFF</code>.<br><br>
+  <b>Financial repercussion at write-off:</b> ACS computes a liability of <code>min(carryFeeUnits, 1000) + 20000</code> paise-equivalents <span class="cite">CustodyStateServiceImpl.java:211</span> and announces it. <b>But no ledger ever debits it</b> — PAY forfeits ₹0 and books no liability row, COMP ignores the event. Net real-money impact on the CSP for losing a device today: the ₹200 return credit it <i>doesn't</i> get, plus any carry fee that accrued while idle. The headline ₹20,000 device liability is <b>announced but not enforced</b>.
+</div>
+
+<!-- ============ 5 ORDERS ============ -->
+<h2 id="orders"><span class="n">5</span>Device-order sub-machine (the on-ramp to CUSTODIED)</h2>
+<p>A separate 5-state machine governs how stock reaches a CSP <span class="cite">DeviceOrderStateMachine.java:13-22</span>. Its terminal <code>FULFILLED</code> is what mints <code>CUSTODIED</code> custody rows.</p>
+
+<div class="diagram-wrap">
+<pre class="mermaid">
+stateDiagram-v2
+  direction LR
+  [*] --> REQUESTED: CSP places order
+  REQUESTED --> APPROVED: cap check passes (auto)
+  REQUESTED --> REJECTED: cap exceeded
+  APPROVED --> DISPATCHED: ops confirms dispatch
+  DISPATCHED --> FULFILLED: CSP confirms receipt → mints CUSTODIED rows
+  DISPATCHED --> REJECTED: 72h dispatch-confirm timeout
+  REJECTED --> [*]
+  FULFILLED --> [*]
+</pre>
+</div>
+<div class="twocol">
+  <div class="callout">
+    <h4>What gates an order</h4>
+    Only two checks: (1) no other active order for the CSP, (2) device-count cap not exceeded <span class="cite">DeviceOrderServiceImpl.java:43-102</span>. <b>There is no security-deposit / wallet-balance gate</b> — see Gap ⑧.
+  </div>
+  <div class="callout">
+    <h4>What FULFILLED does</h4>
+    Loops <code>quantityApproved</code> times, minting a custody row per device with a <b>random UUID</b> as <code>device_id</code> <span class="cite">DeviceOrderServiceImpl.java:153-175</span> → CUSTODIED. Real hardware identity arrives (if ever) via the separate <code>NETBOX_ASSIGNMENT_SIGNAL</code> path — see Gap ⑨.
+  </div>
+</div>
+
+<!-- ============ 6 CARRY FEE ============ -->
+<h2 id="carry"><span class="n">6</span>Carry-fee accrual engine</h2>
+<p>A daily batch <span class="cite">CarryFeeAccrualServiceImpl.java:34-99</span> finds idle devices past the threshold, increments their accrual units, and emits one <code>CUSTODY_CARRY_FEE_ACCRUED</code> per CSP.</p>
+<ul>
+  <li><b>Eligibility:</b> idle &gt; <code>idleThresholdDays = 30</code> <span class="cite">AssetCustodyParameters.java:18</span>, accrual capped at <code>carryFeeHardCap = 1000</code> units <span class="cite">AssetCustodyParameters.java:21</span>.</li>
+  <li><b>Increment:</b> +1 unit/device/day <span class="cite">CarryFeeAccrualServiceImpl.java:62-63</span>.</li>
+  <li><b>Event payload:</b> <code>totalAccrualUnits</code> = the <b>count of that CSP's devices that accrued this cycle</b> (it sums +1 per device) <span class="cite">CarryFeeAccrualServiceImpl.java:74</span> — not a per-device unit total. This is the number both consumers then (mis)use differently (Gap ③).</li>
+  <li><b>Rate param</b> <code>carryFeeRatePaise = 2000</code> (₹20/day) is declared in ACS <span class="cite">AssetCustodyParameters.java:44-45</span> but the <b>actual debit rate lives in the consumers</b>, not here.</li>
+  <li><b>Idle counter is paused</b> in DEPLOYED / RETRIEVAL_PENDING / CUSTOMER_RECOVERY_PENDING / terminal <span class="cite">NetboxCustodyStateMachine.java:95-100</span> — so a churned-but-unrecovered device accrues nothing while it waits.</li>
+</ul>
+
+<!-- ============ 7 GAPS ============ -->
+<h2 id="gaps"><span class="n">7</span>Gaps in V1 (the point of this document)</h2>
+<p>Every gap below is a <b>fact about the live code</b>, not a recommendation. Severity is the author's read of blast radius. These are the seams where Jaivin's specific inputs will land next.</p>
+
+<div class="gap">
+  <span class="sev high">HIGH</span><span class="gid">GAP-1</span>
+  <h4>Customer-recovery devices have no automatic exit to LOST</h4>
+  <div class="ev">The edge <code>CUSTOMER_RECOVERY_PENDING → LOST</code> ("T_REC_4: P_RECOVERY_MAX_WINDOW expired / T_REC_5: CSP reports irrecoverable") is declared valid <span class="cite">NetboxCustodyStateMachine.java:44-47</span>, and the windows are parameterised — <code>recoveryWindowSeconds=604800</code> (7d), <code>recoveryMaxWindowSeconds=2592000</code> (30d) <span class="cite">AssetCustodyParameters.java:50-54</span>. <b>But both params are read by zero Java code</b>, there is <b>no batch trigger</b> for recovery timeout <span class="cite">BatchTriggerController.java:26-64</span>, and the one LOST sweep only scans RETRIEVAL_PENDING <span class="cite">CustodyStateServiceImpl.java:171-193</span>. Cross-service trace confirms TAS does not drive it either.</div>
+  <div class="impact"><b>Impact:</b> a churned customer who never returns the device leaves it parked in CUSTOMER_RECOVERY_PENDING indefinitely — accruing no carry fee, never written off, never charged — unless an ops person manually declares loss. The "30-day auto-LOST" the design assumes does not exist.</div>
+</div>
+
+<div class="gap">
+  <span class="sev high">HIGH</span><span class="gid">GAP-2</span>
+  <h4>Lost / written-off device liability is computed but never charged</h4>
+  <div class="ev">Write-off sets <code>totalLiability = min(carryFeeUnits, 1000) + 20000</code> <span class="cite">CustodyStateServiceImpl.java:211</span> and emits <code>ASSET_LIABILITY_SETTLED</code> with it. PAY's handler is invoked with <code>depositApplied=0L, residual=0L</code> <span class="cite x">InboundEventProcessingServiceImpl.java:237-246 (PAY)</span>; downstream, <code>appliedDebit = min(0, balance) = 0</code> → a <b>₹0 DEPOSIT_FORFEITURE</b> row, and the residual-liability branch is skipped because residual is 0 <span class="cite x">DepositServiceImpl.java:200-224 (PAY)</span>. The real <code>totalLiability</code> is used only in a log line. COMP has no consumer for the event.</div>
+  <div class="impact"><b>Impact:</b> the central financial deterrent of the whole custody model — "lose Wiom's device, owe ₹20k" — is announced on the bus but lands nowhere. Same for damage/loss deposit claims via <code>CUSTODY_CONDITION_CLASSIFIED</code> (also passed <code>0L</code>).</div>
+</div>
+
+<div class="gap">
+  <span class="sev high">HIGH</span><span class="gid">GAP-3</span>
+  <h4>Carry fee is double-booked across two services, with different math</h4>
+  <div class="ev">One <code>CUSTODY_CARRY_FEE_ACCRUED</code> is consumed by COMP → <code>entitlement_ledger CARRY_FEE_DEBIT</code> at a flat −1×daily-rate gated by a threshold <span class="cite">CompensationEventProcessingServiceImpl.java:219-252</span>, AND by PAY → <code>wallet_ledger CARRY_FEE</code> at −<code>totalAccrualUnits</code> with no threshold <span class="cite">InboundEventProcessingServiceImpl.java:157-171 (PAY)</span>. Two ledgers, two amounts, two threshold semantics, one event.</div>
+  <div class="impact"><b>Impact:</b> the CSP's carry-fee charge is ambiguous and potentially counted twice; reconciliation between the wallet and the entitlement ledger cannot net to a single source of truth.</div>
+</div>
+
+<div class="gap">
+  <span class="sev high">HIGH</span><span class="gid">GAP-4</span>
+  <h4>"Deactivate &amp; return" endpoint throws on every call</h4>
+  <div class="ev"><code>deactivateAndReturn()</code> first executes <code>DEPLOYED → IDLE</code> <span class="cite x">CustodyStateServiceImpl.java:350</span>, an edge removed in v1.11 — so <code>transition()</code> raises <code>InvalidTransitionException</code> for any input state. The endpoint is live and permissioned <span class="cite x">CustodyStateController.java:59-67</span>.</div>
+  <div class="impact"><b>Impact:</b> the single-call "deactivate a still-deployed device and start its return" flow is non-functional in prod. Callers must fall back to deactivation (via CL) then a separate initiate-return.</div>
+</div>
+
+<div class="gap">
+  <span class="sev med">MED</span><span class="gid">GAP-5</span>
+  <h4>No CSP "exposure" accounting exists at all</h4>
+  <div class="ev">A repo-wide search for <code>CSP_EXPOSURE_CHANGED</code> / <code>csp_exposure</code> / <code>cspExposure</code> returns <b>zero files</b> across all 18 services. Payment-Settlement has wallet, deposit and liability ledgers but no per-device exposure counter. The exposure increments/decrements the change specs rely on are unimplemented.</div>
+  <div class="impact"><b>Impact:</b> there is no live count of "how many of Wiom's devices is this CSP currently on the hook for." Any spec that gates ordering or settlement on exposure is building on a primitive that doesn't yet exist.</div>
+</div>
+
+<div class="gap">
+  <span class="sev med">MED</span><span class="gid">GAP-6</span>
+  <h4>Three inbound triggers have no emitter — they are manual/external</h4>
+  <div class="ev"><code>NETBOX_ASSIGNMENT_SIGNAL</code> <span class="cite">…agent-decisions.md:107</span>, <code>REALLOCATION_INITIATED</code>, and <code>EXIT_TRIGGERED_RETRIEVAL</code> are subscribed and handled in ACS but emitted by <b>no service</b> in the repo (demand-allocation emits the differently-named <code>REASSIGNMENT_COMPLETE</code>, not <code>REALLOCATION_INITIATED</code>).</div>
+  <div class="impact"><b>Impact:</b> the entire <code>REASSIGNED</code> (CSP-to-CSP) path and ad-hoc exit recalls fire only when something/someone posts the event by hand. The state machine has live edges that no automated producer drives.</div>
+</div>
+
+<div class="gap">
+  <span class="sev med">MED</span><span class="gid">GAP-7</span>
+  <h4>Device ordering has no financial gate</h4>
+  <div class="ev"><code>createOrder</code> checks only "one active order per CSP" + a device cap <span class="cite">DeviceOrderServiceImpl.java:43-102</span>. No security-deposit minimum, no wallet check; <code>sdAbsoluteMinimum</code> / order-eligibility appears in zero files in Payment-Settlement. The only ₹20k SD-floor logic lives in the (not-yet-live) device-order-eligibility spec.</div>
+  <div class="impact"><b>Impact:</b> a CSP can order stock with no deposit on file; the financial guardrail is documented but not enforced in V1.</div>
+</div>
+
+<div class="gap">
+  <span class="sev med">MED</span><span class="gid">GAP-8</span>
+  <h4>Two disjoint device-creation paths, one mints synthetic IDs</h4>
+  <div class="ev">Order <code>FULFILLED</code> mints custody rows keyed by <code>UUID.randomUUID()</code> <span class="cite">DeviceOrderServiceImpl.java:153-175</span>; <code>NETBOX_ASSIGNMENT_SIGNAL</code> creates rows keyed by a real external <code>device_id</code> <span class="cite">InboundEventProcessingServiceImpl.java:161-195</span>. The two paths are not reconciled in code.</div>
+  <div class="impact"><b>Impact:</b> custody rows created at order-receipt are not tied to physical hardware serials, so a CSP's "with me" count can diverge from real netboxes until/unless an assignment signal reconciles them.</div>
+</div>
+
+<!-- ============ 8 PROPOSED ============ -->
+<h2 id="proposed"><span class="n">8</span>Live vs Proposed — what the three change specs would add</h2>
+<p>Kept deliberately out of the V1 machine above. This is <b>not live</b>; it is the target state from the referenced specs, shown only so the reader can see which gaps the proposals already intend to close — and which they don't.</p>
+
+<table>
+<thead><tr><th>Concept</th><th>V1 (live, this doc)</th><th>Proposed (specs)</th></tr></thead>
+<tbody>
+<tr><td>State count</td><td>10 states</td><td>+ <code>PENDING_CSP_RECEIPT</code>, <code>RECOVERY_HOLD</code>, <code>WIOM_INVENTORY</code> (warehouse-return / re-dispatch specs)</td></tr>
+<tr><td>"Customer recharged, wants to continue"</td><td><b>No path back to DEPLOYED</b> from CUSTOMER_RECOVERY_PENDING; only →IDLE or (manual) →LOST</td><td><code>T_REC_6</code> rescue edge CUSTOMER_RECOVERY_PENDING → DEPLOYED (rescue-intent spec)</td></tr>
+<tr><td>Return acceptance</td><td>ACS accepts return only from RETRIEVAL_PENDING; other states rejected with an exception that is never recorded</td><td>Accept from <b>any</b> state → RETURNED; persist anomaly flags; add CSP/3PL source (device-warehouse-return)</td></tr>
+<tr><td>Re-dispatch after return</td><td>Impossible — RETURNED is terminal, <code>netbox_custody</code> PK = device_id → re-insert collides</td><td>RETURNED → WIOM_INVENTORY → PENDING_CSP_RECEIPT via an immutable custody-episode log (device-redispatch)</td></tr>
+<tr><td>Exposure</td><td>Does not exist (Gap ⑤)</td><td>CSP_EXPOSURE_CHANGED +1/−1 invariants assumed throughout the specs</td></tr>
+<tr><td>Loss/damage liability</td><td>Computed, booked ₹0 (Gap ②)</td><td>"liability stands, no reversal on return"; device_id added to every ledger entry</td></tr>
+</tbody>
+</table>
+<p class="nb">Reference specs: <a href="../device-warehouse-return/device-warehouse-return_change_spec.html">device-warehouse-return</a> · <a href="../device-redispatch/device-redispatch_change_spec.html">device-redispatch</a> · <a href="../device-redispatch/custody-episode-log_design.html">custody-episode-log design</a>.</p>
+
+<!-- ============ 9 PARAMS ============ -->
+<h2 id="params"><span class="n">9</span>Parameters &amp; key sources</h2>
+<table>
+<thead><tr><th>Param</th><th>Value</th><th>Meaning</th><th>Citation</th></tr></thead>
+<tbody>
+<tr><td><code>idleThresholdDays</code> (P19)</td><td>30</td><td>Idle days before carry fee accrues</td><td><span class="cite">AssetCustodyParameters.java:18</span></td></tr>
+<tr><td><code>carryFeeHardCap</code></td><td>1000</td><td>Max carry-fee units per device</td><td><span class="cite">AssetCustodyParameters.java:21</span></td></tr>
+<tr><td><code>deviceValue</code></td><td>20000</td><td>Device value used in write-off liability</td><td><span class="cite">AssetCustodyParameters.java:24</span></td></tr>
+<tr><td><code>writeOffWindowDays</code></td><td>90</td><td>RETRIEVAL_PENDING → auto write-off</td><td><span class="cite">AssetCustodyParameters.java:27</span></td></tr>
+<tr><td><code>maxRetrievalWindowDays</code> (P20)</td><td>30</td><td>RETRIEVAL_PENDING → auto LOST</td><td><span class="cite">AssetCustodyParameters.java:36</span></td></tr>
+<tr><td><code>dispatchConfirmationWindowHours</code></td><td>72</td><td>DISPATCHED → auto REJECTED</td><td><span class="cite">AssetCustodyParameters.java:33</span></td></tr>
+<tr><td><code>recoveryWindowSeconds</code> / <code>recoveryMaxWindowSeconds</code></td><td>604800 / 2592000</td><td>7d / 30d recovery windows — <b>read by no code</b></td><td><span class="cite x">AssetCustodyParameters.java:50-54</span></td></tr>
+<tr><td><code>defaultDeviceSecurityPaise</code> (PAY)</td><td>20000 paise = ₹200</td><td>Fallback per-device deposit credit — <b>not</b> an order gate</td><td><span class="cite">PaymentSettlementParameters.java:76-78 (PAY)</span></td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+  <h4>Method &amp; provenance</h4>
+  Built by reading the live <code>csp-asset-custody-service</code> source directly (state machine, guards, both application services, both state machines, controllers, params) and tracing every emitted event into <code>csp-compensation-service</code>, <code>csp-payment-settlement-service</code>, <code>csp-tas-service</code>, <code>csp-connection-lifecycle-service</code> and <code>csp-support-resolution-service</code>. All file:line citations are against <code>wiom-tech/csp-os-yaml @ prod</code>, commit <code>eddd75d7</code>. Paths in citations are relative to each service's <code>src/main/java/io/wiom/csp/&lt;service&gt;/</code> root unless suffixed with a service name. No behaviour is asserted that isn't backed by a citation; "no consumer / no writer" claims are backed by repo-wide grep returning zero matches.
+</div>
+
+<footer>
+  Wiom · Asset Custody OS V1 system map · authored 2026-06-29 · sources: <a href="https://github.com/wiom-tech/csp-os-yaml/tree/prod/services">csp-os-yaml @ prod</a>.
+  This is a descriptive system map, not a change spec — proposed behaviour is confined to §8.
+</footer>
+
+<script>
+  mermaid.initialize({startOnLoad:true, theme:'base', themeVariables:{
+    primaryColor:'#eef2f9', primaryBorderColor:'#1f3c6e', primaryTextColor:'#16181d',
+    lineColor:'#6b6b6b', fontSize:'13px'
+  }});
+</script>
+</main>
+</body>
+</html>

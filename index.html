@@ -34,6 +34,10 @@
   </header>
 
   <ul class="specs">
+    <li style="border-left-color:#b42318;"><a href="specs/acs-state-machine-v1/index.html">
+      <div class="spec-title">Asset Custody OS — Ground-Reality State Machine (V1: What Exists)</div>
+      <div class="spec-sub">System map · 2026-06-29 · <b>Not a change spec — descriptive.</b> The live device/netbox custody state machine rebuilt from <code>csp-os-yaml @ prod</code> (10 states, every transition labelled with the ground-level trigger, not the API name) · money downstream traced into Compensation + Payment-Settlement (carry fee, recovery payout, ₹200 return credit, write-off liability) · <b>8 cited gaps</b> incl. ① ≥₹20k loss liability computed but booked ₹0, ② churn-recovery has no auto-LOST timeout, ③ carry fee double-booked, ④ deactivate-and-return endpoint throws, ⑤ no CSP exposure system anywhere · every fact carries a file:line citation, no inferences · proposed behaviour fenced into §8</div>
+    </a></li>
     <li><a href="specs/customer-migration-existing-csp/customer-migration-existing-csp.html">
       <div class="spec-title">Customer Migration to Existing CSPs — Backend Seeding Approach</div>
       <div class="spec-sub">Draft v2.1 · 2026-06-27 · <b>Reviewer-facing go/no-go doc.</b> Leads with approach + thought process + the critical entities (5 datastores + ₹300 wallet credit), then the step-by-step sequence · seed re-assigned old-world customers as new ACTIVE connections under an existing CSP, backend-only · seed-and-fire (skip the install flow, write its result, fire the same events) · <b>v2.1: every SQL seed column reconciled against migration DDL + live rows</b> — CUSTODIED device has no connection_id (set later by device-bind + install-signal); exact required/leave-NULL/default per table · ₹300 payout = prod install path (direct-to-compensation) · csp_id = 6-char short code (prod-verified)</div>
