@@ -35,8 +35,8 @@
 
   <ul class="specs">
     <li style="border-left-color:#b42318;"><a href="specs/acs-state-machine-v1/index.html">
-      <div class="spec-title">Asset Custody OS — State Machine &amp; Scenario Gaps (review doc)</div>
-      <div class="spec-sub">v2 · 2026-06-29 · <b>Review doc, not a change spec.</b> The live device/netbox custody machine (10 states) drawn as a <b>current → target</b> pair, with the gaps drawn on the machine (red = missing transition, amber = needs modification, blue = spec-only state) · scenario-driven, not bug-hunting · 5 gaps: G1 state follows CSP ISP expiry not customer plan cycle · G2 CRP→DEPLOYED (recharge + continue) missing · G3 LOST→DEPLOYED missing · G4 no PUT-cancel without recharge · G5 no verified "CSP keeps device free" path · integrates the warehouse-return / re-dispatch / rescue-intent spec states</div>
+      <div class="spec-title">Asset Custody OS — State Machine, Specs &amp; Open Gaps (review doc)</div>
+      <div class="spec-sub">v3 · 2026-06-29 · <b>Review doc, not a change spec.</b> Custody machine in <b>3 layers</b>: current (live code) · designed (your warehouse-return / re-dispatch / rescue-intent specs, drawn in blue — incl. RETURNED reachable from any state + CRP→DEPLOYED T_REC_6 rescue) · open (covered by no spec). Separates "already solved" from "genuinely missing" so review focuses only on the 4 open items: OG1 state follows CSP ISP expiry not customer plan cycle (modify) · OG2 LOST→DEPLOYED redeploy a found device · OG3 cancel a PUT without recharging · OG4 verified "CSP keeps device free" path · gaps colour-coded on the machine</div>
     </a></li>
     <li><a href="specs/customer-migration-existing-csp/customer-migration-existing-csp.html">
       <div class="spec-title">Customer Migration to Existing CSPs — Backend Seeding Approach</div>
