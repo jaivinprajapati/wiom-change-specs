@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSP-Level Device-Ordering Gate — Ops manual flag on csp_exposure · Change Spec</title>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  nav.toc .back { display: block; margin-top: 24px; padding: 8px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; text-decoration: none; }
+  nav.toc .back:hover { color: var(--ink); }
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 30px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; color: white; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .guardbox { background: var(--guard-bg); border-left: 3px solid var(--guard); padding: 10px 14px; font-size: 13px; margin: 8px 0 14px; color: #7f1d1d; border-radius: 4px; }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em; background: var(--bg); padding: 0.08em 0.32em; border-radius: 3px; border: 1px solid var(--rule); }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin pre { background: none; border: none; padding: 0; margin: 0; font-size: inherit; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  pre.sql { background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height: 1.5; }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+  .wired-pill { font-weight: 700; padding: 2px 8px; border-radius: 3px; font-size: 11px; }
+  .wired-pill.yes { background: #e9f5ee; color: #0b6b3a; }
+  .wired-pill.no { background: #fee2e2; color: #b91c1c; }
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#workflow"><span class="ix">WF.</span>Workflow — gate-0 short-circuit</a></li>
+    <li><a href="#wired"><span class="ix">WR.</span>What's wired / what's not</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+  <a class="back" href="https://jaivinprajapati.github.io/wiom-change-specs/specs/device-order-eligibility/device-order-eligibility_change_spec.html">← Device Order Eligibility (parent spec)</a>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 · PM deliverable · Asset Custody × Payment &amp; Settlement</div>
+  <h1>CSP-Level Device-Ordering Gate — Ops manual flag on <code>csp_exposure</code></h1>
+  <p class="lede">A new, highest-priority gate in the device-order eligibility engine: a per-CSP <strong>manual flag</strong>, set by Ops, that decides whether device ordering is permitted for that CSP <em>at all</em>. There is <strong>no system logic</strong> behind the flag — it is a governance switch Ops toggles by hand. If the flag is <strong>ON</strong>, the engine runs the existing eligibility gates (Quality → Enforcement → Capacity → SD-floor → custody caps → prior-receipt) exactly as the <a href="https://jaivinprajapati.github.io/wiom-change-specs/specs/device-order-eligibility/device-order-eligibility_change_spec.html">Device Order Eligibility</a> spec defines. If the flag is <strong>OFF</strong>, the engine short-circuits immediately: device ordering is blocked, no further gate is evaluated, and the front end <strong>does not render the device-ordering card at all</strong> (not a disabled / "blocked" card — the card is absent). The flag is stored as a new column on the existing <strong><code>csp_exposure</code></strong> table in the Payment &amp; Settlement DB — the table already tied to the CSP's device-ordering exposure — and is read by the ACS eligibility engine as <strong>Gate&nbsp;0</strong>.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Jaivin Prajapati &nbsp;·&nbsp; <strong>Gate owner:</strong> Asset Custody (ACS) &nbsp;·&nbsp; <strong>Data owner:</strong> Payment &amp; Settlement &nbsp;·&nbsp; <strong>Tier:</strong> Light</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong>
+    <span class="badge light">Light</span> — A1, A2, A5, A8, B5 + Workflow + Wired-layers. <strong>The change in one line:</strong> add a per-CSP, Ops-set <code>device_ordering_allowed</code> column to the existing Payment <code>csp_exposure</code> table and read it as <strong>Gate&nbsp;0</strong> — a short-circuit ahead of every existing eligibility gate; flag OFF ⇒ hard block + FE hides the device-ordering card; flag ON ⇒ engine behaves exactly as the parent spec.
+    <br><strong>Rows:</strong> <span class="badge req">Required</span> — every row filled or marked N/A with a reason.
+    <br><strong>Decisions taken (PM):</strong> table = <strong>existing <code>csp_exposure</code> (Payment &amp; Settlement DB)</strong>; default = <strong>BLOCK</strong> (missing/false ⇒ ordering blocked); enforcement = <strong>eligibility read API only</strong> (order create/approve unchanged); scope = <strong>device ordering AND the connection verdict</strong>; Ops surface = <strong>direct DB / SQL runbook</strong> (no new endpoint).
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body is complete.</div>
+  <dl>
+    <dt>What is changing?</dt>     <dd>One new gate in the device-order eligibility engine. <strong>(1) New column on <code>csp_exposure</code></strong> (Payment &amp; Settlement DB): <code>device_ordering_allowed BOOLEAN NOT NULL DEFAULT false</code> + audit columns (<code>ordering_block_reason</code>, <code>ordering_updated_by</code>, <code>ordering_updated_at</code>). One value per CSP. <strong>(2) New "Gate 0"</strong> at the very top of the eligibility read: load the flag for the requesting CSP; if it is <code>false</code> (or no row) → return a hard block with a <strong>distinct verdict <code>ORDERING_DISABLED</code></strong> and <strong>stop</strong> — no Quality / Enforcement / Capacity / SD-floor / custody-cap evaluation. If <code>true</code> → fall through to the existing gates unchanged. <strong>(3) The same flag gates the connection verdict</strong> the engine produces on the assurance strip — flag OFF ⇒ CSP not eligible for new connections either. <strong>(4) FE behaviour:</strong> <code>ORDERING_DISABLED</code> renders <em>differently</em> from a normal hard-block — the front end <strong>hides the device-ordering card entirely</strong> instead of showing a card with a block reason.</dd>
+    <dt>What triggered it?</dt>    <dd>Ops needs a manual, per-CSP kill-switch for device ordering, independent of all the computed gates — to stop ordering for a CSP under review, in a paused region, or pending a commercial decision — without writing new system logic. Today there is no per-CSP "allowed to order at all" switch; the only per-CSP ordering hook in code (<code>DeviceOrderGuards.checkCspEligibilityForOrdering</code>) is unused and has no source of truth behind it.</dd>
+    <dt>Blast radius</dt>          <dd>Payment &amp; Settlement: new column on <code>csp_exposure</code> + migration. ACS: Gate-0 read at the top of the eligibility engine, new <code>ORDERING_DISABLED</code> verdict, connection-verdict gating. FE: the device-ordering card render path (gateway assurance strip + CSP App) gains one branch — hide on <code>ORDERING_DISABLED</code>. <strong>No new events. No change to order create / approve. No change to any other OS's gates</strong> (Gate 0 short-circuits before them).</dd>
+    <dt>Reversible?</dt>           <dd>Yes. Data-driven — set every CSP's flag to <code>true</code> and the engine behaves exactly as the parent spec. Code-side, Gate 0 can be feature-flagged off. The column + migration are additive.</dd>
+    <dt>Money / PII / migration?</dt><dd>No money. No PII. <strong>Yes — a data backfill is required</strong>: because the default is BLOCK, every currently-live CSP must be set <code>device_ordering_allowed = true</code> <em>before</em> Gate 0 is enabled, or device ordering halts fleet-wide. See §A5 + the runbook in §B5.</dd>
+    <dt>OS impact / sign-off?</dt> <dd>Payment &amp; Settlement OS: owns the <code>csp_exposure</code> table — add the column. Asset Custody OS: add Gate 0 to the provisioning-engine gate list. CSP App / Gateway: confirm the card-hide branch. Quality / Capacity / Enforcement / Demand-Allocation OS: no change (Gate 0 runs before them).</dd>
+    <dt>Tier</dt>                  <dd>Light</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: why, where the flag lives, what changes in the engine and on the front end.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, baseline.</div>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>CSP-level device-ordering gate — Ops manual flag on <code>csp_exposure</code> (Gate 0)</td></tr>
+    <tr><td>Gate owner (OS)</td><td>Asset Custody (ACS) — reads the flag as Gate 0 of the eligibility engine</td></tr>
+    <tr><td>Data owner (OS)</td><td>Payment &amp; Settlement — owns the <code>csp_exposure</code> table the flag lives on</td></tr>
+    <tr><td>Author (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft → For tech review</td></tr>
+    <tr><td>Version</td><td>v1.0 (2026-06-30)</td></tr>
+    <tr><td>Baseline (parent spec)</td><td><em>"Device Order Eligibility — Engine Changes"</em> (live: <code>jaivinprajapati.github.io/wiom-change-specs/specs/device-order-eligibility/</code>). After-state gate order: <strong>Quality &gt; Enforcement &gt; Capacity &gt; SD-floor &gt; Absolute custody cap &gt; Free-stock &gt; Prior-receipt</strong>; engine returns A (total eligible), B (orderable, floored {5,10,20}, ≤20), a connection verdict, and an SD top-up soft-blocker. This spec prepends Gate 0 and changes nothing else.</td></tr>
+    <tr><td>Baseline (code / schema)</td><td>ACS: <code>csp-asset-custody-service/.../api/DeviceOrderController.java</code> (<code>@RequestMapping("/api/asset-custody/orders")</code>), <code>application/impl/DeviceOrderServiceImpl.java</code>, <code>domain/service/DeviceOrderGuards.java</code> (existing unused <code>checkCspEligibilityForOrdering(boolean, cspId, reason)</code> → <code>CSP_ORDERING_INELIGIBLE</code>). Payment &amp; Settlement: <code>csp-payment-settlement-service</code>, Flyway dir <code>src/main/resources/db/migration/</code> (latest <code>V28__add_payout_columns_to_wallet_ledger_entries.sql</code>; next free = <strong><code>V29</code></strong>); <code>csp_id</code> is <code>VARCHAR</code> (<code>V22__change_csp_id_uuid_to_varchar.sql</code>); audit helpers from <code>V1__create_audit_function.sql</code>. <em>Note: the <code>csp_exposure</code> table is a prod Payment table not tracked in this repo checkout — see §A8 + evidence; engineering to confirm its exact existing columns.</em></td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Observable trigger, who is affected, cost of leaving it.</div>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong / missing today?</td><td>The eligibility engine has only <strong>computed</strong> gates — Quality, Enforcement, Capacity, SD-floor, custody caps, prior-receipt (per the parent spec). There is <strong>no manual, per-CSP "is this CSP allowed to order devices at all" switch</strong>. When Ops needs to stop a specific CSP from ordering — under commercial review, in a paused area, flagged for misuse, or not yet cleared — there is no lever short of changing one of the computed inputs (indirect, side-effects, may not even block ordering). The one per-CSP ordering hook in code, <code>DeviceOrderGuards.checkCspEligibilityForOrdering(eligible, cspId, reason)</code>, is referenced only in tests; nothing feeds its <code>eligible</code> argument in production.</td></tr>
+    <tr><td>Who experiences it?</td><td><strong>Ops / Asset Custody team:</strong> cannot turn device ordering off for a single CSP on demand. <strong>Wiom (risk):</strong> CSPs that should not be receiving devices can still order them — no gate expresses "Ops says no". <strong>CSPs:</strong> a CSP that should be blocked still sees the ordering card and can attempt an order, getting a confusing computed-gate failure instead of a clean "ordering is not available for you".</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>Every per-CSP ordering stop is a manual, ad-hoc engineering or data intervention with no single source of truth and no audit trail. Device-shipment risk for flagged CSPs stays open. The intended FE experience ("don't show the card") cannot be delivered because the backend has no signal distinguishing "Ops disabled ordering for this CSP" from the ordinary computed block reasons.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per atomic change: <em>what changes → before → after → why</em>.</div>
+  <table class="delta">
+    <thead><tr><th style="width:20%">What changes</th><th class="before" style="width:26%">Before</th><th class="after" style="width:30%">After</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>New flag column on the existing <code>csp_exposure</code> table (Payment &amp; Settlement DB), migration <code>V29</code></td>
+        <td>The <code>csp_exposure</code> table holds the CSP's device-ordering exposure state. It has no per-CSP ordering-permission flag.</td>
+        <td>Add to <code>csp_exposure</code>: <code>device_ordering_allowed BOOLEAN NOT NULL DEFAULT false</code> (default = BLOCK), plus audit-by-convention columns <code>ordering_block_reason VARCHAR(255)</code>, <code>ordering_updated_by VARCHAR(120)</code>, <code>ordering_updated_at TIMESTAMPTZ</code>. Migration <code>V29__add_device_ordering_allowed_to_csp_exposure.sql</code> in <code>csp-payment-settlement-service</code>. One value per CSP.</td>
+        <td>Reuses the table already tied to device-ordering exposure (no new table, no new ownership). <code>DEFAULT false</code> encodes default-BLOCK so "no decision recorded" fails safe (blocked), not open.</td>
+      </tr>
+      <tr>
+        <td>Engine reads the flag — exposed on the ordering exposure path</td>
+        <td>The eligibility engine already consults the CSP's exposure / SD-provisioning state from Payment when computing the SD ceiling.</td>
+        <td>The flag travels on the same exposure read the engine already makes to Payment (e.g. surfaced in the exposure/SD response the ACS engine consumes), so Gate 0 needs <strong>no new cross-service call</strong> — it reads <code>device_ordering_allowed</code> from the data already fetched for the SD path.</td>
+        <td>Keeps Gate 0 cheap and avoids a second round-trip; the flag rides the exposure read that already happens.</td>
+      </tr>
+      <tr>
+        <td>New <strong>Gate 0</strong> at the top of the eligibility engine (ACS)</td>
+        <td>The engine begins with the computed gates (parent spec: evaluate all gates, return the highest-priority reason). No manual pre-gate.</td>
+        <td>Before any computed gate runs, read <code>device_ordering_allowed</code> for the requesting CSP (<code>X-Csp-Id</code>). <strong>If <code>false</code> or no row</strong> → return device verdict <code>ORDERING_DISABLED</code> + connection verdict <code>ineligible</code>, and <strong>short-circuit</strong> (do not evaluate Quality / Enforcement / Capacity / SD-floor / custody caps / prior-receipt). <strong>If <code>true</code></strong> → fall through to the existing engine with zero behaviour change.</td>
+        <td>A manual kill-switch has no data to compute and must dominate every computed gate. Short-circuiting is cheaper and semantically correct: when Ops says "no", the reason is "Ops said no", not whichever computed gate also happens to fail.</td>
+      </tr>
+      <tr>
+        <td>New device verdict value <code>ORDERING_DISABLED</code> + FE-suppression signal in the eligibility response</td>
+        <td>Device verdict is one of: eligible (A, B) · soft-blocked (top-up payload) · hard-blocked (one priority reason). A hard-block is rendered by the FE as the ordering card <em>with</em> a reason chip.</td>
+        <td>Add a distinct terminal verdict <code>ORDERING_DISABLED</code> (e.g. <code>deviceOrder.verdict = ORDERING_DISABLED</code> with <code>deviceOrderingVisible = false</code>). It is <strong>not</strong> a normal hard-block: it instructs the FE to <strong>omit the device-ordering card entirely</strong>. Block-reason code <code>CSP_DEVICE_ORDERING_DISABLED</code> for logs/analytics.</td>
+        <td>The PM-required FE behaviour is "don't show the card at all", which differs from "show a blocked card". The backend must express the two distinctly so the FE can branch.</td>
+      </tr>
+      <tr>
+        <td>Connection verdict gated by the same flag</td>
+        <td>Parent spec: connection verdict = COMPLIANT quality AND (Σ zone caps − held) &gt; 0 AND absolute cap not hit.</td>
+        <td>Gate 0 also governs the connection verdict: flag OFF ⇒ connection verdict = <strong>ineligible</strong> (reason <code>CSP_DEVICE_ORDERING_DISABLED</code>), short-circuited ahead of the computed connection checks. Flag ON ⇒ connection verdict computed exactly as the parent spec.</td>
+        <td>PM decision: the flag is a whole-CSP supply switch — when ordering is off for a CSP, taking on new connections is off too. One switch, both verdicts.</td>
+      </tr>
+      <tr>
+        <td><strong>Pre-go-live backfill</strong> of the live fleet (consequence of default-BLOCK)</td>
+        <td>N/A — column does not exist yet.</td>
+        <td>Because the default is BLOCK, on deploy every CSP with <code>device_ordering_allowed = false</code> (the column default) is blocked. <strong>Before Gate 0 is enabled</strong>, set <code>device_ordering_allowed = true</code> for the currently-live fleet (Ops-provided CSP list; bulk update, see §B5). Any CSP not on that list stays blocked by design (default-deny). One-time data step, gated ahead of enabling Gate 0.</td>
+        <td>Without the backfill, default-BLOCK halts device ordering fleet-wide the moment Gate 0 ships. The backfill converts default-deny into "deny only those Ops hasn't cleared".</td>
+      </tr>
+      <tr>
+        <td>Ops control surface = <strong>direct DB / SQL runbook</strong></td>
+        <td>No surface.</td>
+        <td>No new API or admin screen. Ops flips the flag with parameterised SQL on <code>csp_exposure</code> (templates in §B5): an <em>allow</em> and a <em>block</em> update, both setting <code>ordering_block_reason</code> + <code>ordering_updated_by</code> + <code>ordering_updated_at = now()</code>. Audit by convention via those columns + the table's existing audit trigger.</td>
+        <td>PM decision — fastest to ship, no endpoint to build. The audit columns + trigger preserve a trail despite the manual workflow.</td>
+      </tr>
+      <tr>
+        <td>Order <em>create</em> / <em>approve</em> — no change (read-API-only enforcement)</td>
+        <td>Parent spec: create checks tier + no-active-order; approve copies requested→approved. Gate enforcement is on the eligibility read the FE runs before ordering.</td>
+        <td><strong>Unchanged.</strong> Gate 0 is enforced only in the eligibility read. <code>DeviceOrderController.createOrder</code> / <code>confirmDispatch</code> / <code>confirmReceipt</code> are not modified.</td>
+        <td>PM decision: read-API-only, consistent with the parent spec. <em>Residual</em> (accepted): a non-FE caller could still POST <code>createOrder</code> for a flag-OFF CSP — see the guard note below.</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="hint"><strong>Table decision — why <code>csp_exposure</code>, not a new table.</strong> The flag is a per-CSP property of the CSP's <em>device-ordering exposure</em>, which is exactly what the Payment &amp; Settlement <code>csp_exposure</code> table already represents and what the eligibility engine already reads when computing the SD ceiling. Putting the flag there means no new table, no new ownership boundary, and no extra cross-service call. (Considered and rejected: <code>csp_zone_exposures</code> in demand-allocation — wrong grain, per CSP×zone, and a computed-band state machine; a brand-new ACS table — an extra store and read for a value the exposure read already carries.)</div>
+  <div class="guardbox"><strong>Residual risk — read-API-only enforcement.</strong> Because enforcement is on the eligibility read only, the flag is a <em>UI-gating</em> control, not a server-side block at order submission. A non-FE caller (or a stale FE) could still create an order for a flag-OFF CSP. This matches the parent spec's stance ("order create/approve unchanged") and is accepted for v1. If a true server-side block is wanted later, feed this flag into the already-present <code>DeviceOrderGuards.checkCspEligibilityForOrdering</code> at <code>DeviceOrderServiceImpl.createOrder</code> — a small, isolated follow-up.</div>
+  <div class="hint"><strong>Why Gate 0 is an explicit exception to "evaluate all gates, return highest".</strong> The parent spec evaluates every computed gate and ranks the reasons so the CSP sees the most important computed constraint. Gate 0 deliberately does <em>not</em> participate: it has no computation, it changes the FE rendering (hide vs show-with-reason), and Ops intent should not be buried under a co-incident computed failure. So it runs first and returns on its own.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="workflow">
+  <h2><span class="num">WF.</span> Workflow — Gate-0 short-circuit <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> The engine gate order before/after, and the request sequence showing the FE card-hide.</div>
+
+  <h3>Engine gate order — before vs after</h3>
+  <div class="mermaid">
+flowchart TD
+    A0([CSP opens ordering surface]) --> G0{"Gate 0: csp_exposure.device_ordering_allowed = true?"}
+    G0 -- "false / no row" --> BLOCK["verdict = ORDERING_DISABLED<br/>connection = ineligible<br/>(short-circuit — no other gate runs)"]
+    G0 -- "true" --> REST["Existing engine (parent spec):<br/>Quality &gt; Enforcement &gt; Capacity &gt;<br/>SD-floor &gt; AbsCap &gt; FreeStock &gt; PriorReceipt"]
+    REST --> OUT(["Device verdict A,B / soft-block / hard-block<br/>+ connection verdict"])
+  </div>
+  <div class="hint"><strong>Read:</strong> Gate 0 is purely a data lookup with a binary outcome. The "true" branch is the entire existing engine, untouched. The "false" branch never reaches it.</div>
+
+  <h3>Request sequence — flag OFF (card hidden)</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant App as CSP App
+    participant GW as Gateway (assurance strip)
+    participant ACS as Asset Custody (eligibility engine)
+    participant PAY as Payment (csp_exposure)
+
+    App->>GW: open ordering surface / assurance strip
+    GW->>ACS: GET eligibility (X-Csp-Id)
+    ACS->>PAY: read exposure (incl. device_ordering_allowed)
+    PAY-->>ACS: device_ordering_allowed = false (or no row)
+    Note over ACS: Gate 0 short-circuits — no Quality/Capacity/SD/cap evaluation
+    ACS-->>GW: deviceOrder.verdict = ORDERING_DISABLED, deviceOrderingVisible = false, connection = ineligible
+    GW-->>App: eligibility payload (ordering suppressed)
+    Note over App: FE hides the device-ordering card entirely (NOT a disabled/blocked card)
+  </div>
+
+  <h3>Request sequence — flag ON (unchanged behaviour)</h3>
+  <div class="mermaid">
+sequenceDiagram
+    autonumber
+    participant App as CSP App
+    participant GW as Gateway (assurance strip)
+    participant ACS as Asset Custody (eligibility engine)
+    participant PAY as Payment (csp_exposure)
+
+    App->>GW: open ordering surface / assurance strip
+    GW->>ACS: GET eligibility (X-Csp-Id)
+    ACS->>PAY: read exposure (incl. device_ordering_allowed)
+    PAY-->>ACS: device_ordering_allowed = true
+    Note over ACS: Gate 0 passes — fall through to existing gates (parent spec)
+    ACS->>ACS: evaluate Quality, Enforcement, Capacity, SD-floor, custody caps, prior-receipt
+    ACS-->>GW: device verdict A,B / soft-block / hard-block + connection verdict
+    GW-->>App: eligibility payload
+    Note over App: FE renders the device-ordering card exactly as today
+  </div>
+
+  <h3>FE rendering — the key distinction</h3>
+  <table>
+    <thead><tr><th style="width:30%">Backend verdict</th><th>FE device-ordering card</th></tr></thead>
+    <tbody>
+      <tr><td><code>ORDERING_DISABLED</code> (flag OFF)</td><td><strong>Card not rendered at all.</strong> The ordering entry point is absent — the CSP sees no device-ordering card and no block message.</td></tr>
+      <tr><td>hard-block (computed reason)</td><td>Card rendered <strong>with</strong> a block-reason chip (Quality / Capacity / SD-floor / …) — unchanged from the parent spec.</td></tr>
+      <tr><td>soft-block (SD top-up)</td><td>Card rendered with the top-up CTA — unchanged.</td></tr>
+      <tr><td>eligible (A, B)</td><td>Card rendered with orderable quantity B + CTA — unchanged.</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="wired">
+  <h2><span class="num">WR.</span> What's wired, what's not <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Per-layer audit — what already exists vs what this spec must build.</div>
+  <table>
+    <thead><tr><th style="width:6%">#</th><th style="width:13%">Status</th><th style="width:26%">Layer</th><th>Where it is (or isn't)</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span class="wired-pill yes">Wired</span></td><td>Payment <code>csp_exposure</code> table + Flyway infra + audit helpers</td><td>Existing prod Payment table for CSP device-ordering exposure. Migration dir <code>csp-payment-settlement-service/.../db/migration/</code> (latest <code>V28</code>; next free <code>V29</code>). Audit helpers <code>audit_entity_changes()</code> / <code>update_updated_at_column()</code> exist (<code>V1</code>). <code>csp_id</code> already <code>VARCHAR</code> (<code>V22</code>). <em>(Exact existing columns to be confirmed by Payment eng — see §A8.)</em></td></tr>
+      <tr><td>2</td><td><span class="wired-pill yes">Wired</span></td><td>Engine ↔ Payment exposure read</td><td>The eligibility engine already reads the CSP's exposure / SD-provisioning state from Payment to compute the SD ceiling (parent spec). The flag rides this existing read — no new cross-service call.</td></tr>
+      <tr><td>3</td><td><span class="wired-pill yes">Wired</span></td><td>Per-CSP ordering-permission hook in ACS domain</td><td><code>DeviceOrderGuards.checkCspEligibilityForOrdering(boolean, String, String)</code> + <code>GuardFailureException.cspOrderingIneligible</code> → <code>CSP_ORDERING_INELIGIBLE</code>. Exists, unit-tested, no production caller. Available verbatim if create-time enforcement is later added (residual follow-up).</td></tr>
+      <tr><td>4</td><td><span class="wired-pill yes">Wired</span></td><td>Eligibility read engine + gateway assurance strip</td><td>The eligibility read (parent spec) and FE assurance strip (<code>csp-gateway-service</code>) are the integration point. Gate 0 is prepended to the engine; no new endpoint.</td></tr>
+      <tr><td>5</td><td><span class="wired-pill no">Missing</span></td><td>The flag column + persistence mapping</td><td>New <code>V29__add_device_ordering_allowed_to_csp_exposure.sql</code> (column + audit columns). Map the new fields on the Payment exposure entity and surface <code>device_ordering_allowed</code> on the exposure response the ACS engine consumes.</td></tr>
+      <tr><td>6</td><td><span class="wired-pill no">Missing</span></td><td>Gate 0 in the engine (short-circuit)</td><td>Read the flag at the very start of eligibility evaluation; on <code>false</code>/absent return <code>ORDERING_DISABLED</code> + connection ineligible and stop; on <code>true</code> fall through. Default-deny when absent.</td></tr>
+      <tr><td>7</td><td><span class="wired-pill no">Missing</span></td><td><code>ORDERING_DISABLED</code> verdict + FE-suppress field</td><td>New verdict value in the device-order verdict enum/response; new boolean <code>deviceOrderingVisible</code> in the eligibility response DTO; reason code <code>CSP_DEVICE_ORDERING_DISABLED</code>. Connection verdict carries the same reason.</td></tr>
+      <tr><td>8</td><td><span class="wired-pill no">Missing</span></td><td>FE card-hide branch</td><td>Gateway formatter + CSP App: on <code>ORDERING_DISABLED</code> / <code>deviceOrderingVisible = false</code>, <strong>omit</strong> the device-ordering card (distinct from the existing "render card with reason" branch for computed hard-blocks).</td></tr>
+      <tr><td>9</td><td><span class="wired-pill no">Missing</span></td><td>Pre-go-live backfill + Ops SQL runbook</td><td>Bulk set <code>device_ordering_allowed = true</code> for the live fleet before enabling Gate 0; allow/block update SQL templates for Ops (§B5).</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One row per OS plausibly in the blast radius.</div>
+  <table>
+    <thead><tr><th>OS</th><th>Impacted?</th><th>Notes</th><th>Owner (consulted)</th><th>Sign-off</th></tr></thead>
+    <tbody>
+      <tr><td>Payment &amp; Settlement OS</td><td>Yes — schema</td><td>Owns <code>csp_exposure</code>. Add <code>device_ordering_allowed</code> + audit columns (migration <code>V29</code>) and surface the flag on the exposure read the eligibility engine consumes. <strong>Confirm the table's exact existing columns and grain</strong> (assumed one row per CSP; if per-CSP×zone, the flag must remain CSP-level).</td><td>Payment &amp; Settlement OS owner</td><td>Pending</td></tr>
+      <tr><td>Asset Custody OS</td><td>Yes — amendment</td><td>Add <strong>Gate 0</strong> (manual per-CSP ordering-permission) to the provisioning-engine gate list, ahead of all computed gates, with short-circuit semantics; add the <code>ORDERING_DISABLED</code> verdict. Confirm default-BLOCK + read-API-only enforcement are acceptable.</td><td>Asset Custody OS owner</td><td>Pending</td></tr>
+      <tr><td>CSP App / Gateway spec</td><td>Verify</td><td>New FE branch: hide the device-ordering card entirely on <code>ORDERING_DISABLED</code> (not the existing "card + reason" hard-block rendering). Confirm the gateway assurance-strip formatter and the app honour <code>deviceOrderingVisible = false</code>.</td><td>CSP App / Gateway owner</td><td>Pending</td></tr>
+      <tr><td>Quality OS / Enforcement OS / Capacity &amp; Coverage OS</td><td>No</td><td>Their gates are evaluated only on the flag-ON path, unchanged. No new inputs, no new signals.</td><td>—</td><td>—</td></tr>
+      <tr><td>Demand-Allocation OS</td><td>No</td><td>Not touched: the flag is kept off <code>csp_zone_exposures</code>. No demand-allocation read/write.</td><td>—</td><td>—</td></tr>
+      <tr><td>ESR (Event Schema Registry)</td><td>No / N/A</td><td>No new events. Gate 0 is a synchronous read-time check; <code>ORDERING_DISABLED</code> is a response value, not an emitted event.</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <div class="guardbox"><strong>Open item for engineering.</strong> The <code>csp_exposure</code> table is a prod Payment table not present in the <code>csp-os-yaml</code> repo checkout (= <code>origin/prod</code> @ <code>eddd75d7</code>, 2026-05-05) — repo-visible <code>csp_exposure</code> artifacts are only <code>CSP_EXPOSURE_VIEW</code> (a read-only visibility projection in <code>csp-visibility-service</code>) and <code>csp_zone_exposures</code> (demand-allocation). Payment eng to confirm the real table name, columns, and grain before the <code>V29</code> migration is written.</div>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>Verification layer for engineering build and test, plus the Ops SQL runbook. LOGIC + EDGE only.</p>
+  <div class="author-note">Authored alongside engineering. Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given / When / Then blocks covering Gate-0 logic and edges. Negative checks first-class on every block.</div>
+
+  <h3>Schema (migration <code>V29</code>, Payment &amp; Settlement)</h3>
+  <pre class="sql">-- V29__add_device_ordering_allowed_to_csp_exposure.sql  (csp-payment-settlement-service)
+ALTER TABLE csp_exposure
+    ADD COLUMN device_ordering_allowed BOOLEAN NOT NULL DEFAULT false,  -- default = BLOCK
+    ADD COLUMN ordering_block_reason   VARCHAR(255),                    -- Ops note (audit-by-convention)
+    ADD COLUMN ordering_updated_by     VARCHAR(120),                    -- Ops actor
+    ADD COLUMN ordering_updated_at     TIMESTAMP WITH TIME ZONE;
+-- (existing audit / updated_at triggers on csp_exposure continue to apply)</pre>
+
+  <h3>Ops SQL runbook (direct-DB control surface)</h3>
+  <pre class="sql">-- BLOCK device ordering for a CSP
+UPDATE csp_exposure
+   SET device_ordering_allowed = false,
+       ordering_block_reason   = :reason,
+       ordering_updated_by     = :ops_user,
+       ordering_updated_at     = now()
+ WHERE csp_id = :csp_id;
+
+-- ALLOW device ordering for a CSP
+UPDATE csp_exposure
+   SET device_ordering_allowed = true,
+       ordering_block_reason   = :reason,
+       ordering_updated_by     = :ops_user,
+       ordering_updated_at     = now()
+ WHERE csp_id = :csp_id;
+
+-- PRE-GO-LIVE BACKFILL — set the live fleet to ALLOW before Gate 0 is enabled
+-- (:live_csp_ids = the Ops-provided list of currently-live CSPs)
+UPDATE csp_exposure
+   SET device_ordering_allowed = true,
+       ordering_block_reason   = 'go-live backfill',
+       ordering_updated_by     = 'ops_migration',
+       ordering_updated_at     = now()
+ WHERE csp_id = ANY(:live_csp_ids::varchar[]);</pre>
+  <div class="guardbox"><strong>Sequencing.</strong> Run the backfill <em>before</em> Gate 0 is enabled in production. Any CSP not in <code>:live_csp_ids</code> stays blocked by default-deny — that is intended.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin"><pre><span class="kw">LOGIC-1:</span> Flag OFF — engine short-circuits, FE hides the card
+  <em>Real-world:</em> Ops has blocked device ordering for this CSP.
+
+  <span class="kw">Given</span> csp_exposure.device_ordering_allowed = false for &lt;csp_X&gt;
+  <span class="kw">When</span>  &lt;csp_X&gt; opens the ordering surface (eligibility read with X-Csp-Id = csp_X)
+  <span class="kw">Then</span>  the device verdict = ORDERING_DISABLED
+  <span class="kw">And</span>   deviceOrderingVisible = false
+  <span class="kw">And</span>   the connection verdict = ineligible, reason = CSP_DEVICE_ORDERING_DISABLED
+  <span class="kw">And</span>   NO computed gate is evaluated (no Quality / Enforcement / Capacity / SD-floor / cap work)
+  <span class="kw">And</span>   the FE does NOT render the device-ordering card at all
+
+  <span class="kw">Verify:</span>
+    • <strong>Response</strong> — deviceOrder.verdict = 'ORDERING_DISABLED', deviceOrderingVisible = false;
+        connection.eligible = false, connection.reason = 'CSP_DEVICE_ORDERING_DISABLED'
+    • <strong>Short-circuit</strong> — engine logs/timers show no Quality, Capacity, SD-ceiling,
+        or custody-cap computation for this request
+    • <strong>FE</strong> — the device-ordering card element is absent from the rendered surface
+        (NOT present-but-disabled, NOT present-with-reason)
+    • <strong>Negative</strong> — response carries no computed hard-block reason (no QUALITY /
+        CAPACITY / SD_FLOOR reason); the only reason is CSP_DEVICE_ORDERING_DISABLED</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-2:</span> Flag ON — engine behaves exactly as the parent spec
+  <em>Real-world:</em> normal, cleared CSP.
+
+  <span class="kw">Given</span> csp_exposure.device_ordering_allowed = true for &lt;csp_Y&gt;
+  <span class="kw">When</span>  &lt;csp_Y&gt; opens the ordering surface
+  <span class="kw">Then</span>  Gate 0 passes and the engine evaluates the existing gates unchanged
+  <span class="kw">And</span>   the device verdict is one of eligible(A,B) / soft-block / hard-block(reason)
+  <span class="kw">And</span>   the FE renders the device-ordering card exactly as today
+
+  <span class="kw">Verify:</span>
+    • <strong>Response</strong> — verdict is NEVER ORDERING_DISABLED; deviceOrderingVisible = true
+    • <strong>Parity</strong> — for the same CSP state, the verdict/A/B match the parent-spec engine
+        output with Gate 0 absent (Gate 0 is a no-op when the flag is true)
+    • <strong>Negative</strong> — no CSP_DEVICE_ORDERING_DISABLED reason anywhere in the response</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">LOGIC-3:</span> No row / NULL exposure for the CSP — default-deny
+  <em>Real-world:</em> a CSP with no csp_exposure row yet, or never backfilled.
+
+  <span class="kw">Given</span> csp_exposure has NO row for &lt;csp_Z&gt; (or the flag column is unset)
+  <span class="kw">When</span>  &lt;csp_Z&gt; opens the ordering surface
+  <span class="kw">Then</span>  the engine treats the absent/false flag as device_ordering_allowed = false
+  <span class="kw">And</span>   the verdict = ORDERING_DISABLED (same as LOGIC-1)
+
+  <span class="kw">Verify:</span>
+    • <strong>Response</strong> — identical to LOGIC-1
+    • <strong>Negative</strong> — the engine does NOT fail open (never defaults to allowed when the
+        row/flag is absent) and does NOT error/500 on the missing row</pre></div>
+
+  <h3>Use / edge cases</h3>
+  <div class="gherkin"><pre><span class="kw">EDGE-1:</span> Backfill correctness
+  <span class="kw">Given</span> the pre-go-live backfill set the live fleet to device_ordering_allowed = true
+  <span class="kw">When</span>  a backfilled CSP and a non-backfilled CSP each open the ordering surface
+  <span class="kw">Then</span>  the backfilled CSP sees the card; the non-backfilled CSP does not
+  <span class="kw">Verify:</span>
+    • count(csp_exposure WHERE device_ordering_allowed = true) = size of the live-fleet list
+    • a CSP intentionally omitted from the list returns ORDERING_DISABLED</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-2:</span> Ops flips the flag — next read reflects it
+  <span class="kw">Given</span> &lt;csp_X&gt; is currently device_ordering_allowed = false (card hidden)
+  <span class="kw">When</span>  Ops runs the ALLOW update (sets true, ordering_block_reason, ordering_updated_by)
+  <span class="kw">And</span>   &lt;csp_X&gt; re-opens the ordering surface
+  <span class="kw">Then</span>  the card now appears and the engine evaluates the computed gates
+  <span class="kw">Verify:</span>
+    • ordering_updated_at advanced; reason + updated_by persisted; audit row written by the trigger
+    • no stale cache serves ORDERING_DISABLED after the flip (read reflects current DB state)</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-3:</span> Flag OFF dominates an otherwise-eligible CSP
+  <span class="kw">Given</span> &lt;csp_X&gt; would pass every computed gate (good SD, capacity, quality)
+  <span class="kw">And</span>   device_ordering_allowed = false
+  <span class="kw">When</span>  &lt;csp_X&gt; opens the ordering surface
+  <span class="kw">Then</span>  verdict = ORDERING_DISABLED (the manual flag overrides a clean computed pass)
+  <span class="kw">Verify:</span>
+    • response shows ORDERING_DISABLED, not eligible(A,B)
+    • Negative — no A/B numbers are surfaced</pre></div>
+
+  <div class="gherkin"><pre><span class="kw">EDGE-4:</span> Read-API-only — order create is NOT blocked (documented residual)
+  <span class="kw">Given</span> device_ordering_allowed = false for &lt;csp_X&gt;
+  <span class="kw">When</span>  a caller POSTs /api/asset-custody/orders directly for &lt;csp_X&gt;
+  <span class="kw">Then</span>  the order is still created (Gate 0 is enforced on the eligibility read only)
+  <span class="kw">Verify:</span>
+    • this is the accepted v1 behaviour (read-API-only scope) — documented in A5/residual,
+      NOT a defect. If a server-side block is later required, wire the flag into
+      DeviceOrderGuards.checkCspEligibilityForOrdering at DeviceOrderServiceImpl.createOrder.</pre></div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <thead><tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr></thead>
+    <tbody>
+      <tr><td class="cls">Business logic</td><td>A5 rows 3–5 (Gate 0, verdict, connection gating)</td><td>3 logic lines</td><td>LOGIC-1..3</td><td>All covered</td></tr>
+      <tr><td class="cls">Computation</td><td>—</td><td>N/A (binary flag, no math)</td><td>—</td><td>N/A</td></tr>
+      <tr><td class="cls">Invariants</td><td>Default-deny; single device verdict; flag dominates</td><td>covered in LOGIC-3 / EDGE-3</td><td>LOGIC-3, EDGE-3</td><td>All covered</td></tr>
+      <tr><td class="cls">Use / edge</td><td>A5 rows 6–8 (backfill, Ops SQL, read-only residual)</td><td>4 edges</td><td>EDGE-1..4</td><td>All covered</td></tr>
+      <tr><td class="cls">Regression</td><td>Flag-ON parity with parent spec (Gate 0 = no-op)</td><td>1</td><td>LOGIC-2</td><td>Covered</td></tr>
+    </tbody>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness checklist</h2>
+  <table>
+    <thead><tr><th class="tier-cell">Tier</th><th>Item</th><th class="check">Done</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge light">Light</span></td><td>Quick Check filled (incl. tier)</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Required sections (A1, A2, A5, A8, B5) filled</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Table decision (csp_exposure) recorded in A5</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>B5 coverage matrix reads "all covered" or "N/A" on every class</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Negative checks present on every Verify block</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Workflow diagrams (gate order + sequences) present</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Wired-layers table present</td><td class="check">✓</td></tr>
+      <tr><td><span class="badge light">Light</span></td><td>Every A8 "Yes / Verify" has sign-off Received</td><td class="check">Pending (Payment + ACS + CSP App/Gateway)</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><strong>Code + schema evidence (verified 2026-06-30, <code>csp-os-yaml @ prod</code> commit <code>eddd75d7</code> = <code>origin/prod</code>):</strong>
+    <ul>
+      <li><strong>Order surface (ACS):</strong> <code>csp-asset-custody-service/.../api/DeviceOrderController.java</code> — <code>@RequestMapping("/api/asset-custody/orders")</code>. Not modified by this spec.</li>
+      <li><strong>Existing per-CSP ordering hook (unused in prod):</strong> <code>domain/service/DeviceOrderGuards.java</code> — <code>checkCspEligibilityForOrdering(boolean, String, String)</code> + <code>GuardFailureException.cspOrderingIneligible</code> → <code>CSP_ORDERING_INELIGIBLE</code>; referenced only in <code>DeviceOrderGuardsTest.java</code>.</li>
+      <li><strong>Payment migration baseline:</strong> <code>csp-payment-settlement-service/.../db/migration/</code> latest <code>V28__add_payout_columns_to_wallet_ledger_entries.sql</code> → new <code>V29</code>. <code>csp_id</code> is <code>VARCHAR</code> (<code>V22__change_csp_id_uuid_to_varchar.sql</code>). Audit helpers from <code>V1__create_audit_function.sql</code>.</li>
+      <li><strong>csp_exposure in the repo:</strong> the writable table <code>csp_exposure</code> is <em>not</em> in this checkout's migrations; the flag is added to the existing prod Payment table (eng to confirm columns). Repo-visible <code>csp_exposure</code> artifacts are only <code>CSP_EXPOSURE_VIEW</code> (read-only projection, <code>csp-visibility-service</code>) and <code>csp_zone_exposures</code> (demand-allocation, per CSP×zone).</li>
+      <li><strong>Parent spec:</strong> "Device Order Eligibility — Engine Changes" (live). This spec prepends Gate 0 and changes nothing else in it.</li>
+    </ul>
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <thead><tr><th>Version</th><th>Date</th><th>Author</th><th>Section(s)</th><th>Change &amp; rationale</th><th>Approver</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-06-30</td><td>Jaivin Prajapati</td><td>All</td><td>Initial draft. Adds a per-CSP, Ops-set <code>device_ordering_allowed</code> flag as a new column on the existing Payment &amp; Settlement <code>csp_exposure</code> table (migration <code>V29</code>; default <code>false</code> = BLOCK), read by the ACS device-order eligibility engine as <strong>Gate 0</strong>. Flag OFF (or no row) ⇒ device verdict <code>ORDERING_DISABLED</code> + connection verdict ineligible + short-circuit (no computed gate runs) + FE <strong>hides the device-ordering card entirely</strong>; flag ON ⇒ engine behaves exactly as the parent Device Order Eligibility spec (Quality &gt; Enforcement &gt; Capacity &gt; SD-floor &gt; AbsCap &gt; FreeStock &gt; PriorReceipt; returns A/B + connection verdict + SD top-up soft-blocker). PM decisions captured: table = existing <code>csp_exposure</code> (Payment); default = BLOCK (requires pre-go-live live-fleet backfill to true); enforcement = eligibility read API only (order create/approve unchanged — residual non-FE-bypass risk documented); scope = device ordering AND connection verdict; Ops surface = direct DB / SQL runbook (allow/block updates + backfill in §B5), audit-by-convention via ordering_block_reason / ordering_updated_by + audit trigger. Open item: the <code>csp_exposure</code> table is not in the <code>csp-os-yaml</code> repo checkout — Payment eng to confirm exact columns and grain before the V29 migration.</td><td>Pending</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose', flowchart: { curve: 'basis' } });
+  }
+</script>
+</body>
+</html>
