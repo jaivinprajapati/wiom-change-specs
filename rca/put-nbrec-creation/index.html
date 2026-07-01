@@ -1,0 +1,104 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>PUT (nbrec) Creation RCA</title>
+<style>
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f6f9;color:#1f2430;margin:0;padding:26px}
+.wrap{max-width:1000px;margin:0 auto}
+h1{font-size:1.5rem;margin:0 0 4px}.sub{color:#667;font-size:.85rem;margin-bottom:18px}
+h2{font-size:1rem;margin:22px 0 10px;padding:7px 12px;background:#1f3a5f;color:#fff;border-radius:6px}
+h3{font-size:.9rem;margin:16px 0 6px;color:#1f3a5f}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.sc{flex:1;min-width:120px;background:#fff;border:1px solid #e1e6ee;border-radius:8px;padding:12px;text-align:center}
+.scn{font-size:1.5rem;font-weight:800;color:#1f3a5f}.scl{font-size:.72rem;color:#667;margin-top:2px}
+table{border-collapse:collapse;width:100%;font-size:.82rem;background:#fff;border:1px solid #e1e6ee;border-radius:8px;overflow:hidden;margin:6px 0}
+th{background:#eef3fb;text-align:left;padding:7px 10px;border-bottom:2px solid #d4e0f5;vertical-align:top}
+td{padding:6px 10px;border-bottom:1px solid #eef0f4;vertical-align:top}
+code{font-family:Consolas,monospace;font-size:.8rem;background:#f2f4f8;padding:1px 5px;border-radius:4px;color:#1a3a63}
+.flow{background:#fff;border:1px solid #e1e6ee;border-radius:8px;padding:12px 14px;font-family:Consolas,monospace;font-size:.78rem;color:#334;line-height:1.9}
+.tag{display:inline-block;padding:1px 8px;border-radius:12px;font-size:.72rem;font-weight:700}
+.cron{background:#e3f2fd;color:#0d47a1}.app{background:#e8f5e9;color:#1b5e20}.warn{background:#fff3e0;color:#7a4f00}
+.big{font-size:1.15rem;font-weight:800;color:#0d47a1}
+.note{font-size:.78rem;color:#667;margin-top:6px}
+.kv td:first-child{width:230px;color:#556;font-weight:600}
+</style></head><body><div class="wrap">
+<h1>PUT (netbox-pickup / nbrec) Creation &mdash; RCA</h1>
+<div class="sub">Population: <code>nbrec_execution_candidates</code> created &ge; 2026-06-18 (IST). Analysis on unique customers. Doubtful cases excluded where noted. Prepared for tech review.</div>
+
+<h2>1 &middot; Total PUTs created</h2>
+<div class="cards">
+<div class="sc"><div class="scn">3,579</div><div class="scl">PUT tickets (nbrec)</div></div>
+<div class="sc"><div class="scn">3,588</div><div class="scl">unique customers</div></div>
+<div class="sc"><div class="scn">100%</div><div class="scl">task_family = NETBOX_PICKUP</div></div>
+</div>
+
+<h2>2 &middot; Source &mdash; internal CSP vs outside &nbsp;<span class="tag cron" style="font-size:.68rem">tech detail</span></h2>
+<div class="cards">
+<div class="sc"><div class="scn">100%</div><div class="scl">triggered OUTSIDE CSP-OS<br>(i2e1 customer stack)</div></div>
+<div class="sc"><div class="scn">0%</div><div class="scl">CSP-world / real-time CSP event<br>(CSP-OS is only downstream)</div></div>
+</div>
+
+<h3>2a &middot; What CSP-OS actually receives (the ingress event)</h3>
+<table class="kv">
+<tr><td>Ingress endpoint (CLOS)</td><td><code>POST /events/customer-deactivation-request</code> &nbsp;(service <code>csp-connection-lifecycle-service</code>, <code>InboundEventController</code>)</td></tr>
+<tr><td>Event type</td><td><code>CUSTOMER_DEACTIVATION_REQUEST</code></td></tr>
+<tr><td>Handler / log</td><td><code>handleCustomerDeactivationRequest</code> &rarr; log &quot;Received CUSTOMER_DEACTIVATION_REQUEST: eventId=&hellip; customerId=&hellip;&quot;</td></tr>
+<tr><td>Payload fields</td><td><code>source_os = CUSTOMER_APP</code>, <code>source_surface = CUSTOMER_APP</code>, <code>deactivation_reason = USER_DEACTIVATION_REQUEST</code>, <code>customer_id</code></td></tr>
+<tr><td>Authenticated caller (MDC <code>actor</code>)</td><td><code>customer-service</code> &nbsp;&larr; <b>internal i2e1 service, NOT a device</b>. 100% of ~3.6k events carry this single actor.</td></tr>
+<tr><td>Transition</td><td>T7 <code>PAUSED&rarr;PENDING_DEACTIVATION</code> (2,381) or T6 <code>ACTIVE&rarr;PENDING_DEACTIVATION</code> (1,241)</td></tr>
+</table>
+<div class="note"><b>Key point for tech:</b> <code>source_surface=CUSTOMER_APP</code> is a <b>caller-supplied body field</b> on the <code>/events/&hellip;</code> ingress (service-to-service, gated only by a service token). It is <b>not</b> derived from an authenticated device session, so the DB label alone does not prove a real app tap.</div>
+
+<h3>2b &middot; Internal CSP-OS cascade (once received &mdash; all inside CSP-OS)</h3>
+<div class="flow">
+CLOS <code>CUSTOMER_DEACTIVATION_REQUEST</code> &rarr; emits <code>ClDeactivationInitiated</code> (source_type <code>USER_INITIATED</code>; outbox <code>eventType=CL_DEACTIVATION_INITIATED</code>)<br>
+&rarr; ACS <code>handleClDeactivationInitiated</code> &mdash; <b>T_REC_1</b> <code>DEPLOYED &rarr; CUSTOMER_RECOVERY_PENDING</code> &rarr; emits <code>DeviceEnteredCustomerRecovery</code><br>
+&rarr; TAS <code>onDeviceEnteredCustomerRecovery</code> &rarr; creates <code>nbrec_execution_candidates</code> (<code>task_family=NETBOX_PICKUP</code>, <code>reason_code=RECOVERY_TASK_ASSIGNED</code>, <code>state=PENDING_PICKUP</code>)
+</div>
+
+<h3>2c &middot; The REAL external trigger (Datadog trace evidence, i2e1 stack)</h3>
+<table>
+<tr><th>&nbsp;</th><th><span class="tag cron">CRON (scheduled)</span></th><th><span class="tag app">APP (customer tap)</span></th></tr>
+<tr><td>Trace root service</td><td><code>customer-java</code></td><td><code>customer-profile-service</code></td></tr>
+<tr><td>Root endpoint</td><td><code>POST /internal/events/scheduled/execute</code></td><td><code>POST /api/security-deposit</code> (<code>SecurityDepositController.createSecurityDeposit</code>, path <code>/plan-recommendations/api/security-deposit</code>)</td></tr>
+<tr><td>Root user-agent</td><td><code>python-urllib3/1.26.19</code> &nbsp;(Datadog device.category = <b>Bot</b>)</td><td><code>okhttp/4.12.0</code> &nbsp;(<b>mobile app</b> client)</td></tr>
+<tr><td>Workflow fired (customer-profile-service)</td><td><code>router_pickup_ticket_created</code> &nbsp;(source: <code>CUSTOMER_PROFILE_SERVICE</code>)</td><td><code>router_pickup_upi_submitted_pickup_requested</code></td></tr>
+<tr><td>Key downstream calls</td><td><code>/api/security-deposit/handle-initiate-router-recovery-event</code> &rarr; <code>/SecurityDeposit/CreateRouterPickupTicket</code> &rarr; msg-orchestrator <code>/v1/workflows/trigger</code></td><td>customer enters UPI &rarr; <code>createSecurityDeposit</code> &rarr; pickup requested</td></tr>
+<tr><td>Sample trace_id / customer</td><td><code>6a44bb88&hellip;1d441479</code> / cust <code>281749855018224</code>;<br><code>6a44b814&hellip;033a5767</code> / cust <code>281749855055579</code></td><td><code>6a44bc6c&hellip;67cd3100</code> / cust <code>274878062610</code></td></tr>
+</table>
+<div class="note">Infra (both): ECS cluster <code>i2e1-cluster</code>, ECR acct <code>780604660019</code>, hosts <code>customerv2.i2e1.in / user-registry.i2e1.in / payment.i2e1.in / customer-profile-service.i2e1.in</code>. No CSP-OS service originates the flow &mdash; CSP-OS (<code>csp-*</code>) appears only as the downstream recipient.</div>
+
+<h2>3 &middot; Cron vs App</h2>
+<table>
+<tr><th>Source</th><th>Marker (<code>SECURITY_DEPOSIT_ORDERS</code>)</th><th>Customers</th><th>Share</th></tr>
+<tr><td><span class="tag cron">CRON</span> scheduled router-recovery</td><td>deposit order, <b>UPI null</b></td><td><b>3,178</b></td><td>88.6%</td></tr>
+<tr><td><span class="tag app">APP</span> customer tap</td><td>deposit order, <b>UPI present</b></td><td><b>410</b></td><td>11.4%</td></tr>
+</table>
+<div class="note">Table: <code>PROD_DB.CUSTOMER_DB_CUSTOMER_PROFILE_SERVICE_PUBLIC.SECURITY_DEPOSIT_ORDERS</code> (key <code>CUSTOMER_ACCOUNT_ID</code>, field <code>UPI_ID</code>).<br>
+<b>Verification (all 3,588 customers checked):</b> APP <b>410/410</b> have an SDO row with non-null <code>UPI_ID</code> (100%). CRON <b>3,175/3,178</b> have an SDO row with <b>null</b> <code>UPI_ID</code>; <b>3</b> have <b>no SDO row</b> at all (bucketed to CRON as non-app). Split is defined by this marker; independent Datadog trace sample agrees within ~2% (~9% app).</div>
+
+<h2>4 &middot; App breakup (410)</h2>
+<div class="cards">
+<div class="sc"><div class="scn">410</div><div class="scl">UPI submitted by customer</div></div>
+<div class="sc"><div class="scn">3,585</div><div class="scl">had a deposit order (of 3,588)</div></div>
+<div class="sc"><div class="scn">132</div><div class="scl">status = ROUTER_PICKED_BUT_NO_UPI</div></div>
+</div>
+<div class="note">App = customer actively entered UPI to reclaim security deposit &rarr; pickup requested (workflow <code>router_pickup_upi_submitted_pickup_requested</code>).</div>
+
+<h2>5 &middot; Cron breakup (3,178)</h2>
+<table>
+<tr><th>Bucket</th><th>Customers</th><th>Share</th><th></th></tr>
+<tr><td><b>Sure-shot &mdash; ~15-day rule (gap 13&ndash;17d)</b></td><td><b>2,660</b></td><td>84%</td><td><span class="tag cron">kept</span></td></tr>
+<tr><td>Recharged AFTER pickup (expiry overwritten)</td><td>503</td><td>16%</td><td><span class="tag warn">doubtful &mdash; set aside</span></td></tr>
+<tr><td>Other</td><td>~15</td><td>0%</td><td><span class="tag warn">set aside</span></td></tr>
+</table>
+
+<h2>6 &middot; Cron 15-day hypothesis (R15) &mdash; CONFIRMED</h2>
+<div class="cards">
+<div class="sc"><div class="scn">14.8d</div><div class="scl">median gap</div></div>
+<div class="sc"><div class="scn">14.8&ndash;15.1d</div><div class="scl">p25 &ndash; p75</div></div>
+<div class="sc"><div class="scn">84%</div><div class="scl">of cron at ~15 days</div></div>
+</div>
+<div class="flow">GAP = nbrec_created (TAS) &minus; PLAN_EXPIRY_TIME (<code>T_WG_CUSTOMER</code>) &nbsp;&rarr;&nbsp; <span class="big">router pickup PUT created exactly ~15 days after plan expiry</span></div>
+<div class="note">Middle 50% inside 14.8&ndash;15.1 days = a hard-coded rule, not a trend. Customer-level data (TRUM <code>OTP_EXPIRY_TIME</code> + TAS nbrec creation) for the 2,660 sure-shot: <b>cron_15day_sureshot_customer_level.xlsx</b>.</div>
+
+<div class="sub" style="margin-top:22px;text-align:center">Doubtful cases (16% recharged-after + missing-data) excluded from the R15 conclusion.</div>
+</div></body></html>

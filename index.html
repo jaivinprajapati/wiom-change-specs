@@ -84,6 +84,14 @@
     </a></li>
   </ul>
 
+  <h2>RCA</h2>
+  <ul class="specs">
+    <li style="border-left-color:#0d47a1;"><a href="rca/put-nbrec-creation/index.html">
+      <div class="spec-title">Netbox-Pickup (PUT / nbrec) Creation — RCA</div>
+      <div class="spec-sub">2026-07-01 · Why ~3,579 netbox-pickup PUTs were created (≥18 Jun). 100% triggered <b>outside CSP-OS</b> (i2e1 customer stack), stamped <code>CUSTOMER_DEACTIVATION_REQUEST</code>/<code>source_surface=CUSTOMER_APP</code> · two real sources (Datadog trace evidence): <b>CRON</b> scheduled router-recovery (python-urllib3 → <code>/internal/events/scheduled/execute</code>, 88.6%) vs <b>APP</b> customer UPI tap (okhttp → <code>/api/security-deposit</code>, 11.4%) · verified in <code>SECURITY_DEPOSIT_ORDERS</code> (UPI present=app 410/410; UPI null=cron 3,175/3,178) · <b>R15 confirmed</b>: cron PUT created ~15 days after plan expiry (median 14.8d, p25–p75 14.8–15.1). Full ingress→cascade event chain + service/endpoint/user-agent/workflow names for tech review.</div>
+    </a></li>
+  </ul>
+
   <h2>Reference</h2>
   <ul class="aux">
     <li><a href="templates/Wiom_Change_Spec_Template_v1_0.html">Change Spec Template v1.0 (blank, with worked examples)</a></li>
