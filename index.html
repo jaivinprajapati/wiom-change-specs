@@ -34,6 +34,10 @@
   </header>
 
   <ul class="specs">
+    <li><a href="specs/srs-service-task-device-id/index.html">
+      <div class="spec-title">SRS Service Task — Expose Device / Netbox ID in Task API</div>
+      <div class="spec-sub">v0.1 Draft · 2026-07-07 · Light tier · Backend spec for a FE PR carrying 3 task-card changes — only one needs backend: the SRS (non-gateway) service-task API doesn't return the device / netbox ID, so the card can't show it · single additive field (device / netbox ID of the complaint's connection; null when none mapped) · install zone-name removal + NBREC device-ID display are FE-only (netbox_id already on /home/feed) · A6 guards the returned task set + existing fields · SRS/Service OS sign-off pending</div>
+    </a></li>
     <li style="border-left-color:#b42318;"><a href="specs/acs-state-machine-v1/index.html">
       <div class="spec-title">Asset Custody OS — State Machine, Specs &amp; Open Gaps (review doc)</div>
       <div class="spec-sub">v4 · 2026-06-29 · <b>Review doc, not a change spec.</b> Custody machine in <b>3 layers</b>: current (live code) · designed (your warehouse-return / re-dispatch / rescue-intent specs in blue — incl. RETURNED reachable from any state + CRP→DEPLOYED on recharge) · open (no spec). 4 open gaps colour-coded on the machine: Gap 1 state follows CSP ISP expiry not customer plan cycle (modify) · Gap 2 LOST→DEPLOYED when customer recharges · Gap 3 cancel a PUT without recharging · Gap 4 IDLE accept-all — a CSP can claim a device from any active state, but verification + cross-cutting actions (close NBREC, deactivate CLOS) must run, unlike the self-verifying warehouse RETURNED</div>
