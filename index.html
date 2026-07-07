@@ -34,6 +34,10 @@
   </header>
 
   <ul class="specs">
+    <li style="border-left-color:#b42318;"><a href="specs/lost-device-recharge-restore/index.html">
+      <div class="spec-title">Restore a LOST Device to DEPLOYED on Customer Recharge</div>
+      <div class="spec-sub">v0.1 Draft · 2026-07-07 · Full tier · A device can sit in <b>LOST</b> (or <b>WRITTEN_OFF</b>) while its customer's connection is live &amp; paying; a plain recharge reactivates the connection but never touches custody, so the device stays lost and CSP exposure is understated · <b>fix:</b> any recharge that reactivates the connection restores the still-mapped device to DEPLOYED, re-emits <code>CSP_EXPOSURE_CHANGED(+1)</code> (LOST decrements −1 via ACS-SD-21, so net-zero round-trip), and <b>keeps every penalty booked</b> (loss liability + Payment recoverable_due + write-off liability untouched) · reuses the existing <code>CL_CONNECTION_RESCUED</code> restore, adds the plain <code>CL_CONNECTION_ACTIVATED</code> trigger (device_id null today → resolve by connection_id) + a new <code>WRITTEN_OFF→DEPLOYED</code> reclaim edge (un-terminalise) · OS: ACS + CLOS behaviour, Payment/Compensation/TAS confirm · code-grounded in csp-os-yaml main</div>
+    </a></li>
     <li><a href="specs/srs-service-task-device-id/index.html">
       <div class="spec-title">SRS Service Task — Expose Device / Netbox ID in Task API</div>
       <div class="spec-sub">v0.1 Draft · 2026-07-07 · Light tier · Backend spec for a FE PR carrying 3 task-card changes — only one needs backend: the SRS (non-gateway) service-task API doesn't return the device / netbox ID, so the card can't show it · single additive field (device / netbox ID of the complaint's connection; null when none mapped) · install zone-name removal + NBREC device-ID display are FE-only (netbox_id already on /home/feed) · A6 guards the returned task set + existing fields · SRS/Service OS sign-off pending</div>

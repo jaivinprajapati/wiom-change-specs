@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Restore LOST Device to DEPLOYED on Recharge — Change Spec</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee; --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8; --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif; font-size:15px; line-height:1.55; color:var(--ink); background:var(--bg); }
+  .layout { display:grid; grid-template-columns:280px 1fr; min-height:100vh; }
+  nav.toc { position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto; padding:24px 18px; border-right:1px solid var(--rule); background:var(--surface); font-size:13px; }
+  nav.toc h2 { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top:0; }
+  nav.toc h2.qc { color:var(--quickcheck-ink); border-left:3px solid var(--quickcheck-rule); padding-left:8px; }
+  nav.toc h2.what { color:var(--what); border-left:3px solid var(--what); padding-left:8px; }
+  nav.toc h2.how { color:var(--how); border-left:3px solid var(--how); padding-left:8px; }
+  nav.toc h2.close { color:var(--muted); border-left:3px solid var(--muted); padding-left:8px; }
+  nav.toc ol { list-style:none; padding:0; margin:0; }
+  nav.toc li { margin:4px 0; }
+  nav.toc li a { text-decoration:none; color:var(--ink); display:flex; gap:8px; align-items:baseline; padding:4px 6px; border-radius:4px; font-size:12.5px; }
+  nav.toc li a:hover { background:var(--bg); }
+  nav.toc li a .ix { color:var(--muted); font-variant-numeric:tabular-nums; min-width:32px; font-weight:600; }
+  main { padding:40px 56px 120px; max-width:1000px; }
+  header.doc { border-bottom:2px solid var(--ink); padding-bottom:20px; margin-bottom:28px; }
+  header.doc .eyebrow { font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+  header.doc h1 { font-size:30px; margin:6px 0 8px; line-height:1.2; }
+  header.doc p.lede { color:var(--muted); font-size:15px; margin:0; max-width:78ch; }
+  header.doc .meta-row { display:flex; gap:24px; margin-top:14px; font-size:13px; color:var(--muted); flex-wrap:wrap; }
+  .quickcheck { margin:28px 0 24px; background:var(--quickcheck-bg); border:1px solid var(--quickcheck-rule); border-left:5px solid var(--quickcheck-rule); border-radius:6px; padding:18px 22px; }
+  .quickcheck h2 { margin:0 0 4px; font-size:13px; text-transform:uppercase; letter-spacing:.12em; color:var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size:11px; color:var(--quickcheck-ink); opacity:.9; margin-bottom:12px; }
+  .quickcheck dl { margin:0; display:grid; grid-template-columns:max-content 1fr; gap:6px 18px; font-size:14px; }
+  .quickcheck dt { font-weight:600; color:var(--quickcheck-ink); }
+  .quickcheck dd { margin:0; color:var(--ink); }
+  .callout { margin:22px 0; padding:14px 18px; border-radius:6px; background:#fff7ed; border:1px solid #fdba74; border-left:5px solid #ea580c; font-size:14px; }
+  .callout strong { color:#9a3412; }
+  .part-divider { margin:48px 0 28px; padding:22px 30px; border-radius:8px; color:white; }
+  .part-divider.what { background:var(--what); } .part-divider.how { background:var(--how); }
+  .part-divider .label { font-size:11px; letter-spacing:.18em; text-transform:uppercase; opacity:.8; }
+  .part-divider h2 { font-size:26px; margin:4px 0 6px; } .part-divider p { margin:0; font-size:14px; opacity:.92; max-width:74ch; }
+  section.spec { margin:34px 0; scroll-margin-top:24px; }
+  section.spec h2 { font-size:20px; margin:0 0 6px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  section.spec h2 .num { color:var(--muted); font-weight:600; font-variant-numeric:tabular-nums; }
+  section.spec h3 { font-size:15px; margin:16px 0 4px; }
+  .tier { font-size:10px; text-transform:uppercase; letter-spacing:.08em; padding:3px 8px; border-radius:3px; font-weight:600; }
+  .tier.core { background:var(--core-bg); color:var(--core); } .tier.cond { background:var(--cond-bg); color:var(--cond); }
+  .tier.what { background:var(--what-bg); color:var(--what); } .tier.how { background:var(--how-bg); color:var(--how); }
+  .tier.guard { background:var(--guard-bg); color:var(--guard); }
+  .expected { background:#f4f4f2; border-left:3px solid var(--ink); padding:9px 14px; font-size:13px; margin:10px 0 12px; color:#333; }
+  .hint { background:var(--hint-bg); border-left:3px solid var(--hint-rule); padding:8px 14px; font-size:13px; margin:8px 0 12px; color:var(--hint-ink); border-radius:4px; }
+  .na { background:#f1f3f5; border-left:3px solid var(--illustrative); padding:8px 14px; font-size:13px; margin:8px 0 12px; color:#444; border-radius:4px; }
+  table { width:100%; border-collapse:collapse; margin:8px 0 12px; font-size:13.5px; }
+  th, td { text-align:left; padding:8px 10px; border:1px solid var(--rule); vertical-align:top; }
+  th { background:var(--bg); font-weight:600; }
+  table.delta th.before { background:#f3f4f6; } table.delta th.after { background:var(--delta-bg); color:var(--delta-rule); }
+  code { background:#f1f3f5; padding:1px 5px; border-radius:3px; font-size:12.5px; }
+  .mermaid { background:var(--surface); border:1px solid var(--rule); border-radius:5px; padding:14px; margin:14px 0; text-align:center; }
+  .gherkin { background:var(--surface); border:1px solid var(--rule); border-left:3px solid var(--core); padding:12px 14px; margin:10px 0; font-size:13.5px; }
+  .gherkin.regression { border-left-color:var(--guard); } .gherkin.computation { border-left-color:var(--what); } .gherkin.invariant { border-left-color:var(--how); }
+  .gherkin .kw { font-weight:700; color:var(--core); }
+  .gherkin.regression .kw { color:var(--guard); } .gherkin.computation .kw { color:var(--what); } .gherkin.invariant .kw { color:var(--how); }
+  table.coverage td.cls { font-weight:600; }
+  hr.sect-end { border:none; border-top:1px dashed var(--rule); margin:28px 0 0; }
+  .diff-legend { font-size:12.5px; margin:14px 0 6px; color:var(--muted); }
+  .diff-legend .chip { display:inline-block; padding:2px 8px; border-radius:3px; font-size:11px; font-weight:600; margin-left:6px; border:1px solid; }
+  .chip.unchanged { background:#f4f4f2; color:#444; border-color:#cfcfca; }
+  .chip.added { background:#e9f5ee; color:#064e2b; border-color:#0b6b3a; }
+  .chip.changed { background:#fbf1dd; color:#5b3a00; border-color:#8a5a00; }
+  .flow-label { font-size:13px; font-weight:700; margin:18px 0 0; }
+  .flow-label.before { color:#7f1d1d; } .flow-label.after { color:#064e2b; }
+  footer.checklist { margin-top:52px; padding-top:28px; border-top:2px solid var(--ink); }
+  footer.checklist h2 { font-size:20px; margin-top:0; }
+  footer.checklist td.check { width:70px; text-align:center; font-family:monospace; }
+  footer.note { margin-top:20px; padding:14px; background:var(--bg); border-left:3px solid var(--ink); font-size:13px; }
+  @media print { nav.toc { display:none; } .layout { grid-template-columns:1fr; } main { padding:20px; max-width:none; } }
+  @media (max-width:900px) { .layout { grid-template-columns:1fr; } nav.toc { position:static; height:auto; border-right:none; border-bottom:1px solid var(--rule); } main { padding:24px; } }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired behaviour</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflows</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameters</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>UI / visibility impact</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v0.1 · PM → Engineering</div>
+  <h1>Restore a LOST Device to DEPLOYED on Customer Recharge</h1>
+  <p class="lede">A device can sit in <code>LOST</code> custody while its customer's connection is live and paying. When the customer recharges, the connection reactivates but the device stays <code>LOST</code> — so custody, exposure and inventory are wrong. This change restores such a device to <code>DEPLOYED</code> on recharge, <strong>while keeping every loss penalty booked</strong>. Touches multiple OS (Asset Custody, Connection Lifecycle, Payment, Compensation, TAS) and moves a device state machine — <strong>Full tier</strong>.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Jaivin Prajapati (PM) &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Full</span>
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage.</div>
+  <dl>
+    <dt>What is changing?</dt><dd>A recharge that reactivates a connection whose still-mapped device is <code>LOST</code>, <code>CUSTOMER_RECOVERY_PENDING</code>, or <code>WRITTEN_OFF</code> restores that device to <code>DEPLOYED</code>; loss / write-off penalties stay booked; exposure is re-incremented +1.</dd>
+    <dt>What triggered it?</dt><dd>Bug — ~3,124 devices stuck in <code>LOST</code> while serving live, paying connections (lost-device-rescue-plan).</dd>
+    <dt>Blast radius</dt><dd>ACS custody state machine + exposure; CLOS activation event payload; Payment/Compensation/TAS consumers (confirmation).</dd>
+    <dt>Reversible?</dt><dd>Yes — the restore is additive; disable the new trigger to roll back. No penalty is mutated, so nothing to un-wind.</dd>
+    <dt>Money / PII / migration?</dt><dd>Money: <strong>Y</strong> (exposure re-count; penalties must stay untouched — see A5/A8) · PII: N · Migration: Y (backfill the existing stuck LOST population — engineering runbook, out of scope here)</dd>
+    <dt>OS impact / sign-off?</dt><dd>ACS (Yes — incl. state-machine change to make <code>WRITTEN_OFF</code> reclaimable), CLOS (Yes); Payment, Compensation, TAS (Yes — confirm); RV, Enforcement (No). All sign-off <strong>Pending</strong>.</dd>
+    <dt>Tier</dt><dd>Full</dd>
+  </dl>
+</aside>
+
+<div class="callout">
+  <strong>What already exists, and the gap this closes.</strong>
+  A <code>LOST → DEPLOYED</code> reclaim (<code>T_LOSS_RECLAIM_DEPLOYED</code>, handler <code>handleClConnectionRescued</code>) is already live, driven by <code>CL_CONNECTION_RESCUED</code>; it keeps money untouched and re-emits exposure +1. But it fires <strong>only</strong> for the rescue-intent sub-case (connection in <code>PENDING_DEACTIVATION</code> + a <code>CAEO_RESCUE_INTENT</code>). It does <strong>not</strong> cover a <em>plain</em> recharge-activation (<code>CL_CONNECTION_ACTIVATED</code>) of a still-mapped LOST device — ACS does not subscribe to that event — nor a device that has since gone <code>WRITTEN_OFF</code>. This spec closes both gaps: any customer recharge that reactivates the connection restores a <code>LOST</code>, <code>CUSTOMER_RECOVERY_PENDING</code>, or <code>WRITTEN_OFF</code> device to <code>DEPLOYED</code>, with all penalties preserved.
+</div>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>Restore a still-mapped LOST device to DEPLOYED on customer recharge, with all money penalties preserved and exposure corrected.</p>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Restore a LOST device to DEPLOYED on customer recharge (loss penalty preserved)</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft</td></tr>
+    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Baseline</td><td>ACS state machine v1 (Gap 2, LOST→DEPLOYED on recharge) · <code>lost-device-lifecycle</code> spec · <code>csp-asset-custody-service/docs/plans/lost-device-rescue-plan.md</code></td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>A device marked <code>LOST</code> stays <code>LOST</code> even after its customer recharges and the connection goes back to ACTIVE. The device is physically serving a paying customer but is recorded as lost — so custody state, CSP exposure count and inventory are all wrong, and the device is invisible to normal operations.</td></tr>
+    <tr><td>Who experiences it?</td><td>The CSP (penalised and exposure-reduced for a device that is actually in service), Ops/inventory (false LOST count), and Wiom (~3,124 such devices identified).</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>Understated exposure/deposit adequacy, corrupt inventory, devices that can never be correctly retrieved/returned, and CSP disputes. The loss penalty is legitimate, but the <em>state</em> is not.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:34%">Trigger / condition</th><th>Observable behaviour today (production)</th></tr>
+    <tr><td>Customer recharges; connection is PAUSED; device is LOST and still mapped</td><td>RV validates → connection goes PAUSED→ACTIVE (<code>CL_CONNECTION_ACTIVATED</code> emitted). The device custody state is never touched — it stays <code>LOST</code>. Exposure stays at the reduced (−1) count. This is the bug.</td></tr>
+    <tr><td>Device marked LOST (any of 3 paths)</td><td>Exposure decremented −1 (<code>ACS-SD-21</code>); carry-fee accrual stopped; loss liability booked in Compensation (<code>COMP_DEVICE_LOSS_LIABILITY</code>) → Payment <code>recoverable_due</code>; pickup task set FAILED. The customer connection is <em>not</em> deactivated by the LOST transition — it remains mapped.</td></tr>
+    <tr><td>Device write-off timer elapses on a LOST device</td><td>Device → <code>WRITTEN_OFF</code>; full device-value liability booked (<code>DeviceWriteOffEvent</code> / <code>AssetLiabilitySettled</code>). <code>WRITTEN_OFF</code> is a <strong>terminal</strong> custody state today — no transition out of it exists, so a later recharge can never restore it.</td></tr>
+    <tr><td>Rescue-intent recharge: connection in PENDING_DEACTIVATION + a CAEO rescue-intent</td><td><code>T_RESCUE</code> emits <code>CL_CONNECTION_RESCUED</code>; ACS restores <code>LOST / CUSTOMER_RECOVERY_PENDING → DEPLOYED</code>, re-emits exposure +1, money untouched. This is the only recharge path that restores a device today, and it does not cover a plain PAUSED→ACTIVE recharge or a WRITTEN_OFF device.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:34%">Trigger / condition</th><th>Desired observable behaviour</th></tr>
+    <tr><td>Customer recharges and the connection reactivates, while a LOST or WRITTEN_OFF device is still mapped to that connection</td><td>The device is restored to <code>DEPLOYED</code> and re-bound to the connection. Exposure returns to its correct value (+1). Idle / carry-fee counters reset; no carry-fee back-charge for the LOST/written-off period. <code>WRITTEN_OFF</code> is handled exactly like <code>LOST</code>.</td></tr>
+    <tr><td>Penalties from the LOST / write-off event</td><td>Remain booked, unchanged — the Compensation loss liability, the Payment <code>recoverable_due</code> row, and any full device-value write-off liability are never reversed or clawed back by the restore.</td></tr>
+    <tr><td>Recharge of a connection whose device is not LOST/WRITTEN_OFF (DEPLOYED, or no device mapped)</td><td>No change — behaves exactly as today.</td></tr>
+    <tr><td>Device reassigned to another CSP, or mapped to a different connection</td><td>Not restored under the old mapping (see A7.2 edges).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>The atomic changes engineering builds and tests against.</strong> Rows 1–2 are the genuinely new work; row 3 extends the state machine; rows 4–5 reuse existing restore semantics on the new triggers; row 6 guards correctness.</div>
+  <table class="delta">
+    <tr><th style="width:22%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:26%">Why</th></tr>
+    <tr>
+      <td>ACS reacts to a plain recharge-activation</td>
+      <td>ACS subscribes only to <code>CL_CONNECTION_RESCUED</code>. A PAUSED→ACTIVE recharge emits <code>CL_CONNECTION_ACTIVATED</code>, which ACS ignores.</td>
+      <td>ACS also consumes the recharge-activation signal; on it, if a still-mapped device for that connection is <code>LOST</code>, <code>CUSTOMER_RECOVERY_PENDING</code>, or <code>WRITTEN_OFF</code>, it transitions the device to <code>DEPLOYED</code>.</td>
+      <td>Covers the manual-LOST, written-off, and plain-recharge populations the rescue-intent path misses.</td>
+    </tr>
+    <tr>
+      <td>Device linkage on the activation signal</td>
+      <td><code>CL_CONNECTION_ACTIVATED</code> carries <code>connection_id</code> but <code>device_id = null</code>.</td>
+      <td>ACS resolves the device by <code>connection_id</code> (current or last mapping), OR CLOS populates the device id on the event. Either makes the device findable.</td>
+      <td>ACS must locate the exact device tied to the recharging connection.</td>
+    </tr>
+    <tr>
+      <td>Make <code>WRITTEN_OFF</code> reclaimable (state machine)</td>
+      <td><code>WRITTEN_OFF</code> is a terminal state — no outbound transition; a recharge can never restore it.</td>
+      <td>Add a <code>WRITTEN_OFF → DEPLOYED</code> reclaim edge (soft-terminal, like <code>LOST</code>), fired by the same recharge restore.</td>
+      <td>A written-off device whose customer recharges is physically back in service; state must reflect it, handled identically to LOST.</td>
+    </tr>
+    <tr>
+      <td>Exposure on restore</td>
+      <td>Not re-incremented on a plain recharge (device stays LOST/WRITTEN_OFF → still −1).</td>
+      <td><code>CSP_EXPOSURE_CHANGED(+1)</code> re-emitted on <code>LOST → DEPLOYED</code> and <code>WRITTEN_OFF → DEPLOYED</code> (fresh <code>COUNT(*)</code>; Payment overwrites projection). No effect for a <code>CUSTOMER_RECOVERY_PENDING → DEPLOYED</code> restore (already counted).</td>
+      <td>LOST decremented −1 (and WRITTEN_OFF inherits that −1 from its prior LOST); restoring must give the count back. Net zero across the round-trip.</td>
+    </tr>
+    <tr>
+      <td>Money is untouched on restore</td>
+      <td>N/A (no restore for these paths).</td>
+      <td>The restore emits <strong>no</strong> Compensation or Payment money event. Loss liability, <code>recoverable_due</code>, and any full device-value write-off liability stay exactly as booked.</td>
+      <td>The penalty for having lost / written off the device is legitimate and must persist — only the state is corrected.</td>
+    </tr>
+    <tr>
+      <td>Idempotency of restore</td>
+      <td>N/A</td>
+      <td>Repeated recharges / renewals on an already-DEPLOYED device are a custody no-op — no second transition, no double exposure +1.</td>
+      <td>Recharges recur; the restore must fire once per restore, not per recharge.</td>
+    </tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <table>
+    <tr><th style="width:52%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr><td>The LOST / write-off penalties — Compensation loss liability, Payment <code>recoverable_due</code>, and any full device-value write-off liability — are never reversed, reduced, or clawed back by the restore.</td><td>The restore path touches exposure and could be mistaken for a full "un-loss"; the money must stay.</td></tr>
+    <tr><td>Exposure stays ACS-authoritative: fresh <code>COUNT(*)</code> from ACS; Payment overwrites its projection, never self-increments.</td><td>The new +1 trigger reuses the same recount mechanism; a manual ± would corrupt the count.</td></tr>
+    <tr><td>Recharge/activation of a connection with no device, or with a DEPLOYED device, behaves exactly as today (custody untouched).</td><td>ACS now listens to the activation event; it must be a no-op unless the device is LOST / CUSTOMER_RECOVERY_PENDING / WRITTEN_OFF.</td></tr>
+    <tr><td>All other terminal states (<code>RETURNED</code>, <code>DAMAGED</code>) stay terminal and are not reclaimable by recharge.</td><td>Only <code>WRITTEN_OFF</code> is being un-terminalised; the other terminals must not be loosened by accident.</td></tr>
+    <tr><td>The RV recharge gates and the CLOS PAUSED→ACTIVE transition are unchanged.</td><td>We add a downstream consumer, not a new gate — recharge validation must not regress.</td></tr>
+    <tr><td>No carry-fee is back-charged for the period the device spent in LOST.</td><td>Carry-fee accrual was OFF during LOST; the restore resets counters and must not retroactively bill.</td></tr>
+    <tr><td>The existing <code>CL_CONNECTION_RESCUED</code> → LOST→DEPLOYED rescue-intent behaviour is preserved unchanged.</td><td>We are adding a second trigger, not replacing the rescue-intent path.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases Affected <span class="tier what">WHAT</span></h2>
+  <h3>A7.1 Rules &amp; invariants</h3>
+  <table>
+    <tr><th style="width:35%">Rule / invariant</th><th>Statement</th></tr>
+    <tr><td>INV — exposure conservation</td><td>Across a full <code>LOST → DEPLOYED</code> round-trip the net exposure change is 0: exactly one −1 at LOST and exactly one +1 at restore, never more.</td></tr>
+    <tr><td>INV — penalty persistence</td><td>The device-loss liability, its <code>recoverable_due</code> row, and any write-off liability are unchanged by any restore; a restored device still owes the penalty.</td></tr>
+    <tr><td>INV — deploy requires a live mapping</td><td>A device is set to <code>DEPLOYED</code> by this change only when a live connection is mapped to it (current or last connection id equals the recharging connection).</td></tr>
+    <tr><td>RULE — restore scope</td><td>Restore applies only to a device whose state is <code>LOST</code>, <code>CUSTOMER_RECOVERY_PENDING</code>, or <code>WRITTEN_OFF</code> and which is still mapped to the recharging connection. All other states (incl. <code>RETURNED</code>, <code>DAMAGED</code>) → no-op.</td></tr>
+    <tr><td>RULE — money silence</td><td>The restore path emits no <code>COMP_*</code> and no payment event — ever.</td></tr>
+  </table>
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:38%">Edge / condition</th><th>Intended business outcome</th></tr>
+    <tr><td>Device already <code>WRITTEN_OFF</code> when the customer recharges</td><td>Restored to <code>DEPLOYED</code>, handled identically to LOST: exposure +1, connection re-bound, counters reset — and the full device-value write-off liability stays booked. Requires the new <code>WRITTEN_OFF → DEPLOYED</code> reclaim edge (A5 row 3).</td></tr>
+    <tr><td>Device was reassigned to a different CSP after going LOST/WRITTEN_OFF</td><td>Do not restore under the old CSP; the mapping no longer holds. No-op.</td></tr>
+    <tr><td>Connection recharges but the device is now mapped to a different connection</td><td>Restore only if the recharging connection matches the device's current/last mapping; otherwise no-op.</td></tr>
+    <tr><td>Multiple recharges / renewals in quick succession</td><td>First one restores LOST→DEPLOYED and emits +1; subsequent ones are custody no-ops (idempotent) — no double +1.</td></tr>
+    <tr><td>Manual <code>declareLoss</code> while the connection was ACTIVE/PAUSED (never deactivated), then a plain recharge</td><td>This is the population the rescue-intent path misses; the new activation trigger restores it. This edge is the core reason for the change.</td></tr>
+    <tr><td>Backfill of the ~3,124 already-stuck LOST devices whose connections are already live</td><td>One-off correction via engineering migration runbook (out of scope for this spec); same money-untouched + exposure-recount rules apply.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <table>
+    <tr><th>OS</th><th>Impacted?</th><th>Amendment (one line)</th><th>Amendment type</th><th>Owner (consulted)</th><th>Sign-off</th></tr>
+    <tr><td>Asset Custody OS (ACS)</td><td>Yes</td><td>New activation-signal consumer; <code>LOST / CUSTOMER_RECOVERY_PENDING / WRITTEN_OFF → DEPLOYED</code> on recharge; add <code>WRITTEN_OFF → DEPLOYED</code> reclaim edge (un-terminalise WRITTEN_OFF); re-emit exposure +1; money-silent.</td><td>Behaviour change</td><td>[Owner]</td><td>Pending</td></tr>
+    <tr><td>Connection Lifecycle OS (CLOS)</td><td>Yes</td><td>Recharge-activation event must carry device linkage (populate <code>device_id</code>, or guarantee <code>connection_id</code> is resolvable) so ACS can find the device.</td><td>Cross-OS contract</td><td>[Owner]</td><td>Pending</td></tr>
+    <tr><td>Payment &amp; Settlement OS</td><td>Yes (confirm)</td><td>Exposure +1 projection follows ACS recount; <code>recoverable_due</code> must NOT be touched by the restore.</td><td>Cross-OS contract</td><td>[Owner]</td><td>Pending</td></tr>
+    <tr><td>Compensation OS</td><td>Yes (confirm)</td><td>Loss liability stays booked; no clawback on restore — confirmation only.</td><td>Cross-OS contract</td><td>[Owner]</td><td>Pending</td></tr>
+    <tr><td>TAS OS</td><td>Yes (confirm)</td><td><code>DEVICE_RESCUED</code> closes/cancels the FAILED pickup candidate gracefully — confirmation only.</td><td>Cross-OS contract</td><td>[Owner]</td><td>Pending</td></tr>
+    <tr><td>Recharge Validation OS (RV)</td><td>No</td><td>Recharge gates unchanged.</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Enforcement OS</td><td>No</td><td>Does not consume custody/exposure/loss events; unaffected.</td><td>None</td><td>—</td><td>—</td></tr>
+  </table>
+  <div class="hint"><strong>Amendment types:</strong> <em>Behaviour change</em> · <em>Cross-OS contract</em> · <em>None</em>. A change ships only when every "Yes" sign-off is Received.</div>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>Business behaviour and outcomes engineering builds and verifies against. Architecture, event schemas and the backfill runbook are engineering's.</p>
+</div>
+
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflows — Before &amp; After <span class="tier cond">Conditional — flow changes</span></h2>
+  <div class="diff-legend"><strong>Colour key</strong>
+    <span class="chip unchanged">Unchanged</span>
+    <span class="chip added">Added / new path</span>
+    <span class="chip changed">Behaviour changed</span>
+  </div>
+
+  <p class="flow-label before">Before — recharge leaves the device LOST / WRITTEN_OFF</p>
+  <div class="mermaid">
+flowchart TD
+    R([Customer recharges]) --> RV[RV validates recharge]
+    RV --> CL[CLOS: PAUSED to ACTIVE]
+    CL --> EV["Emit CL_CONNECTION_ACTIVATED (device_id null)"]
+    EV --> X[ACS does not subscribe]
+    X --> L["Device stays LOST · exposure still -1"]
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class X,L changed;
+  </div>
+
+  <p class="flow-label after">After — recharge restores the device to DEPLOYED</p>
+  <div class="mermaid">
+flowchart TD
+    R([Customer recharges]) --> RV[RV validates recharge]
+    RV --> CL[CLOS: PAUSED to ACTIVE]
+    CL --> EV["Emit activation signal WITH device linkage"]
+    EV --> ACS{ACS: device for this connection LOST / RECOVERY_PENDING / WRITTEN_OFF?}
+    ACS -- No / DEPLOYED / no device --> NOOP[Custody no-op — unchanged]
+    ACS -- Yes --> DEP["Transition device to DEPLOYED · re-bind connection · reset idle+carry-fee"]
+    DEP --> EXP["Emit CSP_EXPOSURE_CHANGED +1 (if from LOST or WRITTEN_OFF)"]
+    DEP --> RES["Emit DEVICE_RESCUED — closes FAILED pickup"]
+    DEP --> KEEP["Loss liability + recoverable_due UNCHANGED"]
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class ACS,DEP,EXP,RES added;
+    class EV changed;
+    class KEEP added;
+  </div>
+  <div class="hint"><strong>Note:</strong> the <code>main</code> rescue-intent path (<code>CAEO_RESCUE_INTENT</code> → <code>CL_CONNECTION_RESCUED</code> → same ACS restore) is preserved as-is; this diagram adds the plain-recharge trigger alongside it.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> State Changes <span class="tier cond">Device custody state machine touched</span></h2>
+  <div class="mermaid">
+stateDiagram-v2
+    DEPLOYED --> CUSTOMER_RECOVERY_PENDING: connection deactivated
+    CUSTOMER_RECOVERY_PENDING --> LOST: recovery window elapsed
+    RETRIEVAL_PENDING --> LOST: retrieval window elapsed
+    DEPLOYED --> LOST: manual declareLoss
+    LOST --> WRITTEN_OFF: write-off timer elapsed
+    CUSTOMER_RECOVERY_PENDING --> DEPLOYED: recharge restore (exists)
+    LOST --> DEPLOYED: recharge restore + exposure +1 (NEW trigger)
+    WRITTEN_OFF --> DEPLOYED: recharge restore + exposure +1 (NEW edge + trigger)
+  </div>
+  <div class="hint"><strong>Edges added by this change:</strong> (1) the <code>LOST → DEPLOYED</code> transition fired by a <em>plain recharge-activation</em> (not only <code>CL_CONNECTION_RESCUED</code>) — the transition itself already exists, the new part is the additional trigger + exposure +1; (2) a brand-new <code>WRITTEN_OFF → DEPLOYED</code> reclaim edge (un-terminalises WRITTEN_OFF, made soft-terminal like LOST). No new states; <code>RETURNED</code> / <code>DAMAGED</code> remain terminal.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
+  <table>
+    <tr><th>Parameter / data</th><th>Old</th><th>New</th><th>Valid range / scope</th><th>Reason</th></tr>
+    <tr><td>Device linkage on the recharge-activation signal</td><td>device_id not populated</td><td>device_id present, or resolvable from connection_id</td><td>Per activation event</td><td>ACS must find the device to restore.</td></tr>
+    <tr><td>Exposure count (existing)</td><td>−1 while LOST</td><td>+1 on restore (recount)</td><td>Per CSP · ≥ 0</td><td>Correct the exposure the LOST event removed.</td></tr>
+  </table>
+  <div class="hint">No new configurable parameters. Reuses existing custody state, connection mapping, and the exposure recount. Field names / schemas / the backfill mechanism are engineering's.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> UI / Visibility Impact <span class="tier cond">Conditional</span></h2>
+  <table>
+    <tr><th>Surface</th><th>What now changes</th></tr>
+    <tr><td>Netbox / inventory custody views</td><td>A restored device shows <code>DEPLOYED</code> instead of <code>LOST</code>; the CSP's LOST count drops and exposure count reflects the restore.</td></tr>
+    <tr><td>CSP exposure / deposit-adequacy surface</td><td>Exposure returns to the correct value after restore.</td></tr>
+    <tr><td>CSP penalty / recoverable dues surface</td><td>Unchanged — the loss penalty remains visible and owed even after the device is restored.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+
+  <div class="gherkin">
+    <strong>LOGIC_01 (business logic · happy):</strong> Plain recharge restores a LOST device<br>
+    <span class="kw">Given</span> a device in <code>LOST</code> still mapped to a connection, and the connection is PAUSED<br>
+    <span class="kw">When</span> the customer recharges and the connection reactivates<br>
+    <span class="kw">Then</span> the device is transitioned to <code>DEPLOYED</code> and re-bound to the connection
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_02 (business logic · happy):</strong> Recovery-pending device restored<br>
+    <span class="kw">Given</span> a device in <code>CUSTOMER_RECOVERY_PENDING</code> mapped to a connection<br>
+    <span class="kw">When</span> the customer recharges<br>
+    <span class="kw">Then</span> the device is restored to <code>DEPLOYED</code> (and no exposure change, as that state was already counted)
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_03 (business logic · negative):</strong> Non-LOST recharge is a no-op<br>
+    <span class="kw">Given</span> a recharge for a connection whose device is <code>DEPLOYED</code>, or which has no device mapped<br>
+    <span class="kw">When</span> the connection reactivates<br>
+    <span class="kw">Then</span> no custody transition occurs and no exposure event is emitted
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_01 (computation · normal):</strong> Exposure +1 on LOST→DEPLOYED<br>
+    <span class="kw">Given</span> a CSP whose exposure was decremented by the device's LOST transition<br>
+    <span class="kw">When</span> the device is restored to <code>DEPLOYED</code><br>
+    <span class="kw">Then</span> a fresh recount is emitted that is exactly 1 higher than the LOST-time count
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_02 (computation · boundary / idempotency):</strong> No double +1<br>
+    <span class="kw">Given</span> a device just restored to <code>DEPLOYED</code> by a recharge<br>
+    <span class="kw">When</span> further recharges / renewals arrive for the same connection<br>
+    <span class="kw">Then</span> exposure is not incremented again and the device is not re-transitioned
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_01 (from A7.1):</strong> Exposure conservation<br>
+    <span class="kw">Given</span> any device that goes <code>LOST</code> then is restored to <code>DEPLOYED</code><br>
+    <span class="kw">Then</span> the net exposure change across the round-trip is 0 — exactly one −1 and one +1
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_02 (from A7.1):</strong> Penalty persistence<br>
+    <span class="kw">Given</span> a device restored from LOST or WRITTEN_OFF<br>
+    <span class="kw">Then</span> the loss liability, its <code>recoverable_due</code> row, and any write-off liability are byte-for-byte unchanged<br>
+    <span class="kw">And</span> no Compensation or Payment money event is emitted by the restore
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_04 (business logic · happy):</strong> Written-off device restored like LOST<br>
+    <span class="kw">Given</span> a device in <code>WRITTEN_OFF</code> still mapped to a connection<br>
+    <span class="kw">When</span> the customer recharges and the connection reactivates<br>
+    <span class="kw">Then</span> the device is transitioned <code>WRITTEN_OFF → DEPLOYED</code>, re-bound, exposure +1<br>
+    <span class="kw">And</span> the write-off liability and <code>recoverable_due</code> stay booked
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_05 (guard · from A6):</strong> Other terminals stay terminal<br>
+    <span class="kw">Given</span> a device in <code>RETURNED</code> or <code>DAMAGED</code><br>
+    <span class="kw">When</span> a recharge occurs on any associated connection<br>
+    <span class="kw">Then</span> the device is not restored — those states remain terminal
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_02 (edge · from A7.2):</strong> Mapping mismatch<br>
+    <span class="kw">Given</span> a LOST device whose current/last connection differs from the recharging connection<br>
+    <span class="kw">When</span> that connection recharges<br>
+    <span class="kw">Then</span> the device is not restored (no-op)
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_01 (guard · from A6):</strong> Loss penalty survives<br>
+    <span class="kw">Given</span> a booked device-loss liability and <code>recoverable_due</code><br>
+    <span class="kw">When</span> the device is restored to <code>DEPLOYED</code> on recharge<br>
+    <span class="kw">Then</span> both remain exactly as booked — no reversal, reduction or clawback
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_02 (guard · from A6):</strong> Recharge validation unchanged<br>
+    <span class="kw">Given</span> the RV gates and CLOS PAUSED→ACTIVE transition<br>
+    <span class="kw">When</span> any recharge is processed<br>
+    <span class="kw">Then</span> validation and connection-state behaviour are exactly as before the change
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_03 (guard · from A6):</strong> No carry-fee back-charge<br>
+    <span class="kw">Given</span> a device that spent time in LOST with carry-fee accrual OFF<br>
+    <span class="kw">When</span> it is restored to <code>DEPLOYED</code><br>
+    <span class="kw">Then</span> no carry-fee is charged for the LOST period; counters reset from zero
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_04 (guard · from A6):</strong> Rescue-intent path preserved<br>
+    <span class="kw">Given</span> the existing <code>CL_CONNECTION_RESCUED</code> restore on <code>main</code><br>
+    <span class="kw">When</span> a rescue-intent recharge occurs from <code>PENDING_DEACTIVATION</code><br>
+    <span class="kw">Then</span> it still restores the device exactly as before
+  </div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <tr><th style="width:22%">Coverage class</th><th>Source section(s)</th><th style="width:10%">Items</th><th style="width:10%">Blocks</th><th style="width:16%">All covered?</th></tr>
+    <tr><td class="cls">Business logic</td><td>A5 rows 1–2, 4–6 · A7.1 rules</td><td>6</td><td>4 LOGIC + rules in INV/EDGE</td><td>Y</td></tr>
+    <tr><td class="cls">Computation</td><td>A5 row 4 · B3 exposure</td><td>1</td><td>2 (normal + boundary/idempotency)</td><td>Y</td></tr>
+    <tr><td class="cls">Invariants</td><td>A7.1 INV ×3</td><td>3</td><td>2 explicit + EDGE_02 covers mapping INV</td><td>Y</td></tr>
+    <tr><td class="cls">Use &amp; edge cases</td><td>A7.2 edges · B1 branch · B2 transitions (incl. WRITTEN_OFF→DEPLOYED)</td><td>6</td><td>LOGIC_04 + EDGE_02 + covered in LOGIC/COMPUTE</td><td>Y</td></tr>
+    <tr><td class="cls">Regression</td><td>A6 guard lines ×7</td><td>7</td><td>5 (REGRESSION_01–05 cover the guards)</td><td>Y</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--muted);">Bias ~1 happy : 3 negative/edge/regression met (4 happy vs 11 negative/edge/invariant/regression). Every computation has a boundary block; every invariant an INVARIANT block; every A6 guard a REGRESSION block.</p>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <table>
+    <tr><th>#</th><th>Section</th><th>Tier</th><th class="check">Filled</th><th class="check">N/A</th></tr>
+    <tr><td>QC</td><td>Quick Check</td><td>Always</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A1–A2</td><td>Metadata · Why</td><td>Light</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A3–A4</td><td>Current · Desired</td><td>Full</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A5</td><td>The delta</td><td>Light</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A6</td><td>Must-not-change</td><td>Light</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edges</td><td>Full</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td>Gate</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B1–B2</td><td>Workflows · State changes</td><td>Cond.</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B3–B4</td><td>Data · UI/visibility</td><td>Full/Cond.</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria</td><td>Light</td><td class="check">[x]</td><td class="check">—</td></tr>
+  </table>
+  <div class="footer note">
+    <strong>Open before build:</strong> (1) All A8 sign-offs are Pending — required before shipping; ACS + CLOS owners are the two behaviour-change owners. (2) The one-off backfill of the already-stuck LOST/WRITTEN_OFF devices whose connections are already live is an engineering migration runbook — out of scope here; same money-untouched + exposure-recount rules apply.<br><br>
+    <strong>Code anchors:</strong> restore handler <code>csp-asset-custody-service/.../InboundEventProcessingServiceImpl.java</code> (<code>handleClConnectionRescued</code>, LOST→DEPLOYED + exposure +1 guarded to <code>fromStatus==LOST</code> — extend to the plain-recharge trigger and to WRITTEN_OFF); state machine <code>NetboxCustodyStateMachine.java</code> (<code>buildTransitions</code> / terminal set — add <code>WRITTEN_OFF → DEPLOYED</code>, un-terminalise WRITTEN_OFF); LOST writers + <code>CSP_EXPOSURE_CHANGED(-1)</code> at <code>CustodyStateServiceImpl.java</code> (declareLoss / retrieval-timeout / recovery-timeout) and write-off at <code>executeWriteOff</code>; exposure recount <code>NetboxCustodyRepository.countExposedDevicesByCspId</code>; plain recharge <code>csp-connection-lifecycle-service/.../InboundEventProcessingServiceImpl.java</code> (<code>handleRechargeConfirmed</code> → <code>CL_CONNECTION_ACTIVATED</code>, device_id null); loss liability <code>csp-compensation-service</code> → Payment <code>recoverable_due</code>.<br><br>
+    <strong>Out-of-scope:</strong> API/event schemas, the exact ACS subscription mechanism, the backfill migration, DB design — engineering owns these.
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top:44px;">
+  <h2>Changelog</h2>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:140px">Author</th><th style="width:90px">Section(s)</th><th>Change &amp; rationale</th></tr>
+    <tr><td>v0.1</td><td>2026-07-07</td><td>Jaivin Prajapati</td><td>All</td><td>Initial change spec — restore LOST / CUSTOMER_RECOVERY_PENDING / WRITTEN_OFF device to DEPLOYED on any customer recharge; penalties preserved; exposure +1. Grounded in csp-os-yaml <code>main</code> (production). WRITTEN_OFF handled like LOST (new reclaim edge).</td></tr>
+  </table>
+</section>
+
+<p style="margin-top:26px;font-size:12px;color:var(--muted);text-align:center;">Wiom Change Spec v1.0 · Full tier · LOST→DEPLOYED on recharge</p>
+
+</main>
+</div>
+<script>mermaid.initialize({ startOnLoad:true, theme:'default', flowchart:{ curve:'basis' } });</script>
+</body>
+</html>
