@@ -86,6 +86,10 @@
       <div class="spec-title">CSP Netbox Swap — Diagnosis-Driven Device Replacement</div>
       <div class="spec-sub">v0.14 Draft · 2026-06-22 · Forward-only CSP journey: gate-check → physical-handoff confirm (record + 20-min timer) → Remote swap → validation (new device up only) → always completes (validated / self-confirmed after 3 / auto-confirmed at 20 min); no reversal · Remote API + connection-validation-service contracts provided · fault = 3 device types (no FAULTY_DEVICE) · config link FE-only · blocker: OS amendments to be LOCKED · 32 test cases</div>
     </a></li>
+    <li style="border-left-color:#b91c1c;"><a href="specs/netbox-device-swap-v2-optical-diagnosis/netbox-device-swap-v2-optical-diagnosis_change_spec.html">
+      <div class="spec-title">CSP Netbox Swap V2 — Optical Diagnosis Gate (Swap-or-Not Pre-Check)</div>
+      <div class="spec-sub">v0.1 Draft · 2026-07-08 · builds on Swap v0.14 · adds a new pre-swap gate <b>G12</b> that reads the <b>old device's optical telemetry</b> and <b>hard-blocks</b> the swap when the fault looks like a line/network problem a swap can't fix: <code>avg &lt; −25 dBm</code>, <code>avg &gt; −8 dBm</code>, or <code>(max − min) &gt; 3 dBm</code> over valid readings · excludes null/0 <code>OPTICAL_AVG</code> + 0-ping rows · <b>fail-open</b> (skip &amp; allow) on no reliable data · old device only · no CSP override; fix line / contact Wiom support · runs for all 3 fault types · lookback 1 h · encodes the ops team's manual optical check · production reads a telemetry <b>optical-history API</b> (not Metabase) — <a href="specs/netbox-device-swap-v2-optical-diagnosis/netbox-swap-v2-optical-diagnosis-api-requirement.md">companion API-requirement doc</a> with real <code>HOURLY_DEVICE_PING_INFLUX</code> examples · 16 test cases</div>
+    </a></li>
     <li><a href="specs/lost-device-lifecycle/lost-device-lifecycle_change_spec.html">
       <div class="spec-title">Lost Device Lifecycle</div>
       <div class="spec-sub">See spec for status</div>

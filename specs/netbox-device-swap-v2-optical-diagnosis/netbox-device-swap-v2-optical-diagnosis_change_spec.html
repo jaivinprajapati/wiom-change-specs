@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — Change Spec — CSP Netbox Swap V2 (Optical Diagnosis Gate)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg);
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px;
+  }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .quickcheck {
+    margin: 28px 0 40px; background: var(--quickcheck-bg);
+    border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule);
+    border-radius: 6px; padding: 18px 22px;
+  }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.core { background: var(--core-bg); color: var(--core); }
+  .tier.cond { background: var(--cond-bg); color: var(--cond); }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .pending { background: var(--cond-bg); border-left: 3px solid var(--cond); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: #5b3a00; border-radius: 4px; font-weight: 600; }
+  .block { background: var(--guard-bg); border-left: 3px solid var(--guard); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: #7f1d1d; border-radius: 4px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+  code { background: #f1f3f5; padding: 1px 5px; border-radius: 3px; font-size: 12.5px; font-family: "SF Mono", Consolas, monospace; }
+  pre { background: #f1f3f5; border: 1px solid var(--rule); border-radius: 5px; padding: 12px; font-size: 12.5px; overflow-x: auto; font-family: "SF Mono", Consolas, monospace; }
+
+  .mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 14px; margin: 14px 0; text-align: center; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  .diff-legend { font-size: 12.5px; margin: 14px 0 6px; color: var(--muted); }
+  .diff-legend .chip { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 6px; border: 1px solid; }
+  .chip.unchanged { background: #f4f4f2; color: #444; border-color: #cfcfca; }
+  .chip.added { background: #e9f5ee; color: #064e2b; border-color: #0b6b3a; }
+  .chip.changed { background: #fbf1dd; color: #5b3a00; border-color: #8a5a00; }
+  .chip.removed { background: #fee2e2; color: #7f1d1d; border-color: #b91c1c; }
+  .flow-label { font-size: 13px; font-weight: 700; margin: 18px 0 0; }
+  .flow-label.before { color: #7f1d1d; }
+  .flow-label.after { color: #064e2b; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired behaviour</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflow (before/after)</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>The diagnosis logic (exact)</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data, API &amp; parameters</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>Worked examples (real data)</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>UI impact</a></li>
+    <li><a href="#b6"><span class="ix">B6.</span>Acceptance criteria (test cases)</a></li>
+  </ol>
+  <h2 class="close">Future &amp; Closeout</h2>
+  <ol>
+    <li><a href="#future"><span class="ix">F.</span>Future scope (noted, not specced)</a></li>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v0.1 · PM deliverable · builds on Netbox Swap v0.14</div>
+  <h1>CSP Netbox Swap V2 — Optical Diagnosis Gate (Swap-or-Not Pre-Check)</h1>
+  <p class="lede">A pre-swap diagnosis gate that decides whether a device swap will actually fix the customer's problem — or whether the fault is on the <em>optical / network</em> side, where a swap would waste a device and still leave the customer offline. Before the CSP is allowed to swap, the system reads the <strong>old device's optical telemetry</strong> and <strong>hard-blocks</strong> the swap when the signal indicates a fibre/line problem (too weak, too strong, or unstable). This mirrors the manual check the ops team ran while they owned swapping. It is a <strong>hard block</strong>, exactly like the existing gate checks (G1–G11) — if it blocks, the swap cannot proceed and the CSP is directed to fix the line / contact Wiom support. <strong>Fail-open:</strong> if there is no reliable optical data, the gate is skipped and the swap proceeds — we don't have enough evidence to blame the network. The production gate runs against a proper telemetry <strong>API</strong> (not Metabase/Snowflake); the exact data contract is the companion API-requirement doc.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Jaivin Prajapati &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Focused (single gate)</span>
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage.</div>
+  <dl>
+    <dt>What is changing?</dt><dd>A new <strong>Optical Diagnosis Gate</strong> (call it <strong>G12</strong>) is added to the existing pre-swap gate-check phase. It reads the <strong>old device's optical readings</strong> and <strong>hard-blocks</strong> the swap when the optical signal points to a network/line fault rather than a device fault: <strong>avg &lt; −25 dBm</strong>, <strong>avg &gt; −8 dBm</strong>, or <strong>(max − min) &gt; 3 dBm</strong> across valid readings. No valid data → <strong>skip &amp; allow</strong>.</dd>
+    <dt>What triggered it?</dt><dd>Swapping (v1) proceeds on any device-fault diagnosis. Ops, who ran swapping manually before, always eyeballed optical health first — a swap can't fix a weak/unstable fibre, so those cases were stopped. We are encoding that check into the flow.</dd>
+    <dt>Blast radius</dt><dd>The pre-swap gate-check phase only (SRS/ACS gate stage). A new synchronous dependency on a telemetry <strong>optical-history API</strong> (telemetry/remote team). One new FE block screen. No change to the swap execution, custody, validation-layer, or ticket-resolution machinery of v1.</dd>
+    <dt>Reversible?</dt><dd>Yes — the gate is parameter-driven; thresholds tunable and the whole gate can be disabled (treated as always-allow) via config.</dd>
+    <dt>Money / PII / migration?</dt><dd>N / N / N.</dd>
+    <dt>OS impact / sign-off?</dt><dd>SR OS (add G12 to the gate-check, surface the block) · ACS (may host the gate computation; consumes the check pre-commit) · Telemetry/Remote API (new optical-history endpoint — Rahul Nijhawan) · Design (block screen copy — Vikash PD). All Pending.</dd>
+    <dt>Tier</dt><dd>Focused — one gate — lead PM: Jaivin Prajapati.</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>Why we are adding this gate, what happens today, what should happen, and the precise delta. Stable across implementation revisions.</p>
+  <div class="author-note">Authored by the PM. Builds on the Netbox Swap v0.14 spec; only the pre-swap gate changes.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>CSP Netbox Swap V2 — Optical Diagnosis Gate (pre-swap block based on the old device's optical signal validity)</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft</td></tr>
+    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Parent spec</td><td><a href="../netbox-device-swap/netbox-device-swap_change_spec.html">CSP Netbox Swap — Diagnosis-Driven Device Replacement (v0.14)</a>. This spec adds a single gate (G12) to that flow's gate-check phase; everything else in v0.14 is unchanged.</td></tr>
+    <tr><td>Companion documents</td><td><strong>API requirement:</strong> <a href="./netbox-swap-v2-optical-diagnosis-api-requirement.md">netbox-swap-v2-optical-diagnosis-api-requirement.md</a> — the exact data contract Wiom needs from the telemetry/remote optical-history API, with real example payloads.</td></tr>
+    <tr><td>Source of truth (validation only, NOT production)</td><td>Metabase / Snowflake table <code>HOURLY_DEVICE_PING_INFLUX</code> (Database 113) — used to prove the logic and produce the worked examples in B4. <strong>Production will not read Metabase</strong>; it calls the telemetry API (A8 / companion doc).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>The v1 swap flow starts as soon as a CSP records a device-fault diagnosis and the custody/state gates (G1–G11) pass. Nothing checks whether the problem is <em>actually</em> the device. If the real fault is on the optical line (weak/strong/unstable fibre), a swap replaces a perfectly good device, consumes inventory, and the customer is <strong>still offline</strong> — the new device sees the same bad line.</td></tr>
+    <tr><td>Who experiences it?</td><td>Customers (a swap that doesn't restore internet); CSPs/technicians (a wasted site visit + a device that must be returned); Wiom inventory (devices cycled needlessly). Ops previously caught these by manually inspecting optical readings before allowing a swap.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>Avoidable device swaps on line faults: churned inventory, repeat tickets, and customer downtime that a swap can never resolve. The information to prevent it (optical telemetry) already exists.</td></tr>
+    <tr><td>Why a gate, and why hard?</td><td>Ops treated a bad optical reading as a stop, not a suggestion — a swap on a line fault is simply the wrong action. So the gate is a <strong>hard block</strong> in the same family as G1–G11: the CSP cannot proceed. The one relief valve is data quality — if the signal can't be read reliably, we don't block (fail-open, A4/A5).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected">Observable behaviour of the slice being changed — the pre-swap gate-check phase of the v1 flow.</div>
+  <table>
+    <tr><th style="width:30%">Trigger / condition</th><th>Observable behaviour today (v1)</th></tr>
+    <tr><td>CSP records a device-fault diagnosis and taps Netbox Swap</td><td>SRS persists the diagnosis and runs the gate-check phase.</td></tr>
+    <tr><td>Gate-check phase runs</td><td>Device-eligibility + state guards evaluate: old device DEPLOYED &amp; bound (G1/G4/G5), new device CUSTODIED/IDLE (G2), same CSP (G3), complaint ASSIGNED/ESCALATED (G7), diagnosis complete (G8), fault ∈ the 3 device types (G9), no in-progress swap on the device/ticket (G10/G11). <strong>No check consults device telemetry or optical health.</strong></td></tr>
+    <tr><td>All gates pass</td><td>The flow advances to the physical-handoff screen — the CSP is cleared to swap, regardless of whether the fault is a device fault or a line fault.</td></tr>
+    <tr><td>The real fault is on the optical line</td><td>Undetected. The swap proceeds; the customer remains offline on the new device; the ticket still moves toward resolution via the v1 validation/auto-confirm path.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected">One new gate in the same pre-swap phase. It runs after the custody/state gates and before physical-handoff. Hard block on a bad optical signal; fail-open on no data.</div>
+  <table>
+    <tr><th style="width:26%">Step / trigger</th><th>Desired observable behaviour</th></tr>
+    <tr><td>Gate-check phase — after G1–G11 pass</td><td>The system runs the <strong>Optical Diagnosis Gate (G12)</strong> on the <strong>old device</strong>: it fetches the old device's recent optical readings (via the telemetry API) and evaluates the block conditions (B2).</td></tr>
+    <tr><td>Optical signal is bad (any block condition met)</td><td><strong>Hard block.</strong> The swap does not proceed; no swap record, no reservation, no timer (exactly like a G1–G11 failure). The CSP is shown a <strong>block screen</strong> (FE copy placeholder) explaining that the issue looks like a line/network problem to be fixed first, and to contact Wiom support if needed.</td></tr>
+    <tr><td>CSP exits after a block and returns later</td><td>Nothing is persisted at a blocked gate. Re-entering the swap starts the flow <strong>from zero</strong> — all gates (including G12) re-run against fresh data. If the line has since been fixed and the optical signal is now healthy, G12 passes and the swap can proceed.</td></tr>
+    <tr><td>Optical signal is healthy (no block condition met)</td><td>G12 passes; the flow advances to the physical-handoff screen exactly as in v1.</td></tr>
+    <tr><td>No reliable optical data for the old device</td><td><strong>Skip &amp; allow.</strong> If the readings are all excluded (see B2) or none are returned, the gate is bypassed and the swap proceeds — there isn't enough evidence to attribute the fault to the network, so we don't stand in the CSP's way.</td></tr>
+    <tr><td>Fault type</td><td>The gate runs for <strong>every</strong> device fault type (DEVICE_HARDWARE / DEVICE_SOFTWARE / DEVICE_CONNECTIVITY) — the optical signal is a fact about the line regardless of what the CSP diagnosed.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected">One atomic change per row. Engineering builds against this; B6 verifies every row.</div>
+  <table class="delta">
+    <tr><th style="width:5%">#</th><th style="width:20%">What changes</th><th class="before">Before (v1)</th><th class="after">After (v2)</th><th style="width:20%">Why</th></tr>
+    <tr><td><strong>D1</strong></td><td>New gate <strong>G12 — Optical Diagnosis</strong> in the gate-check phase</td><td>Gate-check = G1–G11; no telemetry/optical check.</td><td>After G1–G11 pass, run <strong>G12</strong> on the <strong>old device</strong>. Pass/fail with no record — same contract as G1–G11. A G12 fail is a <strong>hard block</strong>.</td><td>Encode the ops manual optical check; stop swaps on line faults.</td></tr>
+    <tr><td><strong>D2</strong></td><td>Block conditions (on valid optical readings)</td><td>—</td><td>Block if <strong>any</strong>: <code>avg_optical &lt; −25</code> dBm · <code>avg_optical &gt; −8</code> dBm · <code>(max_optical − min_optical) &gt; 3</code> dBm. Values are the per-reading <code>OPTICAL_AVG</code> over the lookback window.</td><td>Weak / strong / unstable optical = line fault, not a device fault. Verbatim from the ops logic.</td></tr>
+    <tr><td><strong>D3</strong></td><td>Valid-reading filter (exclusions)</td><td>—</td><td>Use only valid optical telemetry. <strong>Exclude</strong> a reading if <code>OPTICAL_AVG</code> is <strong>null</strong> or <strong>0</strong>, or if <code>TOTAL_PINGS_RECEIVED = 0</code>. Compute avg/max/min on what remains.</td><td>Reliable readings only; <code>0</code>/null optical is a missing-data sentinel, not a real reading.</td></tr>
+    <tr><td><strong>D4</strong></td><td>Fail-open on no data</td><td>—</td><td>If the filter leaves <strong>zero</strong> valid readings (or the API returns none), <strong>skip G12 and allow</strong> the swap. Record that the gate was bypassed for lack of reliable data.</td><td>Insufficient evidence to blame the network; don't block a possibly-genuine device fault. (Aligned across ops + product.)</td></tr>
+    <tr><td><strong>D5</strong></td><td>Hard block — no override</td><td>—</td><td>A G12 block cannot be overridden by the CSP (unlike the post-swap self-confirm). The CSP fixes the line / contacts Wiom support. Exiting and returning restarts the flow from zero (no persisted block state).</td><td>Ops treated a bad optical reading as a stop; a swap can't fix the line.</td></tr>
+    <tr><td><strong>D6</strong></td><td>Old device only</td><td>—</td><td>G12 evaluates the <strong>old_device_id</strong> only. The new device is not read here (it is validated post-swap by the v1 validation layer).</td><td>The question is whether the <em>current</em> line/device shows a network fault.</td></tr>
+    <tr><td><strong>D7</strong></td><td>Telemetry <strong>optical-history API</strong> (new dependency)</td><td>—</td><td>Production reads optical history from a telemetry/remote <strong>API</strong>, not Metabase/Snowflake. Wiom must receive <strong>raw hourly readings</strong> so gate thresholds can be tuned independently later (compute location — Wiom vs telemetry — is the teams' call, provided Wiom retains the raw data). Contract: companion API doc.</td><td>System-grade source; keeps the gate logic Wiom-owned and tunable.</td></tr>
+    <tr><td><strong>D8</strong></td><td>Lookback window + thresholds parameterised</td><td>—</td><td>New params: <code>P_OPTICAL_LOOKBACK</code> = <strong>1 hour</strong>, <code>P_OPTICAL_MIN</code> = <strong>−25</strong>, <code>P_OPTICAL_MAX</code> = <strong>−8</strong>, <code>P_OPTICAL_MAX_RANGE</code> = <strong>3</strong>. Tunable without a code change; a master switch can disable G12 (always-allow).</td><td>Ops may retune; the window is fixed at 1 h for this spec.</td></tr>
+    <tr><td><strong>D9</strong></td><td>Block screen (FE)</td><td>—</td><td>A new gate-fail screen for the optical block: message = placeholder (design-owned) telling the CSP the fault looks like a line/network issue to fix first, with a contact-Wiom-support path. No swap CTA on this screen.</td><td>The CSP needs a clear next action after a hard block.</td></tr>
+  </table>
+  <div class="pending">⚠ Pending: (1) the telemetry <strong>optical-history API</strong> endpoint + contract (Rahul Nijhawan / telemetry-remote) per the companion doc; (2) the <strong>block-screen copy</strong> (Vikash PD / design); (3) SR/ACS OS amendments to place G12 in the gate-check phase, to be <strong>LOCKED</strong> before build.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:48%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr><td><strong>G-A</strong></td><td>Gates G1–G11 and their pass/fail contract (no record on fail) are unchanged. G12 is additive and runs only after G1–G11 pass.</td><td>G12 slots into the same phase; it must not alter the existing guards.</td></tr>
+    <tr><td><strong>G-B</strong></td><td>The v1 swap execution — physical-handoff, Remote connectivity swap, validation layer (new device up), custody commit, auto-confirm, ticket resolution — is untouched once G12 passes.</td><td>G12 is a pre-gate only; everything downstream is v1.</td></tr>
+    <tr><td><strong>G-C</strong></td><td>The post-swap validation layer still checks the <strong>new</strong> device up; G12 (old-device optical) does not replace or feed it.</td><td>Two distinct checks at two distinct times; they must not be conflated.</td></tr>
+    <tr><td><strong>G-D</strong></td><td>A G12 <strong>skip</strong> (no data) resolves to <strong>allow</strong> and is indistinguishable downstream from a v1 flow with no G12 — the swap proceeds exactly as v1.</td><td>Fail-open must never leave the swap in a half-blocked/limbo state.</td></tr>
+    <tr><td><strong>G-E</strong></td><td>Non-swap resolutions and normal installs are untouched; G12 fires only in the swap gate-check.</td><td>The new telemetry dependency must not leak into other flows.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases Affected <span class="tier what">WHAT</span></h2>
+  <h3>A7.1 Rules &amp; invariants (must always hold)</h3>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:30%">Rule / invariant</th><th>Statement</th></tr>
+    <tr><td><strong>I1</strong></td><td>INV — gate ordering</td><td>G12 runs only after G1–G11 pass, and always before the physical-handoff screen. No swap record exists when G12 evaluates.</td></tr>
+    <tr><td><strong>I2</strong></td><td>INV — old device only</td><td>G12 evaluates telemetry for the <code>old_device_id</code> only.</td></tr>
+    <tr><td><strong>I3</strong></td><td>INV — valid-data only</td><td>All statistics are computed exclusively on valid readings (D3 filter). A reading with null/0 <code>OPTICAL_AVG</code> or <code>TOTAL_PINGS_RECEIVED = 0</code> never contributes.</td></tr>
+    <tr><td><strong>I4</strong></td><td>INV — fail-open</td><td>Zero valid readings ⇒ allow. The gate never blocks on absent/unreliable data.</td></tr>
+    <tr><td><strong>I5</strong></td><td>INV — hard block, no state</td><td>A G12 block creates no record, reservation, or timer, and persists no block state; a later re-entry re-runs the gate from scratch.</td></tr>
+    <tr><td><strong>I6</strong></td><td>INV — fault-type agnostic</td><td>G12 runs identically for all three device fault types.</td></tr>
+    <tr><td><strong>R1</strong></td><td>RULE — block trigger</td><td>Block iff (avg &lt; <code>P_OPTICAL_MIN</code>) OR (avg &gt; <code>P_OPTICAL_MAX</code>) OR (max − min &gt; <code>P_OPTICAL_MAX_RANGE</code>), over valid readings in the lookback window.</td></tr>
+    <tr><td><strong>R2</strong></td><td>RULE — no CSP override</td><td>There is no self-confirm / attest path for a G12 block; the only way forward is a healthy re-read.</td></tr>
+  </table>
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:6%">#</th><th style="width:38%">Edge / condition</th><th>Intended business outcome</th></tr>
+    <tr><td><strong>E1</strong></td><td>API returns rows but all are excluded (null/0 optical, or 0 pings)</td><td>Zero valid readings ⇒ <strong>allow</strong> (skip, bypass recorded). Same as no-data.</td></tr>
+    <tr><td><strong>E2</strong></td><td>API returns nothing / errors / times out</td><td>Treated as no reliable data ⇒ <strong>allow</strong> (fail-open). The gate must not hard-fail the swap on an API problem. (Log for observability.)</td></tr>
+    <tr><td><strong>E3</strong></td><td>Exactly one valid reading in the window</td><td>avg = that value; max − min = 0. Block only on the avg bounds; the range check can't trip on a single reading. (Behaviour follows the strict logic; ops may later add a minimum-sample rule.)</td></tr>
+    <tr><td><strong>E4</strong></td><td>Dead device — no pings, no optical at all</td><td>All rows excluded ⇒ <strong>allow</strong>. A genuinely dead device should be swappable; there is no optical evidence of a line fault.</td></tr>
+    <tr><td><strong>E5</strong></td><td>Blocked, CSP fixes the line, re-enters</td><td>Flow restarts from zero; G12 re-reads fresh telemetry; healthy signal ⇒ pass ⇒ swap proceeds.</td></tr>
+    <tr><td><strong>E6</strong></td><td>Optical avg exactly at a boundary (−25 or −8)</td><td>Not blocked — conditions are strict inequalities (&lt; −25, &gt; −8). Only values beyond the band block.</td></tr>
+    <tr><td><strong>E7</strong></td><td>Signal borderline within one hour (intra-hour swing)</td><td>With a 1-hour window the check reads the latest hourly record; the per-hour <code>OPTICAL_AVG</code> drives it. (The table also carries per-hour <code>OPTICAL_MIN</code>/<code>MAX</code> if a tighter intra-hour instability check is wanted later — not in the strict logic.)</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <table>
+    <tr><th>OS / system</th><th>Impacted?</th><th>Amendment (one line)</th><th>Amendment type</th><th>Owner (consulted)</th><th>Sign-off</th></tr>
+    <tr><td>Support &amp; Resolution OS</td><td>Yes</td><td>Add <strong>G12 — Optical Diagnosis</strong> to the pre-swap gate-check phase (after G1–G11); a G12 block returns a specific reason and stops the swap (no record). Surface the block screen. <strong>Amendment to be LOCKED before build.</strong></td><td>Behaviour change</td><td>Varun</td><td>Pending</td></tr>
+    <tr><td>Asset Custody OS</td><td>Yes — placement TBD</td><td>G12 may be computed on the ACS side (ACS already owns device-eligibility gates G1–G5 and the swap). ACS/telemetry decide the compute location; Wiom retains the raw optical data for tuning. No change to custody transitions. <strong>To LOCK.</strong></td><td>Behaviour change</td><td>Dhruv (TBC)</td><td>Pending</td></tr>
+    <tr><td>Telemetry / Remote — optical-history API</td><td>Yes — contract needed</td><td><strong>New endpoint</strong> returning the old device's recent hourly optical readings (raw): per hour <code>hour_start</code>, <code>total_pings_received</code>, <code>optical_avg</code> (signed dBm), optionally <code>optical_min</code>/<code>optical_max</code>. Contract + examples: companion API doc.</td><td>Cross-system contract</td><td>Rahul Nijhawan</td><td>Pending — to provide</td></tr>
+    <tr><td>CSP App (FE) / Design</td><td>Yes</td><td>New gate-fail <strong>block screen</strong> for the optical block (message placeholder; contact-Wiom-support path; no swap CTA). Design to define copy + layout before tech hand-off.</td><td>UX + copy</td><td>Vikash PD</td><td>Pending — design</td></tr>
+    <tr><td>Validation Layer (post-swap, v1)</td><td>No</td><td>— Unchanged; still checks the new device up. G12 is independent (old device, pre-swap).</td><td>None</td><td>—</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>The exact logic, the API/data contract, worked examples on real telemetry, the screen, and the test cases.</p>
+  <div class="author-note">Business behaviour first; the strict ops logic is reproduced exactly.</div>
+</div>
+
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflow — Before &amp; After <span class="tier cond">Conditional</span></h2>
+  <div class="expected">Only the gate-check phase changes. G12 is inserted after G1–G11 and before physical-handoff.</div>
+  <div class="diff-legend">
+    <strong>Colour key</strong>
+    <span class="chip unchanged">Unchanged</span>
+    <span class="chip added">Added / new path</span>
+    <span class="chip changed">Behaviour changed</span>
+  </div>
+
+  <p class="flow-label before">Before — v1 gate-check</p>
+  <div class="expected">G1–G11 pass ⇒ straight to physical-handoff. No telemetry consulted.</div>
+
+  <p class="flow-label after">After — with the Optical Diagnosis Gate (G12)</p>
+  <div class="mermaid">
+flowchart TD
+    Diag([CSP records device-fault diagnosis + new device]) --> G1[Gate checks G1-G11]
+    G1 -- fail --> Rej[Show reason - no record]
+    G1 -- pass --> G12{G12: Optical Diagnosis on OLD device}
+    G12 --> Fetch[Fetch old device optical history - telemetry API]
+    Fetch --> Filter[Keep valid readings: drop optical null/0 and pings=0]
+    Filter --> Data{Any valid readings?}
+    Data -- No --> Allow[Skip and ALLOW - bypass recorded]
+    Data -- Yes --> Calc[avg, max, min of OPTICAL_AVG]
+    Calc --> Cond{avg < -25 OR avg > -8 OR max-min > 3 ?}
+    Cond -- Yes --> Block[HARD BLOCK - show line-fault screen - no record]
+    Cond -- No --> Allow
+    Allow --> Phys[Physical-handoff screen - v1 continues]
+    Block -. CSP exits and returns .-> Diag
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef warn fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    class G12,Fetch,Filter,Data,Calc,Cond,Allow added;
+    class Block warn;
+  </div>
+  <div class="hint"><strong>Hard block, fail-open:</strong> a bad optical signal stops the swap with no record (identical to a G1–G11 failure). Missing/unreliable data never blocks — it falls through to allow. A blocked swap persists nothing; re-entry re-runs every gate from zero.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> The Diagnosis Logic (exact) <span class="tier how">HOW</span></h2>
+  <div class="expected">Reproduced verbatim from the ops logic. Strict — no additions.</div>
+
+  <h3>B2.1 Keep only valid optical readings</h3>
+  <p>For the old device, over the lookback window (<code>P_OPTICAL_LOOKBACK</code> = 1 hour), take each hourly record and <strong>exclude</strong> it if <strong>any</strong> of:</p>
+  <ul>
+    <li><code>OPTICAL_AVG</code> is <code>NULL</code></li>
+    <li><code>OPTICAL_AVG</code> = <code>0</code> &nbsp;<span style="color:var(--muted)">(sentinel for "no optical reading")</span></li>
+    <li><code>TOTAL_PINGS_RECEIVED</code> = <code>0</code></li>
+  </ul>
+  <p>Each surviving record is a <strong>valid reading</strong> contributing its <code>OPTICAL_AVG</code> value.</p>
+
+  <h3>B2.2 Block conditions</h3>
+  <p>Over the valid readings compute <code>avg_optical</code>, <code>max_optical</code>, <code>min_optical</code> (of <code>OPTICAL_AVG</code>). <strong>Block the swap if ANY:</strong></p>
+  <table>
+    <tr><th style="width:36%">Condition</th><th>Meaning</th></tr>
+    <tr><td><code>avg_optical &lt; −25</code> dBm</td><td>Signal too weak → fibre / optical / network side, not the device</td></tr>
+    <tr><td><code>avg_optical &gt; −8</code> dBm</td><td>Signal too strong / out of range → optical side, not the device</td></tr>
+    <tr><td><code>(max_optical − min_optical) &gt; 3</code> dBm</td><td>Unstable / flapping optical signal → network side</td></tr>
+  </table>
+  <p>If none are true → <strong>allow</strong>.</p>
+
+  <h3>B2.3 No valid data</h3>
+  <p>If B2.1 leaves <strong>zero</strong> valid readings (or the API returns none / errors) → <strong>skip &amp; allow</strong>, recording that the gate was bypassed because Wiom could not reliably confirm.</p>
+
+  <div class="hint"><strong>On "readings":</strong> each valid hour contributes its <code>OPTICAL_AVG</code>, so the range check uses max/min of the hourly <code>OPTICAL_AVG</code> series. The source also carries per-hour <code>OPTICAL_MIN</code>/<code>OPTICAL_MAX</code> (intra-hour extremes) — available for a tighter instability check in future, but not part of the strict logic.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data, API &amp; Parameters <span class="tier how">HOW</span></h2>
+
+  <h3>B3.1 Source table (validation only — <code>HOURLY_DEVICE_PING_INFLUX</code>, DB 113)</h3>
+  <div class="expected">Used to prove the logic and build B4. Production uses the telemetry API, not this table.</div>
+  <table>
+    <tr><th>Column</th><th>Type</th><th>Needed?</th><th>Use</th></tr>
+    <tr><td><code>DEVICE_ID</code></td><td>VARCHAR</td><td>Yes</td><td>Match to <code>old_device_id</code></td></tr>
+    <tr><td><code>HOUR_START_IST</code></td><td>TIMESTAMP</td><td>Yes</td><td>Bound the lookback window / order the series</td></tr>
+    <tr><td><code>TOTAL_PINGS_RECEIVED</code></td><td>NUMBER</td><td>Yes</td><td>Exclusion filter (drop hour if <code>= 0</code>)</td></tr>
+    <tr><td><code>OPTICAL_AVG</code></td><td>NUMBER (signed dBm)</td><td>Yes</td><td>The reading; drives all three block conditions; exclusion if null/0</td></tr>
+    <tr><td><code>OPTICAL_MIN</code> / <code>OPTICAL_MAX</code></td><td>NUMBER (signed dBm)</td><td>Optional</td><td>Not in strict logic; useful for a future intra-hour instability check</td></tr>
+  </table>
+
+  <h3>B3.2 Production API contract (telemetry / remote)</h3>
+  <div class="expected">Preferred shape: the API returns <strong>raw hourly rows</strong> and Wiom's gate applies the exclusions + thresholds — keeping the gate logic Wiom-owned and tunable (D7). Full contract + alternative "pre-computed verdict" shape: companion doc.</div>
+  <p style="margin:6px 0 2px;"><strong>Request</strong> (old device + window):</p>
+  <pre>GET /device/optical-history?device_id=&lt;old_device_id&gt;&amp;lookback_hours=1</pre>
+  <p style="margin:8px 0 2px;"><strong>Response</strong> (raw rows; Wiom computes the verdict):</p>
+  <pre>{
+  "device_id": "GX44909",
+  "lookback_hours": 1,
+  "records": [
+    { "hour_start_ist": "2026-05-02T02:00:00+05:30", "total_pings_received": 1, "optical_avg": -27, "optical_min": -27, "optical_max": -27 }
+  ]
+}</pre>
+  <p><strong>Required per record:</strong> <code>hour_start_ist</code>, <code>total_pings_received</code>, <code>optical_avg</code>. <strong>Optional:</strong> <code>optical_min</code>, <code>optical_max</code>. Confirm with telemetry: <code>optical_avg</code> is always signed dBm, and <code>0</code> is always a missing-data sentinel (never a legitimate 0 dBm).</p>
+
+  <h3>B3.3 Parameters (tunable, not hardcoded)</h3>
+  <table>
+    <tr><th>Parameter</th><th>Default</th><th>Meaning</th></tr>
+    <tr><td><code>P_OPTICAL_LOOKBACK</code></td><td><strong>1 hour</strong></td><td>Window over which valid hourly readings are gathered (may change on ops input)</td></tr>
+    <tr><td><code>P_OPTICAL_MIN</code></td><td><strong>−25 dBm</strong></td><td>Block if <code>avg_optical</code> below this</td></tr>
+    <tr><td><code>P_OPTICAL_MAX</code></td><td><strong>−8 dBm</strong></td><td>Block if <code>avg_optical</code> above this</td></tr>
+    <tr><td><code>P_OPTICAL_MAX_RANGE</code></td><td><strong>3 dBm</strong></td><td>Block if <code>(max − min)</code> above this</td></tr>
+    <tr><td><code>P_OPTICAL_GATE_ENABLED</code></td><td><strong>true</strong></td><td>Master switch; <code>false</code> ⇒ G12 always allows (gate disabled)</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> Worked Examples — Real Data <span class="tier how">HOW</span></h2>
+  <div class="expected">Every row below is actual telemetry pulled from <code>HOURLY_DEVICE_PING_INFLUX</code> (DB 113, 2026-05-02).</div>
+  <table>
+    <tr><th style="width:10%">Case</th><th style="width:16%">Device</th><th style="width:30%">Valid reading(s) — <code>OPTICAL_AVG</code></th><th style="width:14%">Computed</th><th>Verdict</th></tr>
+    <tr><td>A — healthy</td><td><code>GX98531</code></td><td>12 hrs all −21, pings healthy</td><td>avg −21 · range 0</td><td><span style="color:#064e2b;font-weight:700">ALLOW</span> — within band, stable</td></tr>
+    <tr><td>B — too weak</td><td><code>GX44909</code></td><td>pings 1, −27</td><td>avg −27</td><td><span style="color:#7f1d1d;font-weight:700">BLOCK</span> — avg &lt; −25 (weak fibre)</td></tr>
+    <tr><td>C — too strong</td><td><code>GX44893</code></td><td>pings 12, −1</td><td>avg −1</td><td><span style="color:#7f1d1d;font-weight:700">BLOCK</span> — avg &gt; −8 (out of range)</td></tr>
+    <tr><td>D — excluded → no data</td><td><code>GX78435</code></td><td>pings 12 but <code>OPTICAL_MIN/AVG/MAX = 0/0/0</code></td><td>0 valid</td><td><span style="color:#064e2b;font-weight:700">ALLOW</span> — all excluded (D7 sentinel), bypass</td></tr>
+    <tr><td>E — unstable <span style="color:var(--muted)">(illustrative)</span></td><td>—</td><td>hourly avg ranges −24 … −19</td><td>range 5</td><td><span style="color:#7f1d1d;font-weight:700">BLOCK</span> — max−min &gt; 3 (flapping)</td></tr>
+  </table>
+  <div class="hint">Cases A–D are real rows; E is illustrative (a real device with a &gt;3 dBm swing across the window would trip the range check identically). Note case B blocks off a single valid reading via the <em>average</em> bound — the range check needs ≥2 readings to trip (E3).</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> UI Impact <span class="tier cond">Conditional</span></h2>
+  <div class="expected">Backend spec — design (Vikash PD) owns layout/copy. One new screen; one small change to the gate-fail handling.</div>
+  <table>
+    <tr><th>Surface / screen</th><th>What the backend requires / makes available</th></tr>
+    <tr><td>Gate-check (existing)</td><td>On a G12 block, return a specific block reason (line/network fault) distinct from G1–G11 reasons, so the FE can route to the block screen.</td></tr>
+    <tr><td>Optical block screen <span style="color:#b91c1c">(design ask — new)</span></td><td>Shown on a G12 block. Message = <strong>placeholder</strong> (design-owned): the issue looks like a line/network problem to fix before swapping; provide a <strong>contact-Wiom-support</strong> path. <strong>No swap CTA.</strong> Exiting returns the CSP to the ticket; re-entering the swap restarts the flow from zero.</td></tr>
+    <tr><td>Healthy / no-data pass</td><td>No new screen — the flow continues to the v1 physical-handoff exactly as before.</td></tr>
+  </table>
+  <div class="block"><strong>Design placeholder:</strong> the exact wording, iconography, and support-contact affordance for the block screen are owned by design (Vikash PD) and to be defined before tech hand-off. This spec fixes only the trigger and the required action (fix-line / contact-support, no override, no swap CTA).</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b6">
+  <h2><span class="num">B6.</span> Acceptance Criteria — Test Cases <span class="tier how">HOW</span></h2>
+  <div class="expected">Derived from A5 / A6 / A7. Critical → regression.</div>
+  <table>
+    <tr><th style="width:4%">#</th><th style="width:9%">Priority</th><th style="width:28%">Test case — in plain terms</th><th style="width:31%">Technical condition / check</th><th style="width:20%">Expected result</th><th style="width:8%">Ref</th></tr>
+    <tr><td>TC-01</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A weak optical signal blocks the swap.</td><td>Valid readings, <code>avg_optical &lt; −25</code> → hard block, no record, block reason returned.</td><td>Swap blocked; line-fault screen.</td><td>D2 · R1</td></tr>
+    <tr><td>TC-02</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A too-strong optical signal blocks the swap.</td><td>Valid readings, <code>avg_optical &gt; −8</code> → hard block.</td><td>Swap blocked.</td><td>D2 · R1</td></tr>
+    <tr><td>TC-03</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>An unstable signal blocks the swap.</td><td>≥2 valid readings, <code>(max − min) &gt; 3</code> → hard block.</td><td>Swap blocked.</td><td>D2 · R1</td></tr>
+    <tr><td>TC-04</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>No valid data lets the swap proceed.</td><td>All readings excluded (null/0 optical or 0 pings), or none returned → skip &amp; allow; bypass recorded.</td><td>Swap proceeds (fail-open).</td><td>D4 · I4 · E1/E2/E4</td></tr>
+    <tr><td>TC-05</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>Excluded readings never enter the maths.</td><td>Rows with <code>OPTICAL_AVG</code> null/0 or <code>TOTAL_PINGS_RECEIVED = 0</code> are dropped before avg/max/min.</td><td>Stats use valid readings only.</td><td>D3 · I3</td></tr>
+    <tr><td>TC-06</td><td><span style="color:#b91c1c;font-weight:700">Critical</span></td><td>A healthy signal passes the gate.</td><td>Valid readings, avg within [−25, −8] and range ≤ 3 → G12 pass → physical-handoff.</td><td>Swap continues as v1.</td><td>A4 · R1</td></tr>
+    <tr><td>TC-07</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The gate reads the old device only.</td><td>G12 queries <code>old_device_id</code>; the new device's telemetry is not fetched here.</td><td>Old-device optical only.</td><td>D6 · I2</td></tr>
+    <tr><td>TC-08</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>A block cannot be overridden by the CSP.</td><td>No self-confirm/attest path on the block screen; the only way forward is a healthy re-read.</td><td>No override.</td><td>D5 · R2</td></tr>
+    <tr><td>TC-09</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>A blocked swap persists no state; re-entry restarts from zero.</td><td>Block creates no record/reservation/timer; re-entering re-runs G1–G11 + G12 against fresh data.</td><td>Clean restart.</td><td>D5 · I5 · E5</td></tr>
+    <tr><td>TC-10</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>The gate runs for every device fault type.</td><td>HARDWARE / SOFTWARE / CONNECTIVITY all trigger G12 identically.</td><td>Fault-type agnostic.</td><td>I6</td></tr>
+    <tr><td>TC-11</td><td><span style="color:#8a5a00;font-weight:700">High</span></td><td>An API error/timeout does not hard-fail the swap.</td><td>Telemetry API errors/times out → treated as no data → allow; logged.</td><td>Fail-open on API failure.</td><td>E2 · I4</td></tr>
+    <tr><td>TC-12</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>Boundary values do not block.</td><td>avg exactly −25 or −8 → not blocked (strict inequalities).</td><td>Only beyond-band blocks.</td><td>E6</td></tr>
+    <tr><td>TC-13</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>A single valid reading can't trip the range check.</td><td>One valid reading → max − min = 0; only the avg bounds can block.</td><td>Range needs ≥2 readings.</td><td>E3</td></tr>
+    <tr><td>TC-14</td><td><span style="color:#1f3c6e;font-weight:600">Medium</span></td><td>Thresholds &amp; window are config-driven; the gate can be disabled.</td><td>Changing <code>P_OPTICAL_*</code> retunes without a deploy; <code>P_OPTICAL_GATE_ENABLED=false</code> ⇒ always allow.</td><td>Tunable + kill-switch.</td><td>D8</td></tr>
+    <tr><td>TC-15</td><td><span style="color:#6b7280">Low / Regression</span></td><td>G1–G11 and the whole v1 swap execution are unchanged.</td><td>G12 is additive after G1–G11; once it passes, physical-handoff → Remote swap → VL → commit → resolve behave exactly as v0.14.</td><td>No v1 regression.</td><td>G-A · G-B · G-C</td></tr>
+    <tr><td>TC-16</td><td><span style="color:#6b7280">Low / Regression</span></td><td>A fail-open skip is indistinguishable from a v1 flow with no gate.</td><td>Skip → allow leaves no limbo state; downstream matches v1.</td><td>Clean bypass.</td><td>G-D</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--muted);"><strong>Coverage:</strong> 16 test cases spanning every delta (D1–D9), invariants/rules (I1–I6, R1–R2), edges (E1–E7), and the A6 regression guards. Pending: the telemetry optical-history API contract and the block-screen copy.</p>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="future">
+  <h2><span class="num">F.</span> Future Scope — Noted, Not Specced <span class="tier cond">Out of scope for this version</span></h2>
+  <div class="expected">Parked deliberately — recorded so the intent isn't lost, but not part of this build.</div>
+
+  <h3>F1. Minimum-sample rule for the range check</h3>
+  <table>
+    <tr><th style="width:22%">Aspect</th><th>Detail</th></tr>
+    <tr><td>The gap</td><td>With very few valid readings the instability (max − min) check is weak. A minimum-sample threshold (e.g. require ≥ N valid readings before trusting the range check) would harden it.</td></tr>
+    <tr><td>Why deferred</td><td>Ops gave no minimum-sample rule; strict logic only for v2. Revisit if false blocks/passes surface.</td></tr>
+  </table>
+
+  <h3>F2. No-data disambiguation (dead device vs line down)</h3>
+  <table>
+    <tr><th style="width:22%">Aspect</th><th>Detail</th></tr>
+    <tr><td>The gap</td><td>Fail-open treats "no optical data" as allow, but no-data can mean a dead device (swap correct) or an upstream line/fibre outage (swap won't help). A pre-failure-window look-back could separate the two.</td></tr>
+    <tr><td>Why deferred</td><td>Aligned decision: allow on no data for v2. Disambiguation is a later enhancement.</td></tr>
+  </table>
+
+  <h3>F3. Intra-hour instability &amp; deeper optical signals</h3>
+  <table>
+    <tr><th style="width:22%">Aspect</th><th>Detail</th></tr>
+    <tr><td>The gap</td><td>The strict logic uses hourly <code>OPTICAL_AVG</code>. Per-hour <code>OPTICAL_MIN</code>/<code>MAX</code> (and finer telemetry) could catch faster flaps and richer optical faults.</td></tr>
+    <tr><td>Why deferred</td><td>Keep v2 verbatim to the ops logic; richer checks are a future gate revision.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <table>
+    <tr><th>#</th><th>Section</th><th class="tier-cell">Tier</th><th class="check">Filled</th><th class="check">N/A</th></tr>
+    <tr><td>QC</td><td>Quick Check</td><td><span class="tier core">Always</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A1</td><td>Metadata</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A2</td><td>Why this change</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A3</td><td>Current behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A4</td><td>Desired behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A5</td><td>The delta</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A6</td><td>Must-not-change (guard)</td><td><span class="tier guard">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edge cases</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td><span class="tier guard">Always — gate</span></td><td class="check">[x]</td><td class="check">— (4 sign-offs Pending)</td></tr>
+    <tr><td>B1</td><td>Changed workflow (before/after)</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B2</td><td>The diagnosis logic (exact)</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B3</td><td>Data, API &amp; parameters</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">— (API contract pending)</td></tr>
+    <tr><td>B4</td><td>Worked examples (real data)</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B5</td><td>UI impact</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">— (block-screen copy = design placeholder)</td></tr>
+    <tr><td>B6</td><td>Acceptance criteria (test cases)</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">— (16 cases)</td></tr>
+    <tr><td>F</td><td>Future scope (noted, not specced)</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+  </table>
+  <div class="footer note">
+    <strong>Not sendable yet — blockers:</strong> (1) the telemetry <strong>optical-history API</strong> endpoint + contract (Rahul Nijhawan) per the <a href="./netbox-swap-v2-optical-diagnosis-api-requirement.md">companion API doc</a>; (2) the <strong>block-screen</strong> copy/design (Vikash PD); (3) the SR/ACS OS amendments placing G12 in the gate-check to be <strong>LOCKED</strong> before build; (4) Status = Draft pending human review.<br><br>
+    <strong>Scope note:</strong> this spec adds exactly one gate to the v0.14 Netbox Swap flow. It does not change swap execution, custody, the post-swap validation layer, or ticket resolution. The optical logic is reproduced verbatim from the ops team's manual check.
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:150px">Author</th><th style="width:90px">Section(s)</th><th>Change &amp; rationale</th><th style="width:110px">Approver</th></tr>
+    <tr><td>v0.1</td><td>2026-07-08</td><td>Jaivin Prajapati (with Claude)</td><td>All</td><td>Initial draft. Adds the <strong>Optical Diagnosis Gate (G12)</strong> to the v0.14 Netbox Swap gate-check phase: hard-block the swap on the old device's optical signal (<code>avg &lt; −25</code> / <code>avg &gt; −8</code> / <code>max − min &gt; 3</code> dBm) over valid readings; exclude null/0 <code>OPTICAL_AVG</code> and 0-ping rows; fail-open (skip &amp; allow) on no valid data; old device only; no CSP override; runs for all fault types; lookback fixed at 1 h. Logic reproduced verbatim from the ops team. Production reads a telemetry optical-history API (not Metabase); companion API-requirement doc defines the data contract with real <code>HOURLY_DEVICE_PING_INFLUX</code> examples. Worked examples grounded in live DB-113 rows.</td><td>—</td></tr>
+  </table>
+</section>
+
+<p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
+  Wiom Change Spec Template v1.0 (PM deliverable) · CSP Netbox Swap V2 — Optical Diagnosis Gate · v0.1 Draft
+</p>
+
+</main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>
