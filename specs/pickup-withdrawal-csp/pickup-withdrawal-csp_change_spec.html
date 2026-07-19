@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer-Initiated Pickup Withdrawal — CSP Side · Wiom Change Spec</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --example-bg: #fffbeb; --example-rule: #f3d56a; --example-ink: #78350f;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg);
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px;
+  }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention strong { font-weight: 700; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+  .badge.ill { background: var(--illustrative-bg); color: var(--illustrative); }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.full { background: var(--how-bg); color: var(--how); }
+
+  .quickcheck {
+    margin: 28px 0 40px; background: var(--quickcheck-bg);
+    border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule);
+    border-radius: 6px; padding: 18px 22px;
+  }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+  .quickcheck dd.placeholder { color: var(--muted); font-style: italic; }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.core { background: var(--core-bg); color: var(--core); }
+  .tier.cond { background: var(--cond-bg); color: var(--cond); }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .hint strong { color: var(--hint-ink); }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+  .row-mode.ill { background: var(--illustrative-bg); color: var(--illustrative); }
+  .row-mode-note { font-size: 12.5px; color: var(--muted); margin-left: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  td.placeholder { color: var(--muted); font-style: italic; }
+  tr.example-row td { background: #fefcf5; }
+  tr.example-row td:first-child::before { content: "ex: "; color: var(--illustrative); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .worked-example { margin: 16px 0; background: var(--example-bg); border: 1px solid var(--example-rule); border-left: 4px solid var(--example-rule); border-radius: 5px; padding: 12px 16px; }
+  .worked-example .we-label { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; background: var(--example-rule); color: var(--example-ink); }
+  .worked-example .we-title { font-weight: 700; font-size: 14px; color: var(--example-ink); margin: 2px 0 8px; }
+  .worked-example table { font-size: 13px; margin: 6px 0; }
+
+  .mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 14px; margin: 14px 0; text-align: center; }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin.computation { border-left-color: var(--what); }
+  .gherkin.invariant { border-left-color: var(--how); }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  .gherkin.computation .kw { color: var(--what); }
+  .gherkin.invariant .kw { color: var(--how); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  .diff-legend { font-size: 12.5px; margin: 14px 0 6px; color: var(--muted); }
+  .diff-legend .chip { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 6px; border: 1px solid; }
+  .chip.unchanged { background: #f4f4f2; color: #444; border-color: #cfcfca; }
+  .chip.added { background: #e9f5ee; color: #064e2b; border-color: #0b6b3a; }
+  .chip.changed { background: #fbf1dd; color: #5b3a00; border-color: #8a5a00; }
+  .chip.removed { background: #fee2e2; color: #7f1d1d; border-color: #b91c1c; }
+  .flow-label { font-size: 13px; font-weight: 700; margin: 18px 0 0; }
+  .flow-label.before { color: #7f1d1d; }
+  .flow-label.after { color: #064e2b; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck, .worked-example { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired behaviour</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflows (before/after)</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameter changes</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#prereq"><span class="ix">—</span>Blocking prerequisite (C1)</a></li>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v1.0 · CSP side</div>
+  <h1>Customer-Initiated Pickup Withdrawal — CSP Side</h1>
+  <p class="lede">A customer who raised a netbox pickup request by mistake has no way to take it back — their only route today is to pay for another recharge. This spec adds a withdrawal path on the CSP side: a customer whose plan is still live can cancel their own pickup request, and the CSP world unwinds exactly as it does when a customer recharges. The customer-app trigger and its screens are specified separately.</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Jaivin Prajapati (PM) &nbsp;·&nbsp; <strong>Reviewer:</strong> CSP Engineering &nbsp;·&nbsp; <strong>Tier:</strong> Full</span>
+  </div>
+  <div class="convention">
+    <strong>Scope fence:</strong> this spec covers the <strong>CSP side only</strong> — what the CSP world must do to accept and act on a withdrawal signal. The customer-app trigger, screens, eligibility messaging and the pre-check call are specified in the companion <em>Customer-Initiated Pickup Withdrawal — Customer Side</em> spec.
+    <br><strong>Blocking prerequisite:</strong> defect <b>C1</b> (see <a href="#prereq">Blocking prerequisite</a>) must ship before this change. Build must not start until C1 is merged.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage.</div>
+  <dl>
+    <dt>What is changing?</dt><dd>A customer with a live plan can withdraw their own netbox pickup request; the CSP world cancels the pickup task and restores the connection and device, treating it exactly as it treats a customer recharge.</dd>
+    <dt>What triggered it?</dt><dd>Product gap found in review — a mistakenly-raised pickup is irreversible and forces the customer into an unnecessary recharge to undo it.</dd>
+    <dt>Blast radius</dt><dd>Connection lifecycle (CLOS), customer access &amp; entitlement (CAEO), asset custody (ACS), pickup task (TAS&nbsp;NBREC), CSP task feed. Actors: customer, CSP.</dd>
+    <dt>Reversible?</dt><dd>Yes — the withdrawal path is additive and feature-flagged. Disabling the new entry point restores today's behaviour with no data cleanup.</dd>
+    <dt>Money / PII / migration?</dt><dd><strong>Money:</strong> No — no charge, refund, or CSP compensation. <strong>PII:</strong> No — no new personal data. <strong>Migration:</strong> No — new enum values only, no backfill.</dd>
+    <dt>OS impact / sign-off?</dt><dd>4 impacted: Connection Lifecycle, Customer Access &amp; Entitlement, NetBox Asset Custody, Task Allocation (NBREC). All sign-offs <strong>Pending</strong> — not sendable to build.</dd>
+    <dt>Tier</dt><dd>Full — touches four lifecycles, two state machines and a cross-service contract.</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>Why we are changing this, what happens today, what should happen, and the precise delta. Stable across implementation revisions.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Customer-initiated pickup withdrawal — CSP-side closure of the netbox pickup task</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft — blocked on C1</td></tr>
+    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>NetBox Recovery (NBREC) OS &amp; PRD; Connection Lifecycle OS v1.8 (rescue amendment §2, §6); NetBox Asset Custody OS v1.11 / v1.12 (T_REC_1, T_REC_6); Customer Access &amp; Entitlement OS v1.4 (§3 rescue intent)</td></tr>
+    <tr><td>Companion specs</td><td><em>Customer-Initiated Pickup Withdrawal — Customer Side</em> (trigger, screens, pre-check); <em>C1 — CAEO rescue state defect</em> (blocking prerequisite)</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>A netbox pickup request raised by the customer cannot be taken back. Once raised, the pickup can only end three ways: the CSP collects the device, the customer pays for a fresh recharge, or the task expires. A customer who tapped it by mistake, or changed their mind an hour later, has no way to say so — even though their plan is still live and paid.</td></tr>
+    <tr><td>Who experiences it?</td><td>Customers who raise a pickup request while their plan is still active — mistaken taps, exploratory taps, and genuine changes of mind. Downstream, the CSP is sent to collect a device the customer intends to keep.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>The customer is pushed into paying for a recharge they do not need, or loses a service they wanted to keep. The CSP makes a wasted trip. Both outcomes are avoidable, and both are read by the customer as the product refusing to listen.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> the observable status quo for the slice about to change.</div>
+  <table>
+    <tr><th style="width:32%">Trigger / condition</th><th>Observable behaviour today</th></tr>
+    <tr><td>Customer raises a pickup request from the customer app, plan still live</td><td>The connection moves into a pending-deactivation state, the customer's device is marked as awaiting recovery from the customer, and a netbox pickup task appears in the CSP's task feed. The customer keeps service until the plan lapses.</td></tr>
+    <tr><td>Plan lapses beyond the deactivation threshold with no recharge</td><td>The system raises the same pickup automatically. Indistinguishable to the CSP from a customer-raised pickup.</td></tr>
+    <tr><td>Customer changes their mind and wants to keep the service</td><td>No withdrawal option exists. The only way to stop the pickup is to buy a fresh recharge, which cancels the task as a side effect.</td></tr>
+    <tr><td>Customer recharges while the pickup is open</td><td>The pickup task is cancelled, the device is restored to deployed, and the connection returns to active or paused depending on whether the ISP recharge window is still open. The customer keeps the device.</td></tr>
+    <tr><td>CSP collects the device, or the task expires</td><td>The pickup reaches its terminal state and the customer's service ends.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
+  <table>
+    <tr><th style="width:32%">Trigger / condition</th><th>Desired observable behaviour</th></tr>
+    <tr><td>Customer withdraws a pickup they raised themselves, while their plan is live and the pickup is still open</td><td>The pickup task is cancelled, the device returns to deployed with the customer, and the connection returns to active or paused on exactly the same recharge-window rule the recharge path uses. The customer keeps the device and the service, and pays nothing.</td></tr>
+    <tr><td>Customer attempts to withdraw a pickup the <em>system</em> raised (plan lapsed past threshold)</td><td>Withdrawal is refused. The customer is told a recharge is required — the existing recharge path remains their route.</td></tr>
+    <tr><td>Customer attempts to withdraw after their plan has lapsed</td><td>Withdrawal is refused. A recharge is required.</td></tr>
+    <tr><td>Customer attempts to withdraw a pickup that has already reached a terminal state</td><td>Withdrawal is refused, with the reason distinguishing "already collected" from "already cancelled" and from "expired".</td></tr>
+    <tr><td>Customer withdraws while the CSP has the pickup in progress</td><td>Withdrawal succeeds. The task is cancelled from whatever active state it was in, matching how a recharge behaves today.</td></tr>
+    <tr><td>Customer recharges while the pickup is open</td><td>Unchanged in every respect.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> one atomic change per row. Each row is buildable and testable on its own.</div>
+  <table class="delta">
+    <tr><th style="width:20%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:24%">Why</th></tr>
+    <tr>
+      <td><b>D1.</b> Withdrawal entry point</td>
+      <td>No way to withdraw a pickup. Only a recharge, a collection, or expiry ends it.</td>
+      <td>A customer-app-sourced withdrawal signal is accepted by the connection lifecycle and drives the same unwind the recharge path drives.</td>
+      <td>Gives the customer a way to undo a mistaken pickup without paying.</td>
+    </tr>
+    <tr>
+      <td><b>D2.</b> Eligibility — origin of the pickup</td>
+      <td>N/A — nothing to be eligible for.</td>
+      <td>Withdrawal is permitted <b>only</b> when the pending deactivation was customer-initiated. System-initiated deactivations (plan lapsed past threshold) are refused.</td>
+      <td>A customer cannot withdraw their way out of a lapsed plan; only a payment resolves that.</td>
+    </tr>
+    <tr>
+      <td><b>D3.</b> Eligibility — plan must be live</td>
+      <td>N/A.</td>
+      <td>Withdrawal is permitted only when the customer's entitlement end is in the future at the moment of the request.</td>
+      <td>Withdrawal restores a service the customer has already paid for. With no live entitlement there is nothing to restore.</td>
+    </tr>
+    <tr>
+      <td><b>D4.</b> Eligibility — pickup must be open</td>
+      <td>N/A.</td>
+      <td>Withdrawal is permitted only when the pickup task is still in an active (non-terminal) state.</td>
+      <td>A collected, cancelled or expired pickup cannot be unwound.</td>
+    </tr>
+    <tr>
+      <td><b>D5.</b> Which active pickup states allow withdrawal</td>
+      <td>N/A.</td>
+      <td><b>All</b> active states, including after the CSP has acknowledged and after proof has been submitted — identical to the recharge path's cut-off.</td>
+      <td>Deliberate: withdrawal must behave exactly as a recharge. The overlap case (CSP claims collection while the customer wants to continue) is vanishingly rare and is not worth a divergent rule.</td>
+    </tr>
+    <tr>
+      <td><b>D6.</b> Connection landing state</td>
+      <td>N/A.</td>
+      <td>Active if the ISP recharge window is still in the future at the moment of withdrawal; paused if it has lapsed. Same rule, same source of truth as the recharge path.</td>
+      <td>Reuses a settled rule rather than inventing a second one that could drift.</td>
+    </tr>
+    <tr>
+      <td><b>D7.</b> Customer access state after withdrawal</td>
+      <td>N/A.</td>
+      <td>Restored to enabled when the connection lands active; blocked-by-supply when it lands paused.</td>
+      <td>Access must match the connection's real state — the customer has a paid, live plan.</td>
+    </tr>
+    <tr>
+      <td><b>D8.</b> Device custody after withdrawal</td>
+      <td>Device stays awaiting-recovery until the pickup terminates.</td>
+      <td>Device returns to deployed against the same connection, and the awaiting-recovery markers are cleared.</td>
+      <td>The device stays with the customer and must stop counting as pending recovery.</td>
+    </tr>
+    <tr>
+      <td><b>D9.</b> Pickup task outcome</td>
+      <td>Cancels only as rescued (recharge), CSP-reported-unable, or exit escalation.</td>
+      <td>Cancels with a <b>new, distinct</b> cancellation reason and reason code meaning "withdrawn by the customer".</td>
+      <td>Recording a withdrawal as a rescue would misreport it as a recharge and make the two permanently indistinguishable in reporting.</td>
+    </tr>
+    <tr>
+      <td><b>D10.</b> Rescue-signal contract</td>
+      <td>The rescue signal implies a recharge and carries a recharge reference.</td>
+      <td>Carries an explicit rescue source distinguishing a recharge from a customer withdrawal; the recharge reference is optional and empty on the withdrawal path.</td>
+      <td>Downstream services must be able to tell the two apart to pick the right reason code and copy.</td>
+    </tr>
+    <tr>
+      <td><b>D11.</b> CSP-facing task copy</td>
+      <td>Cancelled tasks show a reason string; the rescue reason has no CSP-app string and renders as a raw internal key.</td>
+      <td>The new withdrawal reason renders a proper CSP-app string. The existing rescue, exit and failure reasons get their missing strings at the same time.</td>
+      <td>The CSP must be able to read why the task disappeared. Fixing the neighbouring gaps is near-zero cost and prevents another raw key leaking.</td>
+    </tr>
+    <tr>
+      <td><b>D12.</b> Allocation deactivation marker</td>
+      <td>The marker set when deactivation starts is never cleared on a rescue; the allocation reads as permanently mid-deactivation.</td>
+      <td>Cleared whenever a connection is rescued, on both the withdrawal and the recharge path.</td>
+      <td>A stale marker misrepresents live allocations and will mislead any future logic that reads it.</td>
+    </tr>
+    <tr>
+      <td><b>D13.</b> Eligibility pre-check surface</td>
+      <td>No way to ask whether a pickup can be withdrawn; the customer would only discover refusal after attempting.</td>
+      <td>A read-only check reports each eligibility condition (D2, D3, D4) separately, so the customer app can show the right message and hide the action when it cannot succeed.</td>
+      <td>A withdrawal button that fails after the tap is worse than no button. Consumed by the customer-side spec.</td>
+    </tr>
+    <tr>
+      <td><b>D14.</b> CSP notification on withdrawal</td>
+      <td>The CSP is notified when a pickup is assigned, never when it is cancelled.</td>
+      <td>Unchanged — no notification.</td>
+      <td>Explicitly matching the recharge path. Recorded here as a conscious decision, not an oversight; see A7.2 E6 for the residual risk.</td>
+    </tr>
+    <tr>
+      <td><b>D15.</b> CSP compensation on withdrawal</td>
+      <td>No compensation on a recharge-driven cancellation.</td>
+      <td>Unchanged — none.</td>
+      <td>Matching the recharge path. A CSP already en route is an accepted cost, as it is today.</td>
+    </tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="expected"><strong>What is expected:</strong> adjacent behaviours genuinely in the blast radius, each with the reason it is at risk. Every line has a matching REGRESSION block in B5.</div>
+  <table>
+    <tr><th style="width:38%">Must not change</th><th>Why it is at risk</th></tr>
+    <tr><td><b>G1.</b> The recharge-driven cancellation path, end to end — a customer who recharges while a pickup is open still gets the task cancelled, device restored and connection resumed, reported as a rescue.</td><td>The withdrawal path reuses the same signal and the same handlers. A branch added for withdrawal can silently alter the recharge branch.</td></tr>
+    <tr><td><b>G2.</b> System-raised pickups (plan lapsed past threshold) remain rescuable by a recharge.</td><td>Narrowing the eligible-reason rule for withdrawal could narrow it for the recharge path too, stranding every auto-raised pickup.</td></tr>
+    <tr><td><b>G3.</b> The CSP's own "unable to pick up" cancellation, and its restriction to pre-proof states.</td><td>It shares the pickup task's cancellation machinery and reason-code set.</td></tr>
+    <tr><td><b>G4.</b> Exit-driven and device-lost terminations of the pickup task.</td><td>They share the same terminal-transition path and are easy to break when a new terminal reason is introduced.</td></tr>
+    <tr><td><b>G5.</b> The reactive-obligation rule — an obligation is raised only when the connection lands paused and the customer's entitlement is still live.</td><td>It sits immediately below the state writes this change touches, and reads the same signal.</td></tr>
+    <tr><td><b>G6.</b> Normal pickup creation — both customer-raised and system-raised pickups still open a task and mark the device awaiting recovery.</td><td>The withdrawal path writes to the same connection and device records; a shared guard change could block creation.</td></tr>
+    <tr><td><b>G7.</b> The active-connection count held for each CSP stays accurate across a withdraw.</td><td>The count is decremented when deactivation starts and re-incremented only on a genuine return to active. A withdrawal must not double-count or leak.</td></tr>
+    <tr><td><b>G8.</b> Repeat delivery of the same signal changes nothing beyond the first.</td><td>The unwind spans four services; a partially-idempotent path would produce a half-restored connection.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases Affected <span class="tier what">WHAT</span></h2>
+
+  <h3>A7.1 Rules &amp; invariants</h3>
+  <table>
+    <tr><th style="width:12%">Ref</th><th style="width:16%">Type</th><th>Statement</th></tr>
+    <tr><td><b>R1</b></td><td>Rule (new)</td><td>A pickup withdrawal is accepted only when all three hold at the moment of the request: the pending deactivation was customer-initiated; the customer's entitlement end is in the future; the pickup task is in an active state. Failing any one refuses the withdrawal.</td></tr>
+    <tr><td><b>R2</b></td><td>Rule (new)</td><td>An accepted withdrawal produces the same end state as a recharge-driven rescue, differing only in the recorded reason.</td></tr>
+    <tr><td><b>R3</b></td><td>Rule (new)</td><td>A withdrawal is recorded against the pickup task with a cancellation reason and reason code that identify it as customer-withdrawn, never as rescued.</td></tr>
+    <tr><td><b>R4</b></td><td>Rule (altered)</td><td>The set of deactivation reasons eligible for unwinding is now path-dependent: the recharge path keeps both customer-initiated and lapsed-plan reasons; the withdrawal path accepts customer-initiated only.</td></tr>
+    <tr><td><b>R5</b></td><td>Rule (unchanged, restated)</td><td>The connection's landing state is decided solely by whether the ISP recharge window is still open, independent of what triggered the unwind.</td></tr>
+    <tr><td><b>I1</b></td><td>Invariant</td><td>After any completed unwind, the customer's recorded connection state equals the connection lifecycle's actual state for that connection.</td></tr>
+    <tr><td><b>I2</b></td><td>Invariant</td><td>A customer whose plan is live and whose connection is active is never left in a blocked access state.</td></tr>
+    <tr><td><b>I3</b></td><td>Invariant</td><td>A device is in the awaiting-recovery condition if and only if an active pickup task exists for it.</td></tr>
+    <tr><td><b>I4</b></td><td>Invariant</td><td>A pickup task has at most one terminal outcome, and its recorded reason identifies which of the terminating causes applied.</td></tr>
+    <tr><td><b>I5</b></td><td>Invariant</td><td>A withdrawal never moves money: no charge, no refund, no CSP payout, no change to any deposit or wallet balance.</td></tr>
+    <tr><td><b>I6</b></td><td>Invariant</td><td>The CSP's active-connection count reflects exactly the connections currently active for that CSP, at every point during and after a withdrawal.</td></tr>
+  </table>
+
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:12%">Ref</th><th style="width:44%">Condition</th><th>Intended outcome</th></tr>
+    <tr><td><b>E1</b></td><td>Customer withdraws, and the CSP marks the device collected moments later.</td><td>Whichever lands first wins; the second is refused because the task is no longer in an active state. No state is half-applied. The losing actor is told the current state.</td></tr>
+    <tr><td><b>E2</b></td><td>Customer withdraws while the pickup shows proof submitted or under verification.</td><td>Withdrawal succeeds (D5). The task cancels as customer-withdrawn and the device returns to deployed. Accepted asymmetry: if the CSP genuinely holds the device, the position is recoverable through the existing device-return route.</td></tr>
+    <tr><td><b>E3</b></td><td>Customer withdraws and recharges in the same window.</td><td>Both are unwinds to the same end state. The first to land performs it; the second finds nothing to unwind and completes without effect. The recharge's entitlement extension still applies.</td></tr>
+    <tr><td><b>E4</b></td><td>Customer's entitlement lapses between the eligibility pre-check and the withdrawal request.</td><td>Refused at the withdrawal, not at the pre-check. Eligibility is authoritative at the moment of the request, never at the moment of the check.</td></tr>
+    <tr><td><b>E5</b></td><td>The customer's plan is live but the ISP recharge window has lapsed.</td><td>Withdrawal is allowed (the plan is live). The connection lands paused, access goes to blocked-by-supply, and the existing reactive-obligation rule fires — identical to a recharge landing in the same position.</td></tr>
+    <tr><td><b>E6</b></td><td>The CSP is already travelling to collect when the customer withdraws.</td><td>The task disappears from the CSP's feed with no push notification (D14). Accepted, matching the recharge path. <b>Residual risk, recorded deliberately:</b> the CSP may complete a wasted trip. Revisit if withdrawal volume makes it material.</td></tr>
+    <tr><td><b>E7</b></td><td>Withdrawal arrives for a connection whose device was already declared lost.</td><td>Handled by the existing late-recovery route, which already restores a lost device on a rescue signal. No new behaviour; the pickup task cancels as customer-withdrawn.</td></tr>
+    <tr><td><b>E8</b></td><td>Withdrawal arrives twice, or is retried after a timeout.</td><td>The first completes the unwind; every repeat completes without further effect and reports success. No duplicate cancellation record, no duplicate state emission.</td></tr>
+    <tr><td><b>E9</b></td><td>Withdrawal arrives for a connection with no pickup task and no pending deactivation.</td><td>Refused as ineligible. Nothing is written.</td></tr>
+    <tr><td><b>E10</b></td><td>The unwind partially fails — for example the pickup task cancels but the device restore does not.</td><td>The device is the binding record. An unwind that has not restored the device must be retryable to completion, and must not leave the customer active with the device still marked for recovery. Recovery mechanism is engineering's.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> an explicit Yes/No per OS in the blast radius. The change ships only when every "Yes" reads Received.</div>
+  <table>
+    <tr><th>OS</th><th style="width:8%">Impacted?</th><th style="width:30%">Amendment</th><th style="width:14%">Type</th><th style="width:12%">Owner (consulted)</th><th style="width:12%">Sign-off</th></tr>
+    <tr><td>Connection Lifecycle (CLOS)</td><td><b>Yes</b></td><td>New customer-sourced withdrawal trigger into pending-deactivation, with its own narrower eligible-reason rule; reuses the existing landing-state rule.</td><td>Behaviour change</td><td class="placeholder">[To be named]</td><td><b>Pending</b></td></tr>
+    <tr><td>Customer Access &amp; Entitlement (CAEO)</td><td><b>Yes</b></td><td>Access state on an unwind must follow the connection's landing state. Depends on C1.</td><td>Behaviour change</td><td class="placeholder">[To be named]</td><td><b>Pending</b></td></tr>
+    <tr><td>NetBox Asset Custody (ACS)</td><td><b>Yes</b></td><td>No transition change — the existing restore-to-deployed transition is reused. Amendment is to its documented trigger set, which gains a customer-withdrawal cause.</td><td>Cross-OS contract</td><td class="placeholder">[To be named]</td><td><b>Pending</b></td></tr>
+    <tr><td>Task Allocation — NetBox Recovery (NBREC)</td><td><b>Yes</b></td><td>New cancellation reason and reason code for customer withdrawal; new CSP-facing string. No state-machine change.</td><td>Behaviour change</td><td class="placeholder">[To be named]</td><td><b>Pending</b></td></tr>
+    <tr><td>Demand Allocation</td><td>No</td><td>Marker cleanup only (D12); no allocation or counting rule changes.</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Payment Settlement</td><td>No</td><td>No money moves on a withdrawal (I5).</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Compensation</td><td>No</td><td>No CSP payout on withdrawal (D15), matching the recharge path.</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Exit</td><td>No</td><td>A live-plan customer withdrawing a pickup never enters an exit flow.</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Support Resolution (SRS)</td><td>No</td><td>No ticket is raised on the active-landing path; the paused-landing path uses the existing obligation rule unchanged.</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Notification</td><td>No</td><td>No notification change (D14).</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Capacity &amp; Coverage</td><td>No</td><td>Already consumes the rescue signal; projection updates unchanged.</td><td>None</td><td>—</td><td>—</td></tr>
+    <tr><td>Quality / Enforcement</td><td>No</td><td>Neither consumes any signal on this path.</td><td>None</td><td>—</td><td>—</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>The detail engineering needs to build and verify the delta. Business behaviour only — architecture, contracts and schemas are engineering's.</p>
+  <div class="author-note">Evolves with implementation.</div>
+</div>
+
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflow — Before &amp; After <span class="tier cond">Conditional</span></h2>
+  <div class="diff-legend">Key:
+    <span class="chip unchanged">Unchanged</span>
+    <span class="chip added">Added / new path</span>
+    <span class="chip changed">Behaviour changed</span>
+    <span class="chip removed">Removed / replaced</span>
+  </div>
+
+  <p class="flow-label before">BEFORE — how an open pickup can end</p>
+  <div class="mermaid">
+flowchart TD
+    S[Pickup task open<br/>device awaiting recovery] --> Q{How does it end?}
+    Q -->|CSP collects| C[Task completed<br/>service ends]
+    Q -->|Customer recharges| R[Task cancelled: rescued<br/>device deployed<br/>connection active or paused]
+    Q -->|Task expires| X[Task expired<br/>service ends]
+    Q -->|Customer changes mind| N[No route<br/>must recharge to undo]
+    N -.->|only option| R
+
+    classDef unchanged fill:#f4f4f2,stroke:#cfcfca,color:#333
+    classDef removed fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+    class S,Q,C,R,X unchanged
+    class N removed
+  </div>
+
+  <p class="flow-label after">AFTER — withdrawal added as a fourth ending</p>
+  <div class="mermaid">
+flowchart TD
+    S[Pickup task open<br/>device awaiting recovery] --> Q{How does it end?}
+    Q -->|CSP collects| C[Task completed<br/>service ends]
+    Q -->|Customer recharges| R[Task cancelled: rescued<br/>device deployed<br/>connection active or paused]
+    Q -->|Task expires| X[Task expired<br/>service ends]
+    Q -->|Customer withdraws| W{Eligible?}
+    W -->|Pickup was customer-raised<br/>AND plan live<br/>AND task still active| WY[Task cancelled: customer withdrawn<br/>device deployed<br/>connection active or paused]
+    W -->|Any condition fails| WN[Refused<br/>reason returned to customer]
+
+    classDef unchanged fill:#f4f4f2,stroke:#cfcfca,color:#333
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b
+    class S,Q,C,R,X unchanged
+    class W,WY,WN added
+  </div>
+
+  <p class="flow-label before">BEFORE — the unwind cascade (recharge only)</p>
+  <div class="mermaid">
+flowchart LR
+    A[Customer recharges] --> B[Access &amp; entitlement<br/>raises rescue intent]
+    B --> C[Connection lifecycle<br/>lands active or paused]
+    C --> D[Access state restored]
+    C --> E[Device returns to deployed]
+    E --> F[Pickup task cancelled<br/>reason: rescued]
+
+    classDef unchanged fill:#f4f4f2,stroke:#cfcfca,color:#333
+    class A,B,C,D,E,F unchanged
+  </div>
+
+  <p class="flow-label after">AFTER — a second way in, one shared cascade</p>
+  <div class="mermaid">
+flowchart LR
+    A[Customer recharges] --> B[Access &amp; entitlement<br/>raises rescue intent]
+    A2[Customer withdraws pickup] --> G{Eligibility<br/>R1}
+    G -->|refused| H[Refused with reason]
+    B --> C[Connection lifecycle<br/>lands active or paused]
+    G -->|accepted| C
+    C --> D[Access state restored<br/>follows landing state]
+    C --> E[Device returns to deployed]
+    E --> F{Rescue source?}
+    F -->|Recharge| F1[Task cancelled<br/>reason: rescued]
+    F -->|Withdrawal| F2[Task cancelled<br/>reason: customer withdrawn]
+
+    classDef unchanged fill:#f4f4f2,stroke:#cfcfca,color:#333
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00
+    class A,B,C,E,F1 unchanged
+    class A2,G,H,F2 added
+    class D,F changed
+  </div>
+  <div class="hint"><strong>Reading the After cascade:</strong> only the entry (green) and the reason branch (green/amber) are new. The middle of the cascade is deliberately untouched — that reuse is the point of the design, and G1 exists to protect it. The amber "access state restored" node is where <b>C1</b> applies: it is broken today and must be fixed before this change ships.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> State Changes <span class="tier how">HOW</span></h2>
+
+  <h3>B2.1 Pickup task lifecycle</h3>
+  <p>No new states and no new transitions. The existing "any active state → cancelled" transition is reused; only the recorded reason is new.</p>
+  <table>
+    <tr><th style="width:26%">From</th><th style="width:20%">To</th><th style="width:26%">Cause</th><th>Change</th></tr>
+    <tr><td>Any active state</td><td>Cancelled</td><td>Rescued (recharge)</td><td>Unchanged</td></tr>
+    <tr><td>Any active state</td><td>Cancelled</td><td><b>Customer withdrawal</b></td><td><b>New cause</b> on an existing transition</td></tr>
+    <tr><td>Pending pickup / in progress only</td><td>Cancelled</td><td>CSP reported unable</td><td>Unchanged — narrower by design (G3)</td></tr>
+    <tr><td>Any active state</td><td>Cancelled</td><td>Exit escalation</td><td>Unchanged</td></tr>
+    <tr><td>Any active state</td><td>Completed / Failed</td><td>Collection confirmed / device lost</td><td>Unchanged</td></tr>
+  </table>
+
+  <h3>B2.2 Connection lifecycle</h3>
+  <p>No new states and no new transitions. The withdrawal is a new <em>trigger</em> for the two existing transitions out of pending deactivation.</p>
+  <table>
+    <tr><th style="width:26%">From</th><th style="width:20%">To</th><th style="width:26%">Trigger</th><th>Change</th></tr>
+    <tr><td>Pending deactivation</td><td>Active</td><td>Rescue, ISP window still open</td><td>Unchanged transition; <b>new trigger</b> (withdrawal) added</td></tr>
+    <tr><td>Pending deactivation</td><td>Paused</td><td>Rescue, ISP window lapsed</td><td>Unchanged transition; <b>new trigger</b> (withdrawal) added</td></tr>
+  </table>
+
+  <h3>B2.3 Device custody</h3>
+  <p>No change. The existing restore-to-deployed transition out of awaiting-recovery is reused as-is, including its existing handling of a device previously declared lost (E7).</p>
+
+  <h3>B2.4 Customer access state</h3>
+  <table>
+    <tr><th style="width:36%">Connection lands</th><th style="width:28%">Access state today</th><th>Access state required</th></tr>
+    <tr><td>Active (ISP window open)</td><td><b>Blocked by supply</b> — incorrect, defect C1</td><td><b>Enabled</b></td></tr>
+    <tr><td>Paused (ISP window lapsed)</td><td>Blocked by supply</td><td>Blocked by supply — unchanged</td></tr>
+  </table>
+  <div class="hint"><strong>This table is the whole of C1.</strong> The first row is broken today on the existing recharge path as well; the withdrawal path would hit it on every request, because eligibility guarantees a live plan and therefore the active landing. Fix ships separately — see <a href="#prereq">Blocking prerequisite</a>.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
+  <table>
+    <tr><th style="width:24%">Parameter / data</th><th style="width:16%">Old</th><th style="width:22%">New</th><th style="width:20%">Valid range &amp; scope</th><th>Reason</th></tr>
+    <tr><td>Pickup cancellation reason — customer withdrawal</td><td>Does not exist</td><td>New value meaning "withdrawn by the customer"</td><td>Enumerated; one per cancelled pickup; global</td><td>D9 — keep withdrawal distinguishable from a recharge-driven rescue in perpetuity</td></tr>
+    <tr><td>Pickup reason code — customer withdrawal</td><td>Does not exist</td><td>New value paired one-to-one with the cancellation reason above</td><td>Enumerated; global</td><td>D9 — the reason code drives CSP-facing copy</td></tr>
+    <tr><td>Rescue source</td><td>Not carried; a recharge is implied</td><td>Carried explicitly: recharge or customer withdrawal</td><td>Two values; present on every rescue signal; global</td><td>D10 — downstream must pick the right reason code and copy</td></tr>
+    <tr><td>Recharge reference on the rescue signal</td><td>Always present</td><td>Optional; absent on the withdrawal path</td><td>Optional; global</td><td>D10 — no payment exists to reference on a withdrawal</td></tr>
+    <tr><td>CSP-facing cancellation string — customer withdrawal</td><td>Does not exist</td><td>New Hindi string, modelled on the existing CSP-cancelled string</td><td>One per reason code; CSP app</td><td>D11 — without it the raw internal key renders on the CSP's screen</td></tr>
+    <tr><td>CSP-facing strings — rescued, exit-cancelled, failed</td><td>Missing; the raw internal key renders</td><td>Supplied</td><td>One per reason code; CSP app</td><td>D11 — pre-existing gaps in the same place, fixed together</td></tr>
+    <tr><td>Withdrawal-eligible deactivation reasons</td><td>Does not exist</td><td>Customer-initiated only. Distinct from the recharge path's wider set, which is unchanged</td><td>Configurable allowlist; global</td><td>D2 / R4 — a customer must not withdraw their way out of a lapsed plan</td></tr>
+    <tr><td>Allocation deactivation marker</td><td>Set on deactivation, never cleared</td><td>Cleared on any rescue</td><td>Per allocation</td><td>D12 — a stale marker misrepresents live allocations</td></tr>
+    <tr><td>Withdrawal feature flag</td><td>Does not exist</td><td>New; default off until sign-offs land</td><td>On / off; global, ideally per-zone for a staged rollout</td><td>Quick Check "reversible" depends on it</td></tr>
+  </table>
+  <div class="hint">No new tracked quantity, threshold, window or computed value is introduced — withdrawal is a state change, not a calculation. The only computed value on the path is the existing recharge-window comparison (R5), which this change reuses without altering. That is why B5's computation class contains boundary blocks for the reused comparison only.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> UI Impact <span class="tier cond">Conditional</span></h2>
+  <table>
+    <tr><th style="width:24%">Surface</th><th>What the user now sees</th></tr>
+    <tr><td>CSP app — task feed</td><td>A withdrawn pickup leaves the active task list exactly as a recharge-cancelled one does. No new card, no new state.</td></tr>
+    <tr><td>CSP app — cancelled task reason</td><td>A readable reason identifying the cancellation as customer-withdrawn, in place of the raw internal key that renders today for rescue-cancelled tasks.</td></tr>
+    <tr><td>CSP app — notifications</td><td>No change. No push on cancellation (D14).</td></tr>
+    <tr><td>Customer app</td><td>Specified in the companion customer-side spec. The CSP side contributes only the eligibility pre-check (D13) that decides whether the action is offered.</td></tr>
+  </table>
+  <div class="hint">The customer-app withdrawal screens depend on new backend data and are therefore <b>not</b> specified here — they belong to the companion customer-side spec. Exact CSP-app copy is the designer's; B3 records only that a string is required and what it must convey.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> exhaustive coverage of five classes. Every block is labelled so coverage can be audited.</div>
+
+  <h3>Business logic</h3>
+  <div class="gherkin"><b>LOGIC-01</b> — happy path (D1, R1, R2)<br>
+  <span class="kw">Given</span> a customer raised a pickup themselves, their plan is live, the ISP recharge window is still open, and the pickup task is active<br>
+  <span class="kw">When</span> the customer withdraws the pickup<br>
+  <span class="kw">Then</span> the pickup task is cancelled, the device returns to deployed against the same connection, the connection becomes active and the customer's access is enabled.</div>
+
+  <div class="gherkin"><b>LOGIC-02</b> — refused, system-raised pickup (D2, R1, R4)<br>
+  <span class="kw">Given</span> the pending deactivation was raised by the system because the plan lapsed past the threshold<br>
+  <span class="kw">When</span> the customer attempts to withdraw<br>
+  <span class="kw">Then</span> the withdrawal is refused, nothing is written, and the reason returned identifies the pickup as system-raised.</div>
+
+  <div class="gherkin"><b>LOGIC-03</b> — refused, plan not live (D3, R1)<br>
+  <span class="kw">Given</span> the pickup was customer-raised but the customer's entitlement has lapsed<br>
+  <span class="kw">When</span> the customer attempts to withdraw<br>
+  <span class="kw">Then</span> the withdrawal is refused, nothing is written, and the reason identifies the lapsed plan.</div>
+
+  <div class="gherkin"><b>LOGIC-04</b> — refused, pickup already terminal (D4, R1)<br>
+  <span class="kw">Given</span> the pickup task has already been completed, cancelled or expired<br>
+  <span class="kw">When</span> the customer attempts to withdraw<br>
+  <span class="kw">Then</span> the withdrawal is refused, nothing is written, and the reason distinguishes completed from cancelled from expired.</div>
+
+  <div class="gherkin"><b>LOGIC-05</b> — withdrawal from an acknowledged pickup (D5, E2)<br>
+  <span class="kw">Given</span> the CSP has acknowledged the pickup and it is in progress<br>
+  <span class="kw">When</span> the customer withdraws<br>
+  <span class="kw">Then</span> the withdrawal succeeds and the task cancels as customer-withdrawn.</div>
+
+  <div class="gherkin"><b>LOGIC-06</b> — withdrawal after proof submitted (D5, E2)<br>
+  <span class="kw">Given</span> the CSP has submitted collection proof and it is under verification<br>
+  <span class="kw">When</span> the customer withdraws<br>
+  <span class="kw">Then</span> the withdrawal still succeeds and the task cancels as customer-withdrawn — matching the recharge path exactly.</div>
+
+  <div class="gherkin"><b>LOGIC-07</b> — recorded reason (D9, R3)<br>
+  <span class="kw">Given</span> a withdrawal has completed<br>
+  <span class="kw">When</span> the cancelled pickup is inspected<br>
+  <span class="kw">Then</span> its cancellation reason and reason code identify it as customer-withdrawn, and never as rescued.</div>
+
+  <div class="gherkin"><b>LOGIC-08</b> — eligibility pre-check reports conditions separately (D13)<br>
+  <span class="kw">Given</span> a connection failing two of the three eligibility conditions<br>
+  <span class="kw">When</span> the pre-check is called<br>
+  <span class="kw">Then</span> it reports each condition's pass/fail separately, rather than a single combined verdict.</div>
+
+  <div class="gherkin"><b>LOGIC-09</b> — allocation marker cleared (D12)<br>
+  <span class="kw">Given</span> a connection whose deactivation marker was set when the pickup was raised<br>
+  <span class="kw">When</span> a withdrawal completes<br>
+  <span class="kw">Then</span> the marker is cleared and the allocation no longer reads as mid-deactivation.</div>
+
+  <div class="gherkin"><b>LOGIC-10</b> — no money moves (I5, D15)<br>
+  <span class="kw">Given</span> any completed withdrawal<br>
+  <span class="kw">When</span> all financial records for the customer and the CSP are inspected<br>
+  <span class="kw">Then</span> no charge, refund, payout, deposit or wallet movement has occurred.</div>
+
+  <h3>Computation &amp; calculation</h3>
+  <div class="gherkin computation"><b>COMPUTE-01</b> — landing state, window open (D6, R5)<br>
+  <span class="kw">Given</span> the ISP recharge window ends in the future<br>
+  <span class="kw">When</span> a withdrawal is accepted<br>
+  <span class="kw">Then</span> the connection lands active.</div>
+
+  <div class="gherkin computation"><b>COMPUTE-02</b> — landing state, window lapsed (D6, R5, E5)<br>
+  <span class="kw">Given</span> the ISP recharge window ended in the past while the customer's plan is still live<br>
+  <span class="kw">When</span> a withdrawal is accepted<br>
+  <span class="kw">Then</span> the connection lands paused, access goes to blocked-by-supply, and the existing reactive obligation is raised.</div>
+
+  <div class="gherkin computation"><b>COMPUTE-03</b> — boundary, window ends exactly now (D6, R5)<br>
+  <span class="kw">Given</span> the ISP recharge window end equals the instant of the withdrawal<br>
+  <span class="kw">When</span> the withdrawal is accepted<br>
+  <span class="kw">Then</span> the connection lands paused — an end instant that is not strictly in the future counts as lapsed, matching the recharge path exactly.</div>
+
+  <div class="gherkin computation"><b>COMPUTE-04</b> — boundary, no window on record (D6, R5)<br>
+  <span class="kw">Given</span> no ISP recharge window is recorded for the connection<br>
+  <span class="kw">When</span> a withdrawal is accepted<br>
+  <span class="kw">Then</span> the connection lands paused, matching the recharge path's treatment of an absent window.</div>
+
+  <div class="gherkin computation"><b>COMPUTE-05</b> — boundary, entitlement ends exactly now (D3, E4)<br>
+  <span class="kw">Given</span> the customer's entitlement end equals the instant of the withdrawal request<br>
+  <span class="kw">When</span> the withdrawal is attempted<br>
+  <span class="kw">Then</span> it is refused — the entitlement must be strictly in the future to qualify as live.</div>
+
+  <div class="gherkin computation"><b>COMPUTE-06</b> — boundary, eligibility evaluated at request time not check time (E4)<br>
+  <span class="kw">Given</span> the pre-check passed while the plan was live, and the plan lapses before the withdrawal arrives<br>
+  <span class="kw">When</span> the withdrawal is attempted<br>
+  <span class="kw">Then</span> it is refused on the state at the moment of the request.</div>
+
+  <h3>Invariants</h3>
+  <div class="gherkin invariant"><b>INVARIANT-01</b> (I1)<br>
+  <span class="kw">Given</span> any path through a completed unwind — withdrawal or recharge, landing active or paused, first delivery or replay<br>
+  <span class="kw">Then</span> the customer's recorded connection state always equals the connection lifecycle's actual state for that connection.</div>
+
+  <div class="gherkin invariant"><b>INVARIANT-02</b> (I2)<br>
+  <span class="kw">Given</span> any moment after a completed unwind<br>
+  <span class="kw">Then</span> a customer with a live plan on an active connection is never in a blocked access state.</div>
+
+  <div class="gherkin invariant"><b>INVARIANT-03</b> (I3)<br>
+  <span class="kw">Given</span> any moment, including mid-unwind<br>
+  <span class="kw">Then</span> a device is marked awaiting recovery if and only if an active pickup task exists for it.</div>
+
+  <div class="gherkin invariant"><b>INVARIANT-04</b> (I4)<br>
+  <span class="kw">Given</span> any pickup task that has terminated<br>
+  <span class="kw">Then</span> it has exactly one terminal outcome, and its recorded reason identifies which cause applied.</div>
+
+  <div class="gherkin invariant"><b>INVARIANT-05</b> (I5)<br>
+  <span class="kw">Given</span> any path through a withdrawal, including refused and partially-failed attempts<br>
+  <span class="kw">Then</span> no financial record for the customer or the CSP has changed.</div>
+
+  <div class="gherkin invariant"><b>INVARIANT-06</b> (I6)<br>
+  <span class="kw">Given</span> any point during or after a withdrawal, including replays<br>
+  <span class="kw">Then</span> the CSP's active-connection count equals the number of connections actually active for that CSP.</div>
+
+  <h3>Use &amp; edge cases</h3>
+  <div class="gherkin"><b>EDGE-01</b> (E1) — <span class="kw">Given</span> a withdrawal and a CSP collection confirmation racing<br><span class="kw">When</span> both are attempted<br><span class="kw">Then</span> the first to land succeeds, the second is refused as no-longer-active, and no state is half-applied.</div>
+  <div class="gherkin"><b>EDGE-02</b> (E3) — <span class="kw">Given</span> a withdrawal and a recharge in the same window<br><span class="kw">Then</span> the first performs the unwind, the second completes without further effect, and the recharge's entitlement extension still applies.</div>
+  <div class="gherkin"><b>EDGE-03</b> (E7) — <span class="kw">Given</span> the device was previously declared lost<br><span class="kw">When</span> a withdrawal is accepted<br><span class="kw">Then</span> the existing late-recovery route restores the device and the task cancels as customer-withdrawn.</div>
+  <div class="gherkin"><b>EDGE-04</b> (E8) — <span class="kw">Given</span> the same withdrawal delivered twice<br><span class="kw">Then</span> the second completes without effect: no duplicate cancellation record and no duplicate state emission.</div>
+  <div class="gherkin"><b>EDGE-05</b> (E9) — <span class="kw">Given</span> a connection with no pickup task and no pending deactivation<br><span class="kw">When</span> a withdrawal arrives<br><span class="kw">Then</span> it is refused as ineligible and nothing is written.</div>
+  <div class="gherkin"><b>EDGE-06</b> (E10) — <span class="kw">Given</span> an unwind in which the task cancelled but the device restore did not<br><span class="kw">Then</span> the unwind is retryable to completion, and the customer is never left active with the device still marked for recovery.</div>
+  <div class="gherkin"><b>EDGE-07</b> (E6) — <span class="kw">Given</span> a CSP with the pickup open in their feed<br><span class="kw">When</span> the customer withdraws<br><span class="kw">Then</span> the task leaves the active list with no push notification, and the cancelled-task reason reads as customer-withdrawn.</div>
+  <div class="gherkin"><b>EDGE-08</b> (D11) — <span class="kw">Given</span> a pickup cancelled by withdrawal, by recharge, by exit, or failed<br><span class="kw">When</span> the CSP views it<br><span class="kw">Then</span> each shows a readable reason and none renders a raw internal key.</div>
+  <div class="gherkin"><b>EDGE-09</b> (B1 branch) — <span class="kw">Given</span> the withdrawal feature flag is off<br><span class="kw">When</span> a withdrawal arrives<br><span class="kw">Then</span> it is refused and every other path behaves exactly as before the change.</div>
+  <div class="gherkin"><b>EDGE-10</b> (B2.2 transition) — <span class="kw">Given</span> an accepted withdrawal<br><span class="kw">Then</span> the connection's transition out of pending deactivation is recorded as withdrawal-triggered and distinguishable from a recharge-triggered one.</div>
+
+  <h3>Regression</h3>
+  <div class="gherkin regression"><b>REGRESSION-01</b> (G1) — <span class="kw">Given</span> a customer recharges while a pickup is open<br><span class="kw">Then</span> the task cancels as rescued, the device returns to deployed, the connection resumes on the window rule, and every observable outcome is identical to before this change.</div>
+  <div class="gherkin regression"><b>REGRESSION-02</b> (G2) — <span class="kw">Given</span> a system-raised pickup from a lapsed plan<br><span class="kw">When</span> the customer recharges<br><span class="kw">Then</span> the rescue still fires and the task still cancels — the narrower withdrawal rule has not narrowed the recharge path.</div>
+  <div class="gherkin regression"><b>REGRESSION-03</b> (G3) — <span class="kw">Given</span> a CSP reports being unable to collect<br><span class="kw">Then</span> the cancellation still succeeds from pre-proof states and is still refused from post-proof states.</div>
+  <div class="gherkin regression"><b>REGRESSION-04</b> (G4) — <span class="kw">Given</span> an exit escalation or a device declared lost against an open pickup<br><span class="kw">Then</span> the task still terminates with its existing outcome and reason.</div>
+  <div class="gherkin regression"><b>REGRESSION-05</b> (G5) — <span class="kw">Given</span> an unwind landing paused with the customer's entitlement live<br><span class="kw">Then</span> a reactive obligation is raised; <span class="kw">and given</span> the entitlement has also lapsed, <span class="kw">then</span> none is raised.</div>
+  <div class="gherkin regression"><b>REGRESSION-06</b> (G6) — <span class="kw">Given</span> a customer raises a pickup, or the system raises one on a lapsed plan<br><span class="kw">Then</span> the task is still created and the device is still marked awaiting recovery.</div>
+  <div class="gherkin regression"><b>REGRESSION-07</b> (G7) — <span class="kw">Given</span> a pickup raised then withdrawn on an active connection<br><span class="kw">Then</span> the CSP's active-connection count returns to its pre-pickup value exactly once — neither double-counted nor leaked.</div>
+  <div class="gherkin regression"><b>REGRESSION-08</b> (G8) — <span class="kw">Given</span> any signal on the unwind cascade delivered more than once<br><span class="kw">Then</span> only the first has effect, across all four services.</div>
+
+  <h3 id="b51">B5.1 Coverage matrix</h3>
+  <table class="coverage">
+    <tr><th>Class</th><th>Source section(s)</th><th>Items</th><th>Blocks</th><th>All covered?</th></tr>
+    <tr><td class="cls">Business logic</td><td>A5 (D1–D5, D9, D12, D13, D15), A7.1 (R1–R4)</td><td>10</td><td>LOGIC-01 … LOGIC-10</td><td><b>Yes</b></td></tr>
+    <tr><td class="cls">Computation &amp; calculation</td><td>A5 (D3, D6), A7.1 (R5), B3 (window &amp; entitlement comparisons)</td><td>2 comparisons, 4 boundaries</td><td>COMPUTE-01 … COMPUTE-06</td><td><b>Yes</b></td></tr>
+    <tr><td class="cls">Invariants</td><td>A7.1 (I1–I6)</td><td>6</td><td>INVARIANT-01 … INVARIANT-06</td><td><b>Yes</b></td></tr>
+    <tr><td class="cls">Use &amp; edge cases</td><td>A7.2 (E1–E10), B1 branches, B2 transitions</td><td>10 edges + 2 branch/transition</td><td>EDGE-01 … EDGE-10 (E2, E4, E5 also covered by LOGIC-05/06 and COMPUTE-02/05/06)</td><td><b>Yes</b></td></tr>
+    <tr><td class="cls">Regression</td><td>A6 (G1–G8)</td><td>8</td><td>REGRESSION-01 … REGRESSION-08</td><td><b>Yes</b></td></tr>
+  </table>
+  <div class="hint"><strong>Balance:</strong> 34 blocks — 2 happy-path (LOGIC-01, COMPUTE-01) against 32 negative, boundary, invariant, edge and regression. Comfortably inside the ~1:3 bias.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="prereq">
+  <h2><span class="num">—</span> Blocking Prerequisite: defect C1 <span class="tier guard">BLOCKER</span></h2>
+  <div class="expected"><strong>Status:</strong> this change must not start build until C1 is merged. Filed separately as <em>C1 — CAEO rescue state defect</em> and routed to the CAEO owner.</div>
+
+  <h3>What is broken</h3>
+  <p>When a connection is rescued out of pending deactivation, the customer-access record is written as <b>paused / blocked-by-supply regardless of where the connection actually landed</b>. The rescue signal carries the landing state, but only the reactive-obligation rule reads it; the two state writes above it do not.</p>
+
+  <h3>Why it blocks this change specifically</h3>
+  <p>Withdrawal eligibility requires a live plan (D3), so an accepted withdrawal <b>always</b> lands the connection active. Every single withdrawal would therefore hit the broken branch: the customer would withdraw their pickup, keep their device — and be left access-blocked on a plan they have already paid for. That is a worse outcome than the gap this spec sets out to close.</p>
+
+  <h3>Why it is filed separately</h3>
+  <p>The defect is pre-existing and already reachable on the live recharge path whenever a customer recharges while their ISP window is still open. It is not caused by this change and should be fixed on its own timeline. It also silently re-creates the customer-access state drift that required a manual correction of several thousand records in June 2026 — so it warrants attention independent of whether this feature ships.</p>
+
+  <h3>The fix, in business terms</h3>
+  <table>
+    <tr><th style="width:34%">When the connection lands</th><th style="width:30%">Access state today</th><th>Access state required</th></tr>
+    <tr><td>Active — ISP window still open</td><td>Blocked by supply, with a supply-disruption marker set</td><td>Enabled, no supply-disruption marker</td></tr>
+    <tr><td>Paused — ISP window lapsed</td><td>Blocked by supply</td><td>Blocked by supply — unchanged</td></tr>
+  </table>
+  <p>The reactive-obligation rule sitting below these writes is <b>correct as it stands</b> and must not be touched: an obligation is raised only when the connection lands paused <em>and</em> the customer's entitlement is still live. The C1 note carries the code-level location, the proposed patch and its own test cases.</p>
+
+  <h3>Sequencing</h3>
+  <table>
+    <tr><th style="width:10%">Step</th><th>Action</th></tr>
+    <tr><td>1</td><td>C1 is fixed, tested against its own regression cases, and merged.</td></tr>
+    <tr><td>2</td><td>The existing recharge path is re-verified on the active-landing case (REGRESSION-01 covers it).</td></tr>
+    <tr><td>3</td><td>This spec is re-reviewed against the fixed behaviour; A8 sign-offs are collected.</td></tr>
+    <tr><td>4</td><td>Build starts on this change.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <table>
+    <tr><th>Item</th><th class="tier-cell">Tier</th><th class="check">Status</th></tr>
+    <tr><td>Quick Check filled, including tier</td><td>Light</td><td class="check">✓</td></tr>
+    <tr><td>A1–A8 filled</td><td>Full</td><td class="check">✓</td></tr>
+    <tr><td>B1–B5 filled, or N/A with a reason</td><td>Full</td><td class="check">✓</td></tr>
+    <tr><td>B5 coverage matrix reads "all covered" on every class</td><td>Light</td><td class="check">✓</td></tr>
+    <tr><td>Every A6 guard line has a matching B5 REGRESSION block</td><td>Light</td><td class="check">✓ 8/8</td></tr>
+    <tr><td>Every A7.1 invariant has an INVARIANT block</td><td>Full</td><td class="check">✓ 6/6</td></tr>
+    <tr><td>Every A7.2 edge has a block</td><td>Full</td><td class="check">✓ 10/10</td></tr>
+    <tr><td>Every A8 "Yes" has sign-off Received</td><td>Light</td><td class="check">✗ 0/4</td></tr>
+    <tr><td>Blocking prerequisite C1 merged</td><td>Full</td><td class="check">✗</td></tr>
+  </table>
+  <footer class="note">
+    <strong>Not sendable to build.</strong> Two gates are open: all four OS sign-offs are Pending, and defect C1 is unfixed. The spec is otherwise complete and ready for review. Per the authoring guide, a spec with any sign-off Pending is not-yet-canonical and must not start build.
+  </footer>
+
+  <h2 id="changelog" style="margin-top:40px;">Changelog</h2>
+  <table>
+    <tr><th style="width:10%">Version</th><th style="width:14%">Date</th><th style="width:16%">Author</th><th style="width:14%">Section(s)</th><th>Change &amp; rationale</th><th style="width:12%">Approver</th></tr>
+    <tr><td>v0.1</td><td>2026-07-19</td><td>Jaivin Prajapati</td><td>All</td><td>Initial draft. Scope locked to the CSP side; customer-app trigger deferred to the companion spec. Decisions taken at authoring: reuse the recharge unwind cascade rather than build a parallel one; introduce distinct cancellation reason and reason code rather than reuse the rescue reason; allow withdrawal from any active pickup state, matching the recharge path; no CSP notification and no CSP compensation, matching the recharge path. Defect C1 raised separately and recorded here as a blocking prerequisite.</td><td class="placeholder">[Pending]</td></tr>
+  </table>
+</footer>
+
+</main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+</script>
+</body>
+</html>
