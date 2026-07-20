@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — Change Spec — Netbox-Pickup Unread-Update Surfacing (List + Detail)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --example-bg: #fffbeb; --example-rule: #f3d56a; --example-ink: #78350f;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg);
+  }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc {
+    position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto;
+    padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px;
+  }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .convention strong { font-weight: 700; }
+  .convention .badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin: 0 4px; vertical-align: middle; }
+  .badge.req { background: var(--required-bg); color: var(--required); }
+  .badge.ill { background: var(--illustrative-bg); color: var(--illustrative); }
+  .badge.light { background: var(--core-bg); color: var(--core); }
+  .badge.full { background: var(--how-bg); color: var(--how); }
+
+  .quickcheck {
+    margin: 28px 0 40px; background: var(--quickcheck-bg);
+    border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule);
+    border-radius: 6px; padding: 18px 22px;
+  }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+  .quickcheck dd.placeholder { color: var(--muted); font-style: italic; }
+
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.core { background: var(--core-bg); color: var(--core); }
+  .tier.cond { background: var(--cond-bg); color: var(--cond); }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .expected strong { font-weight: 700; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  .hint strong { color: var(--hint-ink); }
+  .row-mode { display: inline-block; margin: 6px 0 4px; padding: 3px 9px; border-radius: 3px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .row-mode.req { background: var(--required-bg); color: var(--required); }
+  .row-mode.ill { background: var(--illustrative-bg); color: var(--illustrative); }
+  .row-mode-note { font-size: 12.5px; color: var(--muted); margin-left: 8px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  td.placeholder { color: var(--muted); font-style: italic; }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+
+  .mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 14px; margin: 14px 0; text-align: center; }
+
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin.computation { border-left-color: var(--what); }
+  .gherkin.invariant { border-left-color: var(--how); }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  .gherkin.computation .kw { color: var(--what); }
+  .gherkin.invariant .kw { color: var(--how); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.tier-cell { width: 110px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+
+  .diff-legend { font-size: 12.5px; margin: 14px 0 6px; color: var(--muted); }
+  .diff-legend .chip { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 6px; border: 1px solid; }
+  .chip.unchanged { background: #f4f4f2; color: #444; border-color: #cfcfca; }
+  .chip.added { background: #e9f5ee; color: #064e2b; border-color: #0b6b3a; }
+  .chip.changed { background: #fbf1dd; color: #5b3a00; border-color: #8a5a00; }
+  .chip.removed { background: #fee2e2; color: #7f1d1d; border-color: #b91c1c; }
+  .flow-label { font-size: 13px; font-weight: 700; margin: 18px 0 0; }
+  .flow-label.before { color: #7f1d1d; }
+  .flow-label.after { color: #064e2b; }
+
+  @media print {
+    nav.toc { display: none; }
+    .layout { grid-template-columns: 1fr; }
+    main { padding: 20px; max-width: none; }
+    section.spec, .part-divider, .quickcheck { page-break-inside: avoid; }
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); }
+    main { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired behaviour</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflows (before/after)</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameter changes</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v0.1 · PM deliverable</div>
+  <h1>Netbox-Pickup Unread-Update Surfacing — Pickup List &amp; Detail</h1>
+  <p class="lede">Netbox-pickup tasks do not participate in the unread-update experience that install and service tasks already have. This change brings pickups to parity on three points — the pickup <strong>list</strong> (reached by tapping the home pickup group card) and the pickup <strong>detail</strong> page: a clearing unread count, the latest-update text, and pink-highlighted unread update entries. The home-page pickup group card is explicitly <strong>out of scope</strong> (tracked separately).</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Jaivin Prajapati (PM) &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering (CSP app · Gateway · ACS) &nbsp;·&nbsp; <strong>Tier:</strong> Full</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong> <span class="badge full">Full</span> — the change spans two surfaces (list + detail), moves the drilldown-open workflow, introduces tracked unread data, and amends two backend OSes. All sections filled or N/A-with-reason.
+    <br><strong>Scope fence:</strong> business behaviour only. No API contracts, schemas, field names, storage, concurrency, or exact copy — engineering and design own those.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body was complete.</div>
+  <dl>
+    <dt>What is changing?</dt><dd>Pickup list + detail now show a clearing unread count, the latest-update text, and pink-highlighted unread updates — parity with install/service.</dd>
+    <dt>What triggered it?</dt><dd>Bug / parity gap — the unread-update experience never worked for pickups.</dd>
+    <dt>Blast radius</dt><dd>Shared task-card + attention-badge + update-timeline components used by install/service; the pickup list, its sort/search, and pickup detail. Home group card excluded.</dd>
+    <dt>Reversible?</dt><dd>Yes — app wiring is flag-guardable/revertible; backend additions are additive (no destructive migration).</dd>
+    <dt>Money / PII / migration?</dt><dd>Money: No (a commission amount is <em>displayed</em> in one update entry; no money moves). PII: No. Migration: No.</dd>
+    <dt>OS impact / sign-off?</dt><dd>CSP Gateway (Yes), CSP Asset Custody / netbox-recovery (Yes), Netbox-Recovery OS decisions (Yes — event set). All sign-off <strong>Pending</strong>. Not shippable until Received.</dd>
+    <dt>Tier</dt><dd>Full — lead PM: Jaivin Prajapati.</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>The PM's decisions: why we are changing this, what pickups do today, what they should do, and the precise delta. Stable across implementation revisions.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, and a link to the baseline being changed.</div>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>Netbox-pickup unread-update surfacing on the pickup list &amp; detail</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft</td></tr>
+    <tr><td>Version</td><td>v0.1</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>Netbox Recovery PRD (<em>es-netbox-recovery-service-prd-v1.6</em>) · the install/service unread-update experience (Attention Framework "attention/ack" + candidate timeline, per Gateway home-feed spec) · design intent: <em>Netbox AFM.xlsx</em> — "Home and Update section" (state → UPDATE Title / HOME CARD subtitle).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A short problem statement — observable trigger, who is affected, cost of leaving it. Two or three lines.</div>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>On pickup tasks the unread-update experience that install/service have does not work: the pickup list row shows an unread count that never clears after the task is opened, the row's "latest update" text is the current-state line rather than what actually changed, and the pickup detail page shows an empty update timeline with nothing highlighted.</td></tr>
+    <tr><td>Who experiences it?</td><td>CSPs and their delegated team members handling netbox pickups — especially anyone returning to the app after updates (reassignment, photo rejection, deadline change, cancellation) happened while they were away.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>CSPs miss or react late to pickup changes → slower device recovery, breached pickup SLAs, and lost/written-off netboxes. Pickup is a revenue-recovery flow, so the miss carries direct cost; it also erodes trust in the app's "what changed while I was away" signal that install/service already earn.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> How the system observably behaves today for the slice being changed. Observable behaviour only.</div>
+  <div class="hint"><strong>Tip:</strong> "Given X, the system does Y." Behaviour, not code structure.</div>
+  <table>
+    <tr><th style="width:32%">Trigger / condition</th><th>Observable behaviour today</th></tr>
+    <tr><td>CSP taps the home pickup group card</td><td>The pickup list opens, listing each pickup as a task card, sorted so the most-recently-updated pickup is at the top.</td></tr>
+    <tr><td>A pickup has updates the CSP has not yet seen</td><td>The pickup's list row shows a pink numeric unread count. After the CSP opens that pickup and returns to the list, the count does <strong>not</strong> clear — it keeps showing, and persists across refreshes.</td></tr>
+    <tr><td>CSP reads a pickup's list row</td><td>The row shows the pickup's <em>current-state</em> status line plus a last-update timestamp. It does not show the text of the latest discrete update (e.g. "Assigned to Ramesh", "Photo rejected").</td></tr>
+    <tr><td>CSP opens a pickup's detail page</td><td>The "updates" timeline is empty ("no updates yet"). No update entries appear, so nothing is highlighted. The app never retrieves a pickup's update history.</td></tr>
+    <tr><td>(Contrast) CSP opens an install or service task</td><td>The list row shows a count that clears once opened and the latest update text; the detail page lists the update history newest-first with the not-yet-seen entries highlighted pink.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> The same slice after the change, mirroring A3 so the two read side by side.</div>
+  <table>
+    <tr><th style="width:32%">Trigger / condition</th><th>Desired observable behaviour</th></tr>
+    <tr><td>CSP taps the home pickup group card</td><td>The pickup list opens, sorted most-recently-updated first. (Unchanged.)</td></tr>
+    <tr><td>A pickup has updates the CSP has not yet seen</td><td>The pickup's list row shows a pink numeric count of the unseen updates. After the CSP opens that pickup, the count clears to zero and stays cleared until a new update occurs.</td></tr>
+    <tr><td>CSP reads a pickup's list row</td><td>The row shows the <strong>title of the pickup's newest update</strong> (the "UPDATE — Title" for its latest lifecycle event, per Netbox AFM) as the latest-update line, plus the last-update timestamp.</td></tr>
+    <tr><td>CSP opens a pickup's detail page</td><td>The updates timeline lists the pickup's update entries newest-first; the entries the CSP has not seen yet are highlighted pink; opening the page marks those updates as seen.</td></tr>
+    <tr><td>(Parity) Install / service tasks</td><td>Behave exactly as today — pickups now match them on these three points.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One atomic change per row — what changes → before → after → why. What engineering builds against and tests are generated from.</div>
+  <div class="hint"><strong>A4 or A5?</strong> A4 is the single picture of the result; A5 is the itemised list of differences, one change per row.</div>
+  <table class="delta">
+    <tr><th style="width:20%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:26%">Why</th></tr>
+    <tr>
+      <td>D1 — Pickup unread count clears on open</td>
+      <td>The list row's unread count never clears; opening a pickup does not mark its updates seen.</td>
+      <td>Opening a pickup marks its updates seen; the list row's count clears to zero and stays until a new update occurs.</td>
+      <td>A count that never clears is noise and destroys the "what's new" signal; parity with install/service.</td>
+    </tr>
+    <tr>
+      <td>D2 — Pickup list "latest update" text</td>
+      <td>Row shows the current-state status line.</td>
+      <td>Row shows the title of the pickup's newest update entry (the AFM "UPDATE — Title" for its latest event).</td>
+      <td>The CSP needs to see <em>what changed</em>, not merely the current state.</td>
+    </tr>
+    <tr>
+      <td>D3 — Pickup detail update timeline is populated</td>
+      <td>Timeline is always empty ("no updates yet").</td>
+      <td>Timeline lists the pickup's update entries, newest-first.</td>
+      <td>The CSP must be able to see updates that happened while they were off the task/app.</td>
+    </tr>
+    <tr>
+      <td>D4 — Unread highlight on pickup detail</td>
+      <td>Nothing is highlighted (no entries exist).</td>
+      <td>Update entries the CSP has not yet seen are highlighted; the count highlighted equals the unseen count shown on the list before opening.</td>
+      <td>Draw the eye to exactly the updates that are new to this CSP.</td>
+    </tr>
+    <tr>
+      <td>D5 — Pickup lifecycle events become visible update entries</td>
+      <td>Pickups produce no CSP-facing update history.</td>
+      <td>Pickup lifecycle events (assigned, self-/team-assigned, reassigned, work started, photos submitted, photo rejected, resubmitted, verified, recovery complete, cancelled — per Netbox AFM) are surfaced as titled, timestamped update entries.</td>
+      <td>The timeline (D3), the list latest-text (D2) and the highlight (D4) all require a source of update entries.</td>
+    </tr>
+    <tr>
+      <td>D6 — Per-pickup unread marker</td>
+      <td>A pickup carries no "how many updates, seen up to where" marker, so unseen cannot be computed or cleared.</td>
+      <td>Each pickup carries a monotonic update marker; the unread count is "updates since the CSP last opened it"; opening advances the "seen up to" point.</td>
+      <td>The count (D1), the highlight (D4) and their clearing all derive from this single marker.</td>
+    </tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Adjacent behaviours that must survive untouched, each with why it's in the blast radius. Each becomes a REGRESSION block in B5.</div>
+  <div class="hint"><strong>Reviewer note:</strong> scoped to what a reasonable engineer might fear breaking — not an inventory.</div>
+  <table>
+    <tr><th style="width:52%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr><td>G1 — Install &amp; service unread count, latest-update text, and detail-timeline highlight behave exactly as today.</td><td>Pickup reuses the same shared task-card, attention-badge, and update-timeline components; a change there can regress install/service.</td></tr>
+    <tr><td>G2 — The pickup list's newest-updated-first sort and its search (by device / ticket / connection / locality) are unchanged.</td><td>The list screen is edited to surface the new latest-text; sort and search live in the same screen.</td></tr>
+    <tr><td>G3 — For an un-started pickup, the 24h-SLA countdown that replaces the status line on the card is still shown (the new latest-update text must not overwrite the countdown where the countdown applies).</td><td>The list row's second line is shared real estate between the countdown and the reason/latest-text; both are edited here.</td></tr>
+    <tr><td>G4 — The home-page pickup group card (dot + rotating summary) is unchanged.</td><td>Out of scope for this change; the same unread signal feeds it, so a change to the unread data could leak into it.</td></tr>
+    <tr><td>G5 — Pickup action flows — acknowledge, submit proof, report-unable, confirm recovery, cancel — behave exactly as today.</td><td>The drilldown-open path being changed sits next to these actions in the same detail screen.</td></tr>
+    <tr><td>G6 — Non-pickup task families do not start reading a pickup update source, and their timelines/counts are untouched.</td><td>The fetch/ack path is currently family-branched; widening it risks cross-family leakage.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases Affected <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Rules/invariants the change introduces, and new edges each with an intended outcome. All verified in B5.</div>
+  <div class="hint"><strong>A6 or A7?</strong> Preserved behaviour → A6. Newly introduced rule / invariant / edge → A7.</div>
+  <h3>A7.1 Rules &amp; invariants (must always hold)</h3>
+  <table>
+    <tr><th style="width:36%">Rule / invariant</th><th>Statement</th></tr>
+    <tr><td>INV-1 — count is non-negative &amp; derived</td><td>A pickup's displayed unread count equals the number of updates that occurred since the CSP last opened it, and is never negative.</td></tr>
+    <tr><td>INV-2 — clear-on-open</td><td>Immediately after a CSP opens a pickup, that pickup's unread count is zero for that CSP, and stays zero until a new update occurs.</td></tr>
+    <tr><td>INV-3 — highlight equals count</td><td>The number of update entries highlighted on the detail page at open equals the unread count that was shown on the list row just before opening.</td></tr>
+    <tr><td>INV-4 — newest-first &amp; latest-text consistency</td><td>Update entries are ordered newest-first everywhere they appear; the list row's latest-update text is the title of the top (newest) timeline entry.</td></tr>
+    <tr><td>RULE-1 — parity, not divergence</td><td>Pickup uses the same unread/timeline semantics as install/service; no pickup-only rule for counting, clearing, ordering, or highlighting is introduced.</td></tr>
+    <tr><td>RULE-2 — single latest-text</td><td>A list row shows exactly one latest-update title (the newest), never a concatenation of several updates.</td></tr>
+  </table>
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:36%">Edge / condition</th><th>Intended business outcome</th></tr>
+    <tr><td>E1 — Pickup with only its creation event (no later updates)</td><td>No unread count and no highlight; timeline shows the single creation/assignment entry; list latest-text is that entry's title ("Pickup task assigned").</td></tr>
+    <tr><td>E2 — An update arrives while the CSP is viewing the pickup detail</td><td>[Decision needed — define before build: does the new update live-append and highlight in the open detail, or only surface on the next open?]</td></tr>
+    <tr><td>E3 — A pickup is delegated: a team member and the admin CSP each open it</td><td>[Decision needed — define before build: is "seen / unread" tracked per user (each clears their own) or per task (either open clears it for both)? Must match install/service semantics.]</td></tr>
+    <tr><td>E4 — Pickup reaches a terminal state (recovery complete / cancelled) with unseen updates</td><td>The terminal card auto-dismisses per Netbox AFM; the unread count is not surfaced after dismissal and blocks nothing.</td></tr>
+    <tr><td>E5 — Pickup has a large update history</td><td>The list shows only the newest update as latest-text; the detail timeline shows the newest page and loads older entries on demand (parity with install/service paging).</td></tr>
+    <tr><td>E6 — An update entry's title has no translation for the active language</td><td>The entry renders via the existing language fallback; it never shows a blank line or a raw key.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Every OS plausibly in the blast radius, with an explicit Yes/No, the amendment, the consulted owner, and sign-off status. Ships only when every "Yes" is Received.</div>
+  <div class="hint"><strong>Backend reality (verified against csp-os-yaml, main):</strong> there is <em>no</em> pickup/nbrec update-history (timeline) endpoint — install and restore each have one; nbrec exposes only action endpoints. The pickup feed/drilldown does not emit an unread-attention version. So this change is <strong>not</strong> app-only — it requires Gateway and Asset-Custody amendments.</div>
+  <table>
+    <tr><th>OS</th><th>Impacted?</th><th>Amendment (one line)</th><th>Amendment type</th><th>Amendment owner (consulted)</th><th>Sign-off</th></tr>
+    <tr>
+      <td>CSP Gateway (csp-gateway-service)</td><td>Yes</td>
+      <td>Emit a per-pickup unread marker (unseen count + "seen up to" version + last-update time) on the pickup feed/drilldown, and expose a pickup update-history for the detail — parity with the install candidate timeline; honour the existing attention-ack for pickups.</td>
+      <td>Behaviour change · Cross-OS contract</td><td class="placeholder">[Gateway OS owner — to consult]</td><td>Pending</td>
+    </tr>
+    <tr>
+      <td>CSP Asset Custody / Netbox Recovery (csp-asset-custody-service)</td><td>Yes</td>
+      <td>Source the pickup update entries — turn pickup lifecycle events into a CSP-facing, titled update history (a custody audit-log timeline exists as a candidate source but is device-keyed and not exposed to the pickup drilldown today).</td>
+      <td>Behaviour change · Cross-OS contract</td><td class="placeholder">[ACS / netbox-recovery owner — to consult]</td><td>Pending</td>
+    </tr>
+    <tr>
+      <td>Netbox-Recovery OS decisions (es-netbox-recovery agent decisions)</td><td>Yes</td>
+      <td>Confirm the agreed set of pickup lifecycle events and their update titles/subtitles (the Netbox AFM "Home and Update section") is the canonical event list the update history is built from.</td>
+      <td>Behaviour change</td><td class="placeholder">[Netbox-Recovery OS owner — to consult]</td><td>Pending</td>
+    </tr>
+    <tr>
+      <td>CSP Compensation (csp-compensation-service)</td><td>No</td>
+      <td>The "recovery complete — ₹{amt} commission" update entry displays an already-available commission amount; no compensation logic changes.</td>
+      <td>None</td><td>—</td><td>—</td>
+    </tr>
+    <tr>
+      <td>CSP Payment &amp; Settlement</td><td>No</td>
+      <td>No money moves; display-only.</td>
+      <td>None</td><td>—</td><td>—</td>
+    </tr>
+    <tr>
+      <td>CSP Support-Resolution (SRS)</td><td>No</td>
+      <td>Pickup is not an SRS ticket; unaffected.</td>
+      <td>None</td><td>—</td><td>—</td>
+    </tr>
+  </table>
+  <div class="hint"><strong>Amendment types:</strong> <em>Behaviour change</em> · <em>SPR parameter</em> · <em>Cross-OS contract</em> · <em>None</em>. Note: the CSP app itself is the consumer of these amendments; its wiring is captured in A5/B1/B4, not as an OS row.</div>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>The supporting detail engineering needs to build and test the delta precisely.</p>
+  <div class="author-note">Still business behaviour — diagrams describe logic and outcomes, never architecture.</div>
+</div>
+
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflows — Before &amp; After <span class="tier cond">Conditional — the drilldown-open logic moves</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Before and After of the workflow whose decision logic changes — here, what happens when a CSP opens a pickup. Shared start/end nodes; only diff nodes coloured.</div>
+  <div class="diff-legend">
+    <strong>Colour key</strong>
+    <span class="chip unchanged">Unchanged</span>
+    <span class="chip added">Added / new path</span>
+    <span class="chip changed">Behaviour changed</span>
+    <span class="chip removed">Removed / replaced</span>
+  </div>
+
+  <p class="flow-label before">Before — current logic (opening a pickup)</p>
+  <div class="mermaid">
+flowchart TD
+    Start([CSP opens a pickup]) --> Detail[Load pickup detail]
+    Detail --> Fetch{Fetch update history?}
+    Fetch -- "not attempted for pickup" --> Empty[Updates timeline shows empty]
+    Empty --> Ack{Mark updates seen?}
+    Ack -- "ack never fires for pickup" --> Stay[Unread count keeps showing]
+    Stay --> End([Detail shown])
+    classDef removed fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    class Fetch,Empty,Ack,Stay removed;
+  </div>
+
+  <p class="flow-label after">After — changed logic (opening a pickup)</p>
+  <div class="mermaid">
+flowchart TD
+    Start([CSP opens a pickup]) --> Detail[Load pickup detail]
+    Detail --> Fetch[Fetch pickup update history]
+    Fetch --> Render[Show update entries newest-first]
+    Render --> HL[Highlight entries not yet seen by this CSP]
+    HL --> Ack[Mark this pickup's updates seen]
+    Ack --> Clear[Unread count clears to zero]
+    Clear --> End([Detail shown])
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    class Fetch,Render,HL,Ack,Clear added;
+  </div>
+
+  <div class="hint"><strong>Read:</strong> the skeleton (open → load detail → … → detail shown) is identical; the change replaces the two dead branches (no fetch, no ack) with the install/service-style fetch → render → highlight → ack → clear path. The list-row latest-text (D2) is a rendering consequence of the same update history, not a separate workflow — see B4.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> State Changes <span class="tier cond">Strict conditional — only if a state machine is touched</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Added/removed/re-routed lifecycle states, or N/A with a reason.</div>
+  <p><strong>N/A.</strong> This change does not add, remove, or re-route any pickup lifecycle state. The pickup state machine (PENDING_PICKUP → DELEGATED/IN_PROGRESS → PROOF_SUBMITTED/VERIFICATION → VERIFIED → RESOLVED / CANCELLED, per Netbox AFM) is unchanged; the change only <em>surfaces</em> its existing transitions as update entries.</p>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Configurable values and tracked data at the business level — never schema, columns, or types.</div>
+  <table>
+    <tr><th style="width:26%">Parameter / data</th><th>Old</th><th>New</th><th>Valid range / scope</th><th>Reason</th></tr>
+    <tr><td>Per-pickup update marker ("update sequence" — how many updates a pickup has had)</td><td>Not tracked for pickup</td><td>Tracked (business state)</td><td>Per pickup; monotonic non-decreasing</td><td>Basis for computing unseen and for the ack.</td></tr>
+    <tr><td>Per-CSP "seen up to" point for a pickup</td><td>Not tracked for pickup</td><td>Tracked (business state)</td><td>Per pickup, per CSP user</td><td>Lets the count clear on open and stay cleared per user.</td></tr>
+    <tr><td>Pickup update history (titled, timestamped update entries)</td><td>Not surfaced for pickup</td><td>Surfaced (business data)</td><td>Per pickup; ordered newest-first</td><td>Feeds the detail timeline, the list latest-text, and the highlight.</td></tr>
+    <tr><td>Update-history page size on the detail page</td><td>Install / service: 5 per page</td><td>Pickup also: 5 per page</td><td>Global; reuse existing value</td><td>Parity — same "load older" behaviour across families.</td></tr>
+  </table>
+  <div class="hint"><strong>Note:</strong> no new tunable numeric threshold is introduced; the page size reuses the existing install/service value. Field names, storage, and event schemas are engineering's.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> UI Impact <span class="tier cond">Conditional — user-visible</span></h2>
+  <div class="expected"><strong>What is expected:</strong> What the user now sees, at the level of information and state — not pixels or copy.</div>
+  <table>
+    <tr><th style="width:34%">Surface</th><th>What the user now sees</th></tr>
+    <tr><td>Pickup list row (after tapping the home group card)</td><td>An unread count that clears after the pickup is opened; the newest update's title as the latest-update line (where the SLA countdown does not occupy that line); the last-update timestamp.</td></tr>
+    <tr><td>Pickup detail — updates section</td><td>The pickup's update history, newest-first; entries not yet seen by this CSP are highlighted; the section's unread badge clears on open; older entries load on demand.</td></tr>
+  </table>
+  <div class="hint"><strong>No Experience–Data Spec needed:</strong> these screen states already exist in the app (built for install/service; pickup reuses the identical components). This change populates existing states with pickup data — it does not introduce a new design surface. Exact copy for update titles/subtitles is the Netbox AFM design deliverable, not this spec.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given/When/Then blocks that exhaustively cover business logic, computation (with boundaries), invariants, use/edge cases, and a REGRESSION block per A6 guard. Every block labelled; the B5.1 matrix filled.</div>
+  <div class="hint"><strong>Why this matters:</strong> B5 is the contract the (AI-generated) code is checked against. A class left uncovered is a class no one verified.</div>
+
+  <h3>Business logic (A5 delta · A7.1 rules)</h3>
+  <div class="gherkin">
+    <strong>LOGIC_01 (logic · happy) — D1/INV-2 count clears on open:</strong><br>
+    <span class="kw">Given</span> a pickup whose list row shows an unread count of 3 for this CSP<br>
+    <span class="kw">When</span> the CSP opens that pickup and returns to the list<br>
+    <span class="kw">Then</span> the pickup's unread count reads zero<br>
+    <span class="kw">And</span> it stays zero across list refreshes until a new update occurs
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_02 (logic · negative) — D1 no false clear:</strong><br>
+    <span class="kw">Given</span> a pickup with unread updates that the CSP has <em>not</em> opened<br>
+    <span class="kw">When</span> the list is refreshed or re-sorted<br>
+    <span class="kw">Then</span> the unread count is still shown (only opening the pickup clears it)
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_03 (logic · happy) — D2 latest-text is the newest update title:</strong><br>
+    <span class="kw">Given</span> a pickup whose most recent update is "Assigned to Ramesh"<br>
+    <span class="kw">When</span> the CSP views the pickup list<br>
+    <span class="kw">Then</span> that row's latest-update line reads the title of that newest update, not the current-state line
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_04 (logic · happy) — D3/D5 timeline populated from lifecycle events:</strong><br>
+    <span class="kw">Given</span> a pickup that has been assigned, started, and had a photo rejected<br>
+    <span class="kw">When</span> the CSP opens its detail page<br>
+    <span class="kw">Then</span> the updates timeline lists those events as titled, timestamped entries, newest-first
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_05 (logic · happy) — D4 highlight of unseen entries:</strong><br>
+    <span class="kw">Given</span> a pickup with 2 updates this CSP has not seen and 4 older seen ones<br>
+    <span class="kw">When</span> the CSP opens the detail page<br>
+    <span class="kw">Then</span> the 2 newest entries are highlighted and the 4 older ones are not
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_06 (logic · negative) — RULE-2 single latest-text:</strong><br>
+    <span class="kw">Given</span> a pickup with several updates in quick succession<br>
+    <span class="kw">When</span> the CSP views the list row<br>
+    <span class="kw">Then</span> exactly one title (the newest) is shown, never a concatenation
+  </div>
+
+  <h3>Computation &amp; calculation (with boundaries)</h3>
+  <div class="gherkin computation">
+    <strong>COMPUTE_01 (computation · normal) — unread = updates since last open:</strong><br>
+    <span class="kw">Given</span> a pickup the CSP last opened after update #5, now at update #8<br>
+    <span class="kw">When</span> the list row renders<br>
+    <span class="kw">Then</span> the unread count reads 3
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_02 (computation · zero boundary) — no new updates:</strong><br>
+    <span class="kw">Given</span> a pickup the CSP last opened at its latest update<br>
+    <span class="kw">When</span> the list row renders<br>
+    <span class="kw">Then</span> the unread count is zero and no count badge is shown
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_03 (computation · first-update boundary) — brand-new pickup:</strong><br>
+    <span class="kw">Given</span> a pickup that has just its creation/assignment event and was never opened<br>
+    <span class="kw">When</span> the list row renders<br>
+    <span class="kw">Then</span> the count reflects that single unseen update (1), and the latest-text is that event's title
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_04 (computation · off-by-one) — highlight count equals list count:</strong><br>
+    <span class="kw">Given</span> a list row showing an unread count of N just before opening<br>
+    <span class="kw">When</span> the CSP opens the detail page<br>
+    <span class="kw">Then</span> exactly N entries are highlighted — not N−1 or N+1
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_05 (computation · max / paging boundary) — large history:</strong><br>
+    <span class="kw">Given</span> a pickup with more updates than one page<br>
+    <span class="kw">When</span> the CSP opens the detail page<br>
+    <span class="kw">Then</span> the newest page is shown, older entries load on demand, and the newest-first order holds across page loads
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_06 (computation · post-open increment) — update after clear:</strong><br>
+    <span class="kw">Given</span> a pickup the CSP opened (count cleared to zero)<br>
+    <span class="kw">When</span> one new update occurs afterwards<br>
+    <span class="kw">Then</span> the unread count becomes exactly 1
+  </div>
+
+  <h3>Invariants (A7.1)</h3>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_01 (INV-1) — non-negative &amp; derived:</strong><br>
+    <span class="kw">Given</span> any pickup and any CSP at any time<br>
+    <span class="kw">Then</span> the displayed unread count equals updates-since-last-open and is never negative
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_02 (INV-2) — clear-on-open holds:</strong><br>
+    <span class="kw">Given</span> any pickup just opened by a CSP<br>
+    <span class="kw">Then</span> its unread count for that CSP is zero<br>
+    <span class="kw">Until</span> a new update occurs
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_03 (INV-3) — highlight equals count:</strong><br>
+    <span class="kw">Given</span> any pickup opened from the list<br>
+    <span class="kw">Then</span> the number of highlighted entries equals the count shown on the list immediately before opening
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_04 (INV-4) — newest-first &amp; latest-text consistency:</strong><br>
+    <span class="kw">Given</span> any pickup with at least one update<br>
+    <span class="kw">Then</span> entries are ordered newest-first wherever shown<br>
+    <span class="kw">And</span> the list latest-text equals the title of the top timeline entry
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_05 (RULE-1) — parity, no divergent rule:</strong><br>
+    <span class="kw">Given</span> the same unread/timeline scenario on a pickup and on an install/service task<br>
+    <span class="kw">Then</span> counting, clearing, ordering, and highlighting behave identically
+  </div>
+
+  <h3>Use &amp; edge cases (A7.2 · B1 branches)</h3>
+  <div class="gherkin">
+    <strong>EDGE_01 (E1) — creation-only pickup:</strong><br>
+    <span class="kw">Given</span> a pickup with only its creation/assignment event<br>
+    <span class="kw">When</span> the CSP views list and detail<br>
+    <span class="kw">Then</span> the timeline shows that single entry, the latest-text is its title, and (if unopened) the count is 1
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_02 (E2 · decision-pending) — update during viewing:</strong><br>
+    <span class="kw">Given</span> a CSP viewing a pickup's detail<br>
+    <span class="kw">When</span> a new update arrives<br>
+    <span class="kw">Then</span> behaviour follows the E2 decision once made (live-append &amp; highlight, or surface on next open) — block to be finalised when E2 is decided
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_03 (E3 · decision-pending) — delegated: team vs admin open:</strong><br>
+    <span class="kw">Given</span> a delegated pickup opened by a team member and by the admin CSP<br>
+    <span class="kw">When</span> each opens it<br>
+    <span class="kw">Then</span> clearing follows the E3 decision (per-user vs per-task), matching install/service semantics
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_04 (E4) — terminal with unseen updates:</strong><br>
+    <span class="kw">Given</span> a pickup that reaches recovery-complete or cancelled with unseen updates<br>
+    <span class="kw">When</span> the terminal card auto-dismisses<br>
+    <span class="kw">Then</span> the unread count is not surfaced afterwards and blocks nothing
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_05 (E6) — missing translation:</strong><br>
+    <span class="kw">Given</span> an update whose title lacks a translation for the active language<br>
+    <span class="kw">When</span> it renders in list or timeline<br>
+    <span class="kw">Then</span> the existing language fallback is used; never a blank line or a raw key
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_06 (B1 branch · negative) — history fetch fails:</strong><br>
+    <span class="kw">Given</span> the pickup detail opens but the update history cannot be fetched<br>
+    <span class="kw">When</span> the page renders<br>
+    <span class="kw">Then</span> the detail still opens gracefully (no crash), and the unread state is not falsely cleared
+  </div>
+
+  <h3>Regression (A6 guards)</h3>
+  <div class="gherkin regression">
+    <strong>REGRESSION_01 (G1) — install/service unaffected:</strong><br>
+    <span class="kw">Given</span> install and service tasks<br>
+    <span class="kw">When</span> the CSP uses their list count, latest-text, and detail highlight<br>
+    <span class="kw">Then</span> all behave exactly as before this change
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_02 (G2) — pickup list sort &amp; search:</strong><br>
+    <span class="kw">Given</span> the pickup list<br>
+    <span class="kw">When</span> it is sorted and searched by device / ticket / connection / locality<br>
+    <span class="kw">Then</span> newest-updated-first order and search results are unchanged
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_03 (G3) — countdown line preserved:</strong><br>
+    <span class="kw">Given</span> an un-started pickup whose card shows the 24h-SLA countdown<br>
+    <span class="kw">When</span> the row renders<br>
+    <span class="kw">Then</span> the countdown still occupies that line and the latest-text does not overwrite it
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_04 (G4) — home group card unchanged:</strong><br>
+    <span class="kw">Given</span> the home-page pickup group card<br>
+    <span class="kw">When</span> pickups have unread updates<br>
+    <span class="kw">Then</span> its dot and rotating summary behave exactly as before (no new count/text leaks in)
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_05 (G5) — pickup actions unchanged:</strong><br>
+    <span class="kw">Given</span> a pickup detail page<br>
+    <span class="kw">When</span> the CSP acknowledges, submits proof, reports unable, confirms recovery, or cancels<br>
+    <span class="kw">Then</span> each action behaves exactly as before
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_06 (G6) — no cross-family leakage:</strong><br>
+    <span class="kw">Given</span> non-pickup task families<br>
+    <span class="kw">When</span> their details open<br>
+    <span class="kw">Then</span> they do not read a pickup update source and their timelines/counts are untouched
+  </div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <p style="font-size:13px;color:var(--muted);margin:4px 0;">Author fills counts; reviewer audits. Not sendable until every row reads "all covered". Two rows carry decision-pending blocks (E2, E3) — they cannot read "all covered" until A7.2 decisions are made.</p>
+  <table class="coverage">
+    <tr><th style="width:24%">Coverage class</th><th>Source section(s)</th><th style="width:12%">Items</th><th style="width:12%">Blocks</th><th style="width:20%">All covered?</th></tr>
+    <tr><td class="cls">Business logic</td><td>A5 (D1–D6) · A7.1 (RULE-1/2)</td><td>8</td><td>6</td><td>Yes</td></tr>
+    <tr><td class="cls">Computation</td><td>A5 (D1/D4/D6 counts) · B3 (marker, page size)</td><td>6</td><td>6</td><td>Yes — each has a boundary block</td></tr>
+    <tr><td class="cls">Invariants</td><td>A7.1 (INV-1…4, RULE-1)</td><td>5</td><td>5</td><td>Yes</td></tr>
+    <tr><td class="cls">Use &amp; edge cases</td><td>A7.2 (E1–E6) · B1 branches</td><td>6</td><td>6</td><td>Partial — E2 &amp; E3 blocks pending their decisions</td></tr>
+    <tr><td class="cls">Regression</td><td>A6 (G1–G6)</td><td>6</td><td>6</td><td>Yes</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--muted);">Bias check: 6 happy vs 22 negative/boundary/edge/invariant/regression blocks — well within the ~1:3 target. Every computation carries a boundary block; every invariant an INVARIANT block; every A6 guard a REGRESSION block.</p>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <p style="font-size:13px;color:var(--muted);margin-top:0;">Sendable when: Quick Check filled (incl. tier); required sections filled; conditional sections filled or N/A-with-reason; the B5 matrix reads "all covered" on every class; every A6 guard has a REGRESSION block; every A8 "Yes" has sign-off Received.</p>
+  <table>
+    <tr><th>#</th><th>Section</th><th class="tier-cell">Tier</th><th class="check">Filled</th><th class="check">N/A</th></tr>
+    <tr><td>QC</td><td>Quick Check</td><td><span class="tier core">Always</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A1</td><td>Metadata</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A2</td><td>Why this change</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A3</td><td>Current behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A4</td><td>Desired behaviour</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A5</td><td>The delta</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A6</td><td>Must-not-change (guard)</td><td><span class="tier guard">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edge cases</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td><span class="tier guard">Always — gate</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B1</td><td>Changed workflows (before/after)</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">[ ]</td></tr>
+    <tr><td>B2</td><td>State changes</td><td><span class="tier cond">Strict cond.</span></td><td class="check">[ ]</td><td class="check">[x] — no state machine touched</td></tr>
+    <tr><td>B3</td><td>Data &amp; parameter changes</td><td><span class="tier how">Full</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B4</td><td>UI impact</td><td><span class="tier cond">Cond.</span></td><td class="check">[x]</td><td class="check">[ ]</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria (verification layer)</td><td><span class="tier core">Light</span></td><td class="check">[x]</td><td class="check">—</td></tr>
+  </table>
+  <div class="footer note">
+    <strong>Open blockers before build:</strong> (1) A8 — all three OS sign-offs are <em>Pending</em>; consult Gateway, Asset-Custody/netbox-recovery, and Netbox-Recovery OS owners and get each to Received. (2) A7.2 — decide E2 (update while viewing) and E3 (per-user vs per-task unread on delegated pickups); until then the B5 use/edge row cannot read "all covered".<br><br>
+    <strong>Reviewer rule (engineering):</strong> Read Quick Check, A5, A6, A8, and the B5 matrix in full. This is not app-only — Gateway must expose a pickup update-history and emit the unread marker; Asset-Custody must source the update entries.<br><br>
+    <strong>Out-of-scope for this spec:</strong> API contracts, event/payload schemas, storage/indexing, retry/backoff, the exact update-title copy (Netbox AFM design), and the home-page pickup group card (separate task).
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:150px">Author</th><th style="width:110px">Section(s)</th><th>Change &amp; rationale</th><th style="width:110px">Approver</th></tr>
+    <tr><td>v0.1</td><td>2026-07-20</td><td>Jaivin Prajapati</td><td>All</td><td>Initial change spec — pickup unread-update parity on list + detail; backend gap (no pickup timeline endpoint, no unread marker emission) confirmed against csp-os-yaml and captured in A8.</td><td>—</td></tr>
+  </table>
+</section>
+
+<p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">
+  Wiom Change Spec v1.0 (PM deliverable) · Quick Check + Part A (8) + Part B (5) + Closeout
+</p>
+
+</main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>
