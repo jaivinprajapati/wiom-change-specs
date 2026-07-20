@@ -185,7 +185,7 @@
 <main>
 
 <header class="doc">
-  <div class="eyebrow">Wiom · Change Spec · v0.1 · PM deliverable</div>
+  <div class="eyebrow">Wiom · Change Spec · v0.2 · PM deliverable</div>
   <h1>Netbox-Pickup Unread-Update Surfacing — Pickup List &amp; Detail</h1>
   <p class="lede">Netbox-pickup tasks do not participate in the unread-update experience that install and service tasks already have. This change brings pickups to parity on three points — the pickup <strong>list</strong> (reached by tapping the home pickup group card) and the pickup <strong>detail</strong> page: a clearing unread count, the latest-update text, and pink-highlighted unread update entries. The home-page pickup group card is explicitly <strong>out of scope</strong> (tracked separately).</p>
   <div class="meta-row">
@@ -226,8 +226,8 @@
     <tr><td>Change title</td><td>Netbox-pickup unread-update surfacing on the pickup list &amp; detail</td></tr>
     <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
     <tr><td>Status</td><td>Draft</td></tr>
-    <tr><td>Version</td><td>v0.1</td></tr>
-    <tr><td>Baseline (original PRD / OS)</td><td>Netbox Recovery PRD (<em>es-netbox-recovery-service-prd-v1.6</em>) · the install/service unread-update experience (Attention Framework "attention/ack" + candidate timeline, per Gateway home-feed spec) · design intent: <em>Netbox AFM.xlsx</em> — "Home and Update section" (state → UPDATE Title / HOME CARD subtitle).</td></tr>
+    <tr><td>Version</td><td>v0.2</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>Netbox Recovery PRD (<em>es-netbox-recovery-service-prd-v1.6</em>) · the install/service unread-update experience (Attention Framework "attention/ack" + candidate timeline, per Gateway home-feed spec) · <strong>design text source: <em>Netbox AFM.xlsx</em></strong> — "Home and Update section", pasted into the tracking issue <em>csp-os-yaml#1177</em>.</td></tr>
   </table>
   <hr class="sect-end">
 </section>
@@ -481,7 +481,8 @@ flowchart TD
     <tr><td>Pickup list row (after tapping the home group card)</td><td>An unread count that clears after the pickup is opened; the newest update's title as the latest-update line (where the SLA countdown does not occupy that line); the last-update timestamp.</td></tr>
     <tr><td>Pickup detail — updates section</td><td>The pickup's update history, newest-first; entries not yet seen by this CSP are highlighted; the section's unread badge clears on open; older entries load on demand.</td></tr>
   </table>
-  <div class="hint"><strong>No Experience–Data Spec needed:</strong> these screen states already exist in the app (built for install/service; pickup reuses the identical components). This change populates existing states with pickup data — it does not introduce a new design surface. Exact copy for update titles/subtitles is the Netbox AFM design deliverable, not this spec.</div>
+  <div class="hint"><strong>Text source for FE &amp; BE — use verbatim:</strong> every update-entry title and card subtitle (EN + हिं) per pickup state is specified in the <strong>Netbox AFM sheet</strong> ("Home and Update section"), pasted into the tracking issue <em>csp-os-yaml#1177</em>. Backend uses the "UPDATE — Title" strings when emitting each update entry (D5); the app renders them (list latest-text D2, detail timeline D3). This spec does not restate the copy — the sheet is the single source so both sides have the strings ready.</div>
+  <div class="hint"><strong>No Experience–Data Spec needed:</strong> these screen states already exist in the app (built for install/service; pickup reuses the identical components). This change populates existing states with pickup data — it does not introduce a new design surface.</div>
   <hr class="sect-end">
 </section>
 
@@ -718,6 +719,7 @@ flowchart TD
   <table>
     <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:150px">Author</th><th style="width:110px">Section(s)</th><th>Change &amp; rationale</th><th style="width:110px">Approver</th></tr>
     <tr><td>v0.1</td><td>2026-07-20</td><td>Jaivin Prajapati</td><td>All</td><td>Initial change spec — pickup unread-update parity on list + detail; backend gap (no pickup timeline endpoint, no unread marker emission) confirmed against csp-os-yaml and captured in A8.</td><td>—</td></tr>
+    <tr><td>v0.2</td><td>2026-07-20</td><td>Jaivin Prajapati</td><td>A1, B4</td><td>Called out the Netbox AFM sheet (pasted into tracking issue csp-os-yaml#1177) as the single verbatim EN/हिं text source for update titles + card subtitles, so FE and BE build from the same ready strings.</td><td>—</td></tr>
   </table>
 </section>
 
