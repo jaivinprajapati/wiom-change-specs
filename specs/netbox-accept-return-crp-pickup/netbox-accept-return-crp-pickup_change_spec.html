@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiom — Change Spec — NetBox "Accept Return" → CRP Device List → Pickup Flow</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #fafaf9; --surface: #ffffff; --ink: #1a1a1a; --muted: #6b6b6b; --rule: #e5e5e2;
+    --core: #0b6b3a; --core-bg: #e9f5ee;
+    --cond: #8a5a00; --cond-bg: #fbf1dd;
+    --what: #1f3c6e; --what-bg: #e8eef8;
+    --how: #5b2a86; --how-bg: #efe6f7;
+    --guard: #b91c1c; --guard-bg: #fee2e2;
+    --required: #b91c1c; --required-bg: #fee2e2;
+    --illustrative: #6b7280; --illustrative-bg: #f1f3f5;
+    --quickcheck-bg: #fef9c3; --quickcheck-rule: #ca8a04; --quickcheck-ink: #713f12;
+    --hint-bg: #ecfeff; --hint-rule: #0e7490; --hint-ink: #155e75;
+    --delta-bg: #eef6ff; --delta-rule: #1f3c6e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif; font-size: 15px; line-height: 1.55; color: var(--ink); background: var(--bg); }
+  .layout { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+  nav.toc { position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; padding: 24px 18px; border-right: 1px solid var(--rule); background: var(--surface); font-size: 13px; }
+  nav.toc h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 18px 0 6px; }
+  nav.toc h2:first-of-type { margin-top: 0; }
+  nav.toc h2.qc { color: var(--quickcheck-ink); border-left: 3px solid var(--quickcheck-rule); padding-left: 8px; }
+  nav.toc h2.what { color: var(--what); border-left: 3px solid var(--what); padding-left: 8px; }
+  nav.toc h2.how { color: var(--how); border-left: 3px solid var(--how); padding-left: 8px; }
+  nav.toc h2.close { color: var(--muted); border-left: 3px solid var(--muted); padding-left: 8px; }
+  nav.toc ol { list-style: none; padding: 0; margin: 0; }
+  nav.toc li { margin: 4px 0; }
+  nav.toc li a { text-decoration: none; color: var(--ink); display: flex; gap: 8px; align-items: baseline; padding: 4px 6px; border-radius: 4px; font-size: 12.5px; }
+  nav.toc li a:hover { background: var(--bg); }
+  nav.toc li a .ix { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 32px; font-weight: 600; }
+  main { padding: 40px 56px 120px; max-width: 980px; }
+  header.doc { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+  header.doc .eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  header.doc h1 { font-size: 32px; margin: 6px 0 8px; line-height: 1.2; }
+  header.doc p.lede { color: var(--muted); font-size: 15px; margin: 0; max-width: 70ch; }
+  header.doc .meta-row { display: flex; gap: 24px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+  .convention { margin-top: 14px; padding: 12px 14px; background: var(--bg); border: 1px dashed var(--rule); border-radius: 5px; font-size: 13px; }
+  .quickcheck { margin: 28px 0 40px; background: var(--quickcheck-bg); border: 1px solid var(--quickcheck-rule); border-left: 5px solid var(--quickcheck-rule); border-radius: 6px; padding: 18px 22px; }
+  .quickcheck h2 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--quickcheck-ink); }
+  .quickcheck .qc-tag { font-size: 11px; color: var(--quickcheck-ink); opacity: 0.9; margin-bottom: 12px; }
+  .quickcheck dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .quickcheck dt { font-weight: 600; color: var(--quickcheck-ink); }
+  .quickcheck dd { margin: 0; color: var(--ink); }
+  .part-divider { margin: 56px 0 32px; padding: 28px 32px; border-radius: 8px; color: white; }
+  .part-divider.what { background: var(--what); }
+  .part-divider.how { background: var(--how); }
+  .part-divider .label { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+  .part-divider h2 { font-size: 28px; margin: 4px 0 6px; }
+  .part-divider p { margin: 0; font-size: 14px; opacity: 0.92; max-width: 70ch; }
+  .part-divider .author-note { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.25); font-size: 13px; font-style: italic; opacity: 0.92; }
+  section.spec { margin: 40px 0; scroll-margin-top: 24px; }
+  section.spec h2 { font-size: 21px; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  section.spec h2 .num { color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+  section.spec h3 { font-size: 15px; margin: 16px 0 4px; }
+  .tier { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 3px 8px; border-radius: 3px; font-weight: 600; }
+  .tier.core { background: var(--core-bg); color: var(--core); }
+  .tier.cond { background: var(--cond-bg); color: var(--cond); }
+  .tier.what { background: var(--what-bg); color: var(--what); }
+  .tier.how { background: var(--how-bg); color: var(--how); }
+  .tier.guard { background: var(--guard-bg); color: var(--guard); }
+  .expected { background: #f4f4f2; border-left: 3px solid var(--ink); padding: 10px 14px; font-size: 13px; margin: 10px 0 14px; color: #333; }
+  .hint { background: var(--hint-bg); border-left: 3px solid var(--hint-rule); padding: 8px 14px; font-size: 13px; margin: 8px 0 14px; color: var(--hint-ink); border-radius: 4px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border: 1px solid var(--rule); vertical-align: top; }
+  th { background: var(--bg); font-weight: 600; }
+  td.placeholder { color: var(--muted); font-style: italic; }
+  table.delta th.before { background: #f3f4f6; }
+  table.delta th.after { background: var(--delta-bg); color: var(--delta-rule); }
+  .mermaid { background: var(--surface); border: 1px solid var(--rule); border-radius: 5px; padding: 14px; margin: 14px 0; text-align: center; }
+  .gherkin { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--core); padding: 12px 14px; margin: 10px 0; font-size: 13.5px; }
+  .gherkin.regression { border-left-color: var(--guard); }
+  .gherkin.computation { border-left-color: var(--what); }
+  .gherkin.invariant { border-left-color: var(--how); }
+  .gherkin .kw { font-weight: 700; color: var(--core); }
+  .gherkin.regression .kw { color: var(--guard); }
+  .gherkin.computation .kw { color: var(--what); }
+  .gherkin.invariant .kw { color: var(--how); }
+  table.coverage th { background: var(--bg); }
+  table.coverage td.cls { font-weight: 600; }
+  hr.sect-end { border: none; border-top: 1px dashed var(--rule); margin: 32px 0 0; }
+  footer.checklist { margin-top: 60px; padding-top: 30px; border-top: 2px solid var(--ink); }
+  footer.checklist h2 { font-size: 20px; margin-top: 0; }
+  footer.checklist table { font-size: 13.5px; }
+  footer.checklist td.check { width: 80px; text-align: center; font-family: monospace; }
+  footer.note { margin-top: 24px; padding: 14px; background: var(--bg); border-left: 3px solid var(--ink); font-size: 13px; }
+  .diff-legend { font-size: 12.5px; margin: 14px 0 6px; color: var(--muted); }
+  .diff-legend .chip { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; margin-left: 6px; border: 1px solid; }
+  .chip.unchanged { background: #f4f4f2; color: #444; border-color: #cfcfca; }
+  .chip.added { background: #e9f5ee; color: #064e2b; border-color: #0b6b3a; }
+  .chip.changed { background: #fbf1dd; color: #5b3a00; border-color: #8a5a00; }
+  .chip.removed { background: #fee2e2; color: #7f1d1d; border-color: #b91c1c; }
+  .flow-label { font-size: 13px; font-weight: 700; margin: 18px 0 0; }
+  .flow-label.before { color: #7f1d1d; }
+  .flow-label.after { color: #064e2b; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } nav.toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--rule); } main { padding: 24px; } }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Table of contents">
+  <h2 class="qc">Quick Check</h2>
+  <ol><li><a href="#quickcheck"><span class="ix">QC.</span>7-line triage</a></li></ol>
+  <h2 class="what">Part A — WHAT (the change)</h2>
+  <ol>
+    <li><a href="#a1"><span class="ix">A1.</span>Metadata</a></li>
+    <li><a href="#a2"><span class="ix">A2.</span>Why this change</a></li>
+    <li><a href="#a3"><span class="ix">A3.</span>Current behaviour</a></li>
+    <li><a href="#a4"><span class="ix">A4.</span>Desired behaviour</a></li>
+    <li><a href="#a5"><span class="ix">A5.</span>The delta</a></li>
+    <li><a href="#a6"><span class="ix">A6.</span>Must-not-change (regression guard)</a></li>
+    <li><a href="#a7"><span class="ix">A7.</span>Rules, invariants &amp; edges</a></li>
+    <li><a href="#a8"><span class="ix">A8.</span>OS impact &amp; sign-off</a></li>
+  </ol>
+  <h2 class="how">Part B — HOW (detailing)</h2>
+  <ol>
+    <li><a href="#b1"><span class="ix">B1.</span>Changed workflows (before/after)</a></li>
+    <li><a href="#b2"><span class="ix">B2.</span>State changes</a></li>
+    <li><a href="#b3"><span class="ix">B3.</span>Data &amp; parameter changes</a></li>
+    <li><a href="#b4"><span class="ix">B4.</span>UI impact</a></li>
+    <li><a href="#b5"><span class="ix">B5.</span>Acceptance criteria (verification)</a></li>
+  </ol>
+  <h2 class="close">Closeout</h2>
+  <ol>
+    <li><a href="#checklist"><span class="ix">—</span>Completeness checklist</a></li>
+    <li><a href="#changelog"><span class="ix">—</span>Changelog</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="doc">
+  <div class="eyebrow">Wiom · Change Spec · v0.2 · PM deliverable</div>
+  <h1>NetBox "Accept Return" — CRP Device List Opening the Pickup Task Flow</h1>
+  <p class="lede">The NetBox "return / take custody" entry on the CSP app should show the CSP the devices he can take custody of — the ones in <strong>Customer-Recovery-Pending (CRP)</strong> — and let him act on each through the existing netbox pickup (NBREC) flow. This change makes the "Accept Return" screen a CRP-only device list where tapping a device opens the same pickup task screen reached today from Home → pickup group card → pickup list → task, and returns him to the CRP list afterwards. Builds on FE PR&nbsp;#506 (which enables the card and adds search).</p>
+  <div class="meta-row">
+    <span><strong>Author:</strong> Jaivin Prajapati (PM) &nbsp;·&nbsp; <strong>Reviewer:</strong> Engineering (CSP app · Gateway · TAS · ACS) &nbsp;·&nbsp; <strong>Tier:</strong> Full</span>
+  </div>
+  <div class="convention">
+    <strong>Tier:</strong> Full — crosses two surfaces (NetBox home + Accept Return list) into the shared pickup drilldown/flow, changes a backend list contract, and reworks navigation. Business behaviour only; engineering owns implementation.
+  </div>
+</header>
+
+<aside class="quickcheck" id="quickcheck" aria-label="Quick check summary">
+  <h2>Quick Check</h2>
+  <div class="qc-tag">7-line triage. Filled last, after the body was complete.</div>
+  <dl>
+    <dt>What is changing?</dt><dd>"Accept Return" becomes a CRP-only device list; tapping a device opens the existing netbox pickup task flow and returns to the CRP list on exit.</dd>
+    <dt>What triggered it?</dt><dd>Product — give the CSP a device-first way to take custody of devices awaiting customer recovery, via the correct NBREC flow (built on PR #506).</dd>
+    <dt>Blast radius</dt><dd>The Accept Return screen + its backend list; the shared pickup drilldown/flow and its navigation/back-stack; NetBox home cards; inventory buckets. Home pickup path must stay identical.</dd>
+    <dt>Reversible?</dt><dd>Yes — FE entry-point + list-source is flag-guardable/revertible; the backend list field is additive.</dd>
+    <dt>Money / PII / migration?</dt><dd>Money: No. PII: No (customer name already shown today). Migration: No.</dd>
+    <dt>OS impact / sign-off?</dt><dd>CSP Gateway (Yes), CSP TAS/netbox-recovery (Yes), CSP Asset Custody (Yes — confirm CRP bucket). All Pending.</dd>
+    <dt>Tier</dt><dd>Full — lead PM: Jaivin Prajapati.</dd>
+  </dl>
+</aside>
+
+<div class="part-divider what">
+  <div class="label">Part A</div>
+  <h2>WHAT — The Change</h2>
+  <p>Why we are changing this, what it does today, what it should do, and the precise delta. Stable across implementation revisions.</p>
+  <div class="author-note">Authored by the PM. Changes here trigger re-review.</div>
+</div>
+
+<section class="spec" id="a1">
+  <h2><span class="num">A1.</span> Metadata <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Title, owner, status, version, and a link to the baseline being changed.</div>
+  <table>
+    <tr><th style="width:28%">Field</th><th>Value</th></tr>
+    <tr><td>Change title</td><td>NetBox "Accept Return" entry — CRP device list opening the pickup task flow</td></tr>
+    <tr><td>Owner (PM)</td><td>Jaivin Prajapati</td></tr>
+    <tr><td>Status</td><td>Draft</td></tr>
+    <tr><td>Version</td><td>v0.2</td></tr>
+    <tr><td>Baseline (original PRD / OS)</td><td>FE PR <em>wiom-csp-app-apr09#506</em> (enables the single return card + adds Accept-Return search) · Netbox Recovery PRD (<em>es-netbox-recovery-service-prd-v1.6</em>) · Gateway device-detail behaviour for CRP (<em>csp-gateway-service / netbox-device-detail-be-plan</em> — CRP device already resolves <code>pickup_ticket_id</code> via TAS) · the existing home pickup drilldown/flow (Home → pickup group card → pickup list → task).</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a2">
+  <h2><span class="num">A2.</span> Why This Change <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> A short observable problem — trigger, who, cost.</div>
+  <table>
+    <tr><th style="width:30%">Question</th><th>Answer</th></tr>
+    <tr><td>What's wrong with the current behaviour?</td><td>The CSP has no device-first way to act on netboxes awaiting customer recovery. The single "return" entry was hidden; when shown, it lists <em>DEPLOYED</em> devices (not the ones actually pending recovery) and dead-ends into a walk-in "accept" path rather than the real recovery flow. So a CSP cannot simply see "which of my devices are Customer-Recovery-Pending" and act on each.</td></tr>
+    <tr><td>Who experiences it?</td><td>CSPs responsible for recovering netbox devices from customers whose service has ended / who requested pickup.</td></tr>
+    <tr><td>Cost of leaving it as-is?</td><td>CRP devices linger un-actioned; recovery isn't driven through the correct NBREC flow; the CSP lacks a clear "these are the devices to take custody of" surface — leading to slower recovery, higher device loss, and overstated CSP exposure.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a3">
+  <h2><span class="num">A3.</span> Current Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Observable behaviour today for the slice being changed.</div>
+  <div class="hint"><strong>Tip:</strong> "Given X, the system does Y." Behaviour, not code structure.</div>
+  <table>
+    <tr><th style="width:32%">Trigger / condition</th><th>Observable behaviour today</th></tr>
+    <tr><td>CSP is on the NetBox home, returns section</td><td>With PR #506, a single "return / customer returned it" card is shown above the batch-return card and opens the Accept Return screen. (Before PR #506 the card was hidden.)</td></tr>
+    <tr><td>CSP opens the Accept Return screen</td><td>It fetches and lists the CSP's <em>DEPLOYED</em> devices from the backend, each showing device ID + customer name. A top-bar search filters the loaded list by device ID or customer name (PR #506), with an empty-results state.</td></tr>
+    <tr><td>CSP selects a device and taps the CTA</td><td>The app navigates into the pickup submission wizard (<em>walk-in</em> entry), not the pickup task screen used from Home. A separate, unused "accept-customer-return" path (DEPLOYED → CUSTODIED) also exists but is not wired to the button.</td></tr>
+    <tr><td>CSP reaches a pickup from Home instead</td><td>Home → pickup group card → pickup list → a task opens the pickup <strong>task drilldown</strong> with the full pickup flow (resolution, assignment, photos, etc.).</td></tr>
+    <tr><td>Backend: a CRP device's linked pickup task</td><td>The gateway device-detail endpoint already resolves a CRP device's pickup task (returns <code>pickup_ticket_id</code> and <code>VIEW_PICKUP_TICKET</code>) via a TAS lookup — but this linkage is not carried on the inventory/Accept-Return <em>list</em>.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a4">
+  <h2><span class="num">A4.</span> Desired Behaviour <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> The same slice after the change, mirroring A3.</div>
+  <table>
+    <tr><th style="width:32%">Trigger / condition</th><th>Desired observable behaviour</th></tr>
+    <tr><td>CSP is on the NetBox home, returns section</td><td>The return / "take custody" card is shown and opens the Accept Return screen. (Copy reframed to "devices to take custody of / recover" — design deliverable.)</td></tr>
+    <tr><td>CSP opens the Accept Return screen</td><td>It lists only the CSP's <strong>Customer-Recovery-Pending (CRP)</strong> devices — no other state — each with device ID + customer name, and searchable by device ID or customer name (per PR #506).</td></tr>
+    <tr><td>CSP taps a device (directly or after search)</td><td>The app opens the <strong>pickup task drilldown</strong> for that device's assigned pickup task — the exact same screen reached from Home → pickup group card → pickup list → task.</td></tr>
+    <tr><td>CSP works the pickup</td><td>The pickup flow behaves identically to the Home-launched one — resolution, assignment, photo submission, etc. — with no behavioural difference.</td></tr>
+    <tr><td>CSP returns, cancels, or completes the pickup</td><td>The app returns the CSP to the Accept Return CRP list (refreshed), not to Home. A device that has left CRP no longer appears.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a5">
+  <h2><span class="num">A5.</span> The Delta <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> One atomic change per row — what changes → before → after → why.</div>
+  <div class="hint"><strong>A4 or A5?</strong> A4 is the single picture; A5 is the itemised diff, one change per row.</div>
+  <table class="delta">
+    <tr><th style="width:20%">What changes</th><th class="before">Before</th><th class="after">After</th><th style="width:24%">Why</th></tr>
+    <tr>
+      <td>D1 — Accept Return list source</td>
+      <td>Lists the CSP's <em>DEPLOYED</em> devices.</td>
+      <td>Lists only the CSP's <em>CUSTOMER_RECOVERY_PENDING</em> devices; no other state appears.</td>
+      <td>The CSP should act only on devices genuinely awaiting customer recovery.</td>
+    </tr>
+    <tr>
+      <td>D2 — Per-device pickup task id on the list</td>
+      <td>The list item carries no pickup task / candidate id.</td>
+      <td>Each CRP device carries its assigned pickup task id (the <code>pickup_ticket_id</code> / candidate the gateway already resolves for CRP on device-detail).</td>
+      <td>Needed to open the correct pickup task drilldown from the list.</td>
+    </tr>
+    <tr>
+      <td>D3 — Device-tap target</td>
+      <td>Selecting a device + CTA navigates into the pickup submission wizard (walk-in entry).</td>
+      <td>Tapping a device opens the pickup <strong>task drilldown</strong> (same screen as the Home pickup path) for that device's pickup task.</td>
+      <td>Parity with the Home pickup experience; full resolution/assignment, not just the wizard.</td>
+    </tr>
+    <tr>
+      <td>D4 — Standalone drilldown launch</td>
+      <td>The pickup drilldown opens only within the Home context (relies on the home feed / its back stack).</td>
+      <td>The drilldown opens from the Accept Return context by pickup task id and loads its own task detail, independent of Home.</td>
+      <td>Accept Return is a different surface; the drilldown must open there without the Home feed present.</td>
+    </tr>
+    <tr>
+      <td>D5 — Post-flow return target</td>
+      <td>Walk-in flow exit pops back / routes to Home.</td>
+      <td>Return, cancel, or completion of the pickup returns the CSP to the Accept Return CRP list (refreshed).</td>
+      <td>Keep the CSP in the take-custody context to action the next device.</td>
+    </tr>
+    <tr>
+      <td>D6 — Drop the walk-in accept path</td>
+      <td>A latent DEPLOYED → CUSTODIED "accept-customer-return" path exists.</td>
+      <td>Removed from this entry; custody/recovery happens only through the NBREC pickup flow.</td>
+      <td>One correct recovery path; no confusing dead alternate.</td>
+    </tr>
+    <tr>
+      <td>D7 — Search scope</td>
+      <td>Search filters the loaded DEPLOYED list (PR #506).</td>
+      <td>Same search UX, now over the CRP list (device ID / customer name).</td>
+      <td>Search must operate on the corrected population.</td>
+    </tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a6">
+  <h2><span class="num">A6.</span> Must-Not-Change — Regression Guard <span class="tier guard">GUARD</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Adjacent behaviours that must survive untouched, each with why it's at risk. Each maps to a REGRESSION block in B5.</div>
+  <table>
+    <tr><th style="width:52%">Adjacent behaviour that must not change</th><th>Why it's in the blast radius</th></tr>
+    <tr><td>G1 — The Home pickup path (group card → pickup list → task) behaves exactly as today.</td><td>The same drilldown is now also launched from Accept Return; the launch rework can break the Home launch.</td></tr>
+    <tr><td>G2 — The pickup flow itself (resolution, assignment, photo submission, acknowledge, report-unable, recovery-confirmed, cancel) is behaviourally unchanged.</td><td>A6 protects the flow; this change only adds an entry point, it must not alter flow logic.</td></tr>
+    <tr><td>G3 — The Home-launched pickup back-stack/return behaviour (on complete/cancel it returns where it does today) is unchanged.</td><td>The new "return to CRP list" branch shares the pickup flow's exit handling.</td></tr>
+    <tr><td>G4 — Other inventory buckets (DEPLOYED, WITH_ME, etc.) and the main NetBox inventory screen are unaffected.</td><td>The list-source change touches the inventory/bucket contract.</td></tr>
+    <tr><td>G5 — The Accept Return search UX (icon toggle, inline field, empty state) behaves as shipped in PR #506.</td><td>Search now runs over a different population; the mechanism must be preserved.</td></tr>
+    <tr><td>G6 — The batch-return card and its flow are unchanged.</td><td>It sits next to the single card being repurposed on the same NetBox home section.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a7">
+  <h2><span class="num">A7.</span> Rules, Invariants &amp; Edge Cases Affected <span class="tier what">WHAT</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Rules/invariants introduced, and new edges each with an intended outcome. All verified in B5.</div>
+  <h3>A7.1 Rules &amp; invariants (must always hold)</h3>
+  <table>
+    <tr><th style="width:36%">Rule / invariant</th><th>Statement</th></tr>
+    <tr><td>INV-1 — CRP-only list</td><td>Every device shown on the Accept Return list is in CUSTOMER_RECOVERY_PENDING for the current CSP; no device in any other state appears.</td></tr>
+    <tr><td>INV-2 — device ↔ task correspondence</td><td>Opening a listed device always opens the pickup task for that same device (never a different device's task).</td></tr>
+    <tr><td>INV-3 — post-flow location</td><td>After returning, cancelling, or completing the pickup launched from Accept Return, the CSP is on the Accept Return CRP list — never dropped to Home.</td></tr>
+    <tr><td>INV-4 — list freshness on return</td><td>A device that has left CRP (recovery completed/cancelled) is not present in the list after returning to it.</td></tr>
+    <tr><td>RULE-1 — flow parity</td><td>The pickup flow opened from Accept Return is behaviourally identical to the same flow opened from Home.</td></tr>
+    <tr><td>RULE-2 — single recovery path</td><td>Taking custody of a CRP device happens only via the NBREC pickup flow; no walk-in DEPLOYED→CUSTODIED accept remains reachable from this entry.</td></tr>
+    <tr><td>RULE-3 — latest task on ambiguity</td><td>If a CRP device resolves to more than one pickup task, the list uses the latest (most recent) one; a device that resolves to no pickup task is not listed at all.</td></tr>
+  </table>
+  <h3>A7.2 Edge cases</h3>
+  <table>
+    <tr><th style="width:36%">Edge / condition</th><th>Intended business outcome</th></tr>
+    <tr><td>E1 — CRP device with no resolvable pickup task (TAS absent / cancelled / error, i.e. <code>pickup_ticket_id</code> null)</td><td><strong>Decided:</strong> the device is not fetched into the list at all — such a device never appears on the Accept Return screen. (Only CRP devices that resolve to a pickup task are listed.)</td></tr>
+    <tr><td>E1b — CRP device with more than one pickup task</td><td><strong>Decided:</strong> resolve to the latest (most recent) task and list the device once against it. (Per RULE-3.)</td></tr>
+    <tr><td>E2 — Device transitions out of CRP while the list is open (recovery completed elsewhere)</td><td>On refresh / return, the device is gone from the list; no stale row remains actionable.</td></tr>
+    <tr><td>E3 — No CRP devices for the CSP</td><td>The Accept Return screen shows an empty state (nothing to take custody of).</td></tr>
+    <tr><td>E4 — Search yields no match</td><td>The existing empty-results state is shown (PR #506).</td></tr>
+    <tr><td>E5 — CRP list larger than one fetch page (fetch is capped, not paginated today)</td><td><strong>Decided:</strong> the CRP list must be paginated so every CRP device is reachable — a silent cap that hides devices is not acceptable. <em>Product mandates "must paginate, no silent cap"; the pagination mechanism (page size, load-more trigger, whether search is server- or client-side) is a design decision to be specified in the FE PR, not by product.</em></td></tr>
+    <tr><td>E6 — Device tapped but the pickup drilldown detail fails to load</td><td>The failure is shown gracefully and the CSP can return to the CRP list; no crash, no wrong-task open.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="a8">
+  <h2><span class="num">A8.</span> OS Impact &amp; Sign-off <span class="tier guard">GATE</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Every OS plausibly in the blast radius, explicit Yes/No, amendment, consulted owner, sign-off. Ships only when every "Yes" is Received.</div>
+  <div class="hint"><strong>Backend reality (verified against csp-os-yaml, main):</strong> the CRP→pickup-task mapping already exists — the gateway device-detail resolves <code>pickup_ticket_id</code> for a CRP device via a TAS nbrec lookup, and CRP is already a modelled inventory bucket. The change exposes that linkage on the Accept-Return list; it does not invent it.</div>
+  <table>
+    <tr><th>OS</th><th>Impacted?</th><th>Amendment (one line)</th><th>Amendment type</th><th>Amendment owner (consulted)</th><th>Sign-off</th></tr>
+    <tr>
+      <td>CSP Gateway (csp-gateway-service)</td><td>Yes</td>
+      <td>Serve the Accept-Return list from the CUSTOMER_RECOVERY_PENDING bucket and carry each device's assigned pickup task id (<code>pickup_ticket_id</code>) on the list item — reusing the TAS lookup already done on device-detail.</td>
+      <td>Behaviour change · Cross-OS contract</td><td class="placeholder">[Gateway OS owner — to consult]</td><td>Pending</td>
+    </tr>
+    <tr>
+      <td>CSP TAS / Netbox Recovery (csp-tas-service)</td><td>Yes</td>
+      <td>Provide the pickup candidate (task) per CRP device to the gateway at list scope (already provided at device-detail scope).</td>
+      <td>Cross-OS contract</td><td class="placeholder">[TAS / netbox-recovery owner — to consult]</td><td>Pending</td>
+    </tr>
+    <tr>
+      <td>CSP Asset Custody (csp-asset-custody-service)</td><td>Yes</td>
+      <td>Confirm CUSTOMER_RECOVERY_PENDING is exposed as an inventory bucket for this list (owns the state + bucket definition).</td>
+      <td>Cross-OS contract</td><td class="placeholder">[ACS owner — to consult]</td><td>Pending</td>
+    </tr>
+    <tr>
+      <td>CSP Compensation / Payment / SRS</td><td>No</td>
+      <td>No money movement, no settlement, no SRS ticket touched — entry-point + list-scope change only.</td>
+      <td>None</td><td>—</td><td>—</td>
+    </tr>
+  </table>
+  <div class="hint"><strong>Note:</strong> the CSP app is the consumer — its list-source, drilldown-launch, and back-navigation changes are in A5/B1/B4, not an OS row.</div>
+  <hr class="sect-end">
+</section>
+
+<div class="part-divider how">
+  <div class="label">Part B</div>
+  <h2>HOW — Detailing</h2>
+  <p>The supporting detail engineering needs to build and verify the delta.</p>
+  <div class="author-note">Still business behaviour — diagrams describe logic and outcomes, never architecture.</div>
+</div>
+
+<section class="spec" id="b1">
+  <h2><span class="num">B1.</span> Changed Workflows — Before &amp; After <span class="tier cond">Conditional — the Accept-Return tap flow moves</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Before and After of the workflow whose decision logic changes. Shared start/end nodes; only diff nodes coloured.</div>
+  <div class="diff-legend">
+    <strong>Colour key</strong>
+    <span class="chip unchanged">Unchanged</span>
+    <span class="chip added">Added / new path</span>
+    <span class="chip changed">Behaviour changed</span>
+    <span class="chip removed">Removed / replaced</span>
+  </div>
+
+  <p class="flow-label before">Before — current Accept-Return flow</p>
+  <div class="mermaid">
+flowchart TD
+    Start([Tap return card on NetBox home]) --> List[Accept Return: DEPLOYED device list]
+    List --> Pick[Select a device + tap CTA]
+    Pick --> Wizard[Open pickup submission wizard - walk-in]
+    Wizard --> Exit[On exit: pop back / Home]
+    Exit --> End([Back on NetBox home area])
+    classDef removed fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class List changed;
+    class Pick,Wizard,Exit removed;
+  </div>
+
+  <p class="flow-label after">After — CRP list → pickup task flow</p>
+  <div class="mermaid">
+flowchart TD
+    Start([Tap return card on NetBox home]) --> List[Accept Return: CRP device list only]
+    List --> Search[Optional: search by device id / customer name]
+    Search --> Tap[Tap a CRP device]
+    Tap --> Resolve[Resolve device's assigned pickup task id]
+    Resolve --> Drilldown[Open pickup task drilldown - same as Home]
+    Drilldown --> Flow[Run pickup flow: resolution / assignment / photos]
+    Flow --> Return[On return / cancel / complete: back to CRP list refreshed]
+    Return --> End([Back on NetBox home area])
+    classDef added fill:#e9f5ee,stroke:#0b6b3a,color:#064e2b;
+    classDef changed fill:#fbf1dd,stroke:#8a5a00,color:#5b3a00;
+    class List changed;
+    class Search,Tap,Resolve,Drilldown,Flow,Return added;
+  </div>
+
+  <div class="hint"><strong>Read:</strong> the skeleton (tap card → … → back on home area) is shared. The list changes population (DEPLOYED → CRP), and the walk-in wizard branch is replaced by: resolve the device's pickup task → open the same drilldown as Home → run the flow → return to the CRP list.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b2">
+  <h2><span class="num">B2.</span> State Changes <span class="tier cond">Strict conditional — only if a state machine is touched</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Added/removed/re-routed lifecycle states, or N/A with a reason.</div>
+  <p><strong>N/A.</strong> No device or pickup lifecycle state is added, removed, or re-routed. The change surfaces an existing state (CUSTOMER_RECOVERY_PENDING) and routes into the existing NBREC pickup flow; all custody/pickup transitions happen inside that unchanged flow.</p>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b3">
+  <h2><span class="num">B3.</span> Data &amp; Parameter Changes <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Configurable values / tracked data at the business level — never schema, columns, or types.</div>
+  <table>
+    <tr><th style="width:28%">Parameter / data</th><th>Old</th><th>New</th><th>Valid range / scope</th><th>Reason</th></tr>
+    <tr><td>Accept Return list population</td><td>DEPLOYED bucket</td><td>CUSTOMER_RECOVERY_PENDING bucket</td><td>Per CSP; single state only</td><td>Show only devices the CSP can take custody of.</td></tr>
+    <tr><td>Assigned pickup task id on each CRP list device</td><td>Not carried on the list</td><td>Carried (business: the pickup task the CSP opens)</td><td>Per device; the CRP device's active pickup candidate</td><td>Lets the list open the correct pickup task drilldown.</td></tr>
+    <tr><td>CRP list retrieval size / paging</td><td>Single capped fetch (no paging)</td><td>Paginated — no silent cap</td><td>Per CSP list; mechanism (page size, load-more, search scope) = design's call in the PR</td><td>Client-side search only covers loaded items; a silent cap can hide CRP devices. Product mandates pagination; design specifies how in the PR.</td></tr>
+  </table>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b4">
+  <h2><span class="num">B4.</span> UI Impact <span class="tier cond">Conditional — user-visible</span></h2>
+  <div class="expected"><strong>What is expected:</strong> What the user now sees, at the level of information and state — not pixels or copy.</div>
+  <table>
+    <tr><th style="width:34%">Surface</th><th>What the user now sees</th></tr>
+    <tr><td>NetBox home — returns section</td><td>The single "take custody / return" card is present (PR #506) and opens the Accept Return screen.</td></tr>
+    <tr><td>Accept Return screen</td><td>A list of only the CSP's CRP devices (device ID + customer name), searchable by device ID / customer name, with an empty state; tapping a device opens the pickup task screen.</td></tr>
+    <tr><td>Pickup task screen (reused)</td><td>The existing pickup drilldown + flow — unchanged — now reachable from Accept Return, and on exit it returns to the CRP list.</td></tr>
+  </table>
+  <div class="hint"><strong>No Experience–Data Spec needed:</strong> the pickup task screen/flow already exist and are reused unchanged; this change only re-points the list and the entry/return navigation. The card's <em>copy</em> (reframing "customer returned it" → "take custody / devices to recover") is a design deliverable, not this spec.</div>
+  <hr class="sect-end">
+</section>
+
+<section class="spec" id="b5">
+  <h2><span class="num">B5.</span> Acceptance Criteria — Verification Layer <span class="tier how">HOW</span></h2>
+  <div class="expected"><strong>What is expected:</strong> Given/When/Then blocks that exhaustively cover business logic, computation (with boundaries), invariants, use/edge cases, and a REGRESSION block per A6 guard. Every block labelled; the B5.1 matrix filled.</div>
+
+  <h3>Business logic (A5 delta · A7.1 rules)</h3>
+  <div class="gherkin">
+    <strong>LOGIC_01 (logic · happy) — D1/INV-1 CRP-only list:</strong><br>
+    <span class="kw">Given</span> a CSP with devices in various states<br>
+    <span class="kw">When</span> the CSP opens the Accept Return screen<br>
+    <span class="kw">Then</span> only CUSTOMER_RECOVERY_PENDING devices are listed<br>
+    <span class="kw">And</span> no DEPLOYED / RECOVERY_HOLD / other-state device appears
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_02 (logic · happy) — D3/D4/INV-2 tap opens the correct task:</strong><br>
+    <span class="kw">Given</span> a CRP device in the Accept Return list<br>
+    <span class="kw">When</span> the CSP taps it<br>
+    <span class="kw">Then</span> the pickup task drilldown for that same device opens — the same screen as the Home pickup path
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_03 (logic · happy) — RULE-1 flow parity:</strong><br>
+    <span class="kw">Given</span> the pickup drilldown opened from Accept Return<br>
+    <span class="kw">When</span> the CSP performs resolution / assignment / photo submission<br>
+    <span class="kw">Then</span> every step behaves identically to the same flow opened from Home
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_04 (logic · happy) — D5/INV-3 return to CRP list:</strong><br>
+    <span class="kw">Given</span> a CSP in the pickup flow launched from Accept Return<br>
+    <span class="kw">When</span> the CSP returns, cancels, or completes it<br>
+    <span class="kw">Then</span> the CSP lands back on the Accept Return CRP list, not Home
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_05 (logic · negative) — RULE-2 no walk-in path:</strong><br>
+    <span class="kw">Given</span> the Accept Return entry<br>
+    <span class="kw">When</span> the CSP acts on a device<br>
+    <span class="kw">Then</span> the only path is the NBREC pickup flow<br>
+    <span class="kw">And</span> no DEPLOYED→CUSTODIED walk-in accept is reachable
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_06 (logic · negative) — D7 search over CRP only:</strong><br>
+    <span class="kw">Given</span> the CRP list with a search query<br>
+    <span class="kw">When</span> results are filtered by device ID or customer name<br>
+    <span class="kw">Then</span> only matching CRP devices show — never a device outside CRP
+  </div>
+  <div class="gherkin">
+    <strong>LOGIC_07 (logic · negative) — RULE-3 latest-task / no-task resolution:</strong><br>
+    <span class="kw">Given</span> a CRP device that resolves to multiple pickup tasks, and another that resolves to none<br>
+    <span class="kw">When</span> the list is built<br>
+    <span class="kw">Then</span> the multi-task device appears once against its latest task<br>
+    <span class="kw">And</span> the no-task device is not fetched into the list at all
+  </div>
+
+  <h3>Computation &amp; calculation (with boundaries)</h3>
+  <div class="gherkin computation">
+    <strong>COMPUTE_01 (computation · normal) — list = count of CRP devices:</strong><br>
+    <span class="kw">Given</span> a CSP with exactly K devices in CRP<br>
+    <span class="kw">When</span> the Accept Return list loads<br>
+    <span class="kw">Then</span> exactly those K devices are shown
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_02 (computation · zero boundary) — no CRP devices:</strong><br>
+    <span class="kw">Given</span> a CSP with zero CRP devices<br>
+    <span class="kw">When</span> the screen loads<br>
+    <span class="kw">Then</span> the list is empty and the empty state is shown
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_03 (computation · off-by-one boundary) — a device leaves CRP:</strong><br>
+    <span class="kw">Given</span> K CRP devices, one of which is recovered<br>
+    <span class="kw">When</span> the CSP returns to the list<br>
+    <span class="kw">Then</span> exactly K−1 devices remain (the recovered one is gone)
+  </div>
+  <div class="gherkin computation">
+    <strong>COMPUTE_04 (computation · max / cap boundary) — large CRP list:</strong><br>
+    <span class="kw">Given</span> more CRP devices than one fetch page<br>
+    <span class="kw">When</span> the CSP scrolls / loads more<br>
+    <span class="kw">Then</span> every CRP device is reachable via pagination — no device is silently hidden by a cap (mechanism per design's PR call)
+  </div>
+
+  <h3>Invariants (A7.1)</h3>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_01 (INV-1) — CRP-only:</strong><br>
+    <span class="kw">Given</span> the Accept Return list at any time<br>
+    <span class="kw">Then</span> every device on it is in CUSTOMER_RECOVERY_PENDING for the current CSP
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_02 (INV-2) — device ↔ task:</strong><br>
+    <span class="kw">Given</span> any device opened from the list<br>
+    <span class="kw">Then</span> the pickup task shown is that device's own task — never another's
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_03 (INV-3) — post-flow location:</strong><br>
+    <span class="kw">Given</span> any pickup launched from Accept Return<br>
+    <span class="kw">Then</span> on return / cancel / complete the CSP is on the CRP list, never dropped to Home
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_04 (INV-4) — freshness:</strong><br>
+    <span class="kw">Given</span> a device that has left CRP<br>
+    <span class="kw">Then</span> it is not present in the list after returning to it
+  </div>
+  <div class="gherkin invariant">
+    <strong>INVARIANT_05 (RULE-1) — parity holds:</strong><br>
+    <span class="kw">Given</span> the same pickup opened from Home and from Accept Return<br>
+    <span class="kw">Then</span> the flow behaves identically in both
+  </div>
+
+  <h3>Use &amp; edge cases (A7.2 · B1 branches)</h3>
+  <div class="gherkin">
+    <strong>EDGE_01 (E1) — CRP device with no pickup task is excluded:</strong><br>
+    <span class="kw">Given</span> a CRP device whose pickup task cannot be resolved (null)<br>
+    <span class="kw">When</span> the list renders<br>
+    <span class="kw">Then</span> that device is not fetched/listed at all — it never appears on the Accept Return screen
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_02 (E2) — device leaves CRP while list open:</strong><br>
+    <span class="kw">Given</span> a listed device recovered/cancelled elsewhere<br>
+    <span class="kw">When</span> the CSP refreshes / returns<br>
+    <span class="kw">Then</span> the device is gone and no stale row is actionable
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_03 (E4) — search no match:</strong><br>
+    <span class="kw">Given</span> a search query matching no CRP device<br>
+    <span class="kw">When</span> results compute<br>
+    <span class="kw">Then</span> the empty-results state is shown (PR #506)
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_04 (E6 · negative) — drilldown detail fails:</strong><br>
+    <span class="kw">Given</span> a device tapped whose pickup detail fails to load<br>
+    <span class="kw">When</span> the open is attempted<br>
+    <span class="kw">Then</span> the error is shown gracefully, no wrong task opens, and the CSP can return to the CRP list
+  </div>
+  <div class="gherkin">
+    <strong>EDGE_05 (B1 branch) — direct tap vs search-then-tap:</strong><br>
+    <span class="kw">Given</span> the CRP list<br>
+    <span class="kw">When</span> the CSP taps a device directly, or searches then taps<br>
+    <span class="kw">Then</span> both open the same pickup task drilldown for that device
+  </div>
+
+  <h3>Regression (A6 guards)</h3>
+  <div class="gherkin regression">
+    <strong>REGRESSION_01 (G1) — Home pickup path unchanged:</strong><br>
+    <span class="kw">Given</span> Home → pickup group card → pickup list → task<br>
+    <span class="kw">When</span> the CSP opens a pickup from Home<br>
+    <span class="kw">Then</span> it behaves exactly as before this change
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_02 (G2) — pickup flow unchanged:</strong><br>
+    <span class="kw">Given</span> any pickup flow<br>
+    <span class="kw">When</span> resolution / assignment / photos / report-unable / cancel run<br>
+    <span class="kw">Then</span> each behaves exactly as before
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_03 (G3) — Home-launched exit unchanged:</strong><br>
+    <span class="kw">Given</span> a pickup launched from Home<br>
+    <span class="kw">When</span> it completes or is cancelled<br>
+    <span class="kw">Then</span> its back/return behaviour is exactly as before (not diverted to the CRP list)
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_04 (G4) — other buckets unchanged:</strong><br>
+    <span class="kw">Given</span> the NetBox inventory screen and its buckets (DEPLOYED, WITH_ME, …)<br>
+    <span class="kw">When</span> the CSP browses them<br>
+    <span class="kw">Then</span> their contents and behaviour are unchanged
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_05 (G5) — search UX unchanged:</strong><br>
+    <span class="kw">Given</span> the Accept Return search (icon, inline field, empty state)<br>
+    <span class="kw">When</span> used<br>
+    <span class="kw">Then</span> it behaves as shipped in PR #506
+  </div>
+  <div class="gherkin regression">
+    <strong>REGRESSION_06 (G6) — batch return unchanged:</strong><br>
+    <span class="kw">Given</span> the batch-return card and flow<br>
+    <span class="kw">When</span> used<br>
+    <span class="kw">Then</span> it behaves exactly as before
+  </div>
+
+  <h3>B5.1 Coverage matrix</h3>
+  <p style="font-size:13px;color:var(--muted);margin:4px 0;">Author fills counts; reviewer audits. Not sendable until every row reads "all covered". The use/edge row stays Partial until A7.2 E1 (no-task device) and E5 (paging/cap) are decided.</p>
+  <table class="coverage">
+    <tr><th style="width:24%">Coverage class</th><th>Source section(s)</th><th style="width:12%">Items</th><th style="width:12%">Blocks</th><th style="width:20%">All covered?</th></tr>
+    <tr><td class="cls">Business logic</td><td>A5 (D1–D7) · A7.1 (RULE-1/2/3)</td><td>10</td><td>7</td><td>Yes</td></tr>
+    <tr><td class="cls">Computation</td><td>A5 (D1 list) · B3 (population, task id, paging)</td><td>4</td><td>4</td><td>Yes — with boundary blocks</td></tr>
+    <tr><td class="cls">Invariants</td><td>A7.1 (INV-1…4, RULE-1)</td><td>5</td><td>5</td><td>Yes</td></tr>
+    <tr><td class="cls">Use &amp; edge cases</td><td>A7.2 (E1, E1b, E2–E6) · B1 branches</td><td>7</td><td>6</td><td>Yes — E1 (exclude) &amp; E5 (paginate) now decided</td></tr>
+    <tr><td class="cls">Regression</td><td>A6 (G1–G6)</td><td>6</td><td>6</td><td>Yes</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--muted);">Bias check: 7 happy vs ~20 negative/boundary/edge/invariant/regression blocks — within the ~1:3 target. Every computation carries a boundary block; every invariant an INVARIANT block; every A6 guard a REGRESSION block. Note: the pagination <em>mechanism</em> (E5) is design's to specify in the FE PR — product's decision is "must paginate".</p>
+  <hr class="sect-end">
+</section>
+
+<footer class="checklist" id="checklist">
+  <h2>Completeness Checklist</h2>
+  <p style="font-size:13px;color:var(--muted);margin-top:0;">Sendable when: Quick Check filled (incl. tier); required sections filled; conditional sections filled or N/A-with-reason; the B5 matrix reads "all covered" on every class; every A6 guard has a REGRESSION block; every A8 "Yes" has sign-off Received.</p>
+  <table>
+    <tr><th>#</th><th>Section</th><th>Tier</th><th class="check">Filled</th><th class="check">N/A</th></tr>
+    <tr><td>QC</td><td>Quick Check</td><td>Always</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A1</td><td>Metadata</td><td>Light</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A2</td><td>Why this change</td><td>Light</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A3</td><td>Current behaviour</td><td>Full</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A4</td><td>Desired behaviour</td><td>Full</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A5</td><td>The delta</td><td>Light</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A6</td><td>Must-not-change (guard)</td><td>Light</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A7</td><td>Rules, invariants &amp; edge cases</td><td>Full</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>A8</td><td>OS impact &amp; sign-off</td><td>Always — gate</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B1</td><td>Changed workflows (before/after)</td><td>Cond.</td><td class="check">[x]</td><td class="check">[ ]</td></tr>
+    <tr><td>B2</td><td>State changes</td><td>Strict cond.</td><td class="check">[ ]</td><td class="check">[x] — no state machine touched</td></tr>
+    <tr><td>B3</td><td>Data &amp; parameter changes</td><td>Full</td><td class="check">[x]</td><td class="check">—</td></tr>
+    <tr><td>B4</td><td>UI impact</td><td>Cond.</td><td class="check">[x]</td><td class="check">[ ]</td></tr>
+    <tr><td>B5</td><td>Acceptance criteria (verification layer)</td><td>Light</td><td class="check">[x]</td><td class="check">—</td></tr>
+  </table>
+  <div class="footer note">
+    <strong>Open blockers before build:</strong> A8 — all OS sign-offs Pending; consult Gateway, TAS/netbox-recovery, and ACS owners to Received. (A7.2 edges E1 and E5 are now decided — E1: exclude a CRP device with no resolvable task; E5: must paginate. The pagination <em>mechanism</em> is deferred to design in the FE PR.)<br><br>
+    <strong>Reviewer rule (engineering):</strong> This is FE + backend. Gateway serves the CRP bucket and carries <code>pickup_ticket_id</code> per list device (reusing the TAS lookup already done on device-detail); the app re-points the list, opens the shared pickup drilldown standalone by task id, and returns to the CRP list on exit — without regressing the Home pickup path.<br><br>
+    <strong>Out-of-scope:</strong> API contracts/schemas, storage, the pickup flow's internal logic (reused unchanged), and the card's exact copy (design).
+  </div>
+</footer>
+
+<section class="spec" id="changelog" style="margin-top: 56px;">
+  <h2>Changelog</h2>
+  <table>
+    <tr><th style="width:80px">Version</th><th style="width:110px">Date</th><th style="width:150px">Author</th><th style="width:110px">Section(s)</th><th>Change &amp; rationale</th><th style="width:110px">Approver</th></tr>
+    <tr><td>v0.1</td><td>2026-07-21</td><td>Jaivin Prajapati</td><td>All</td><td>Initial change spec — Accept Return becomes a CRP-only device list opening the existing pickup task flow; built on PR #506; device→task mapping confirmed already present on gateway device-detail and captured in A8.</td><td>—</td></tr>
+    <tr><td>v0.2</td><td>2026-07-21</td><td>Jaivin Prajapati</td><td>A7, B3, B5</td><td>Resolved edges: E1 — a CRP device with no resolvable pickup task is not fetched/listed; RULE-3 — multiple tasks resolve to the latest; E5 — CRP list must paginate (no silent cap), with the pagination mechanism explicitly deferred to design in the FE PR.</td><td>—</td></tr>
+  </table>
+</section>
+
+<p style="margin-top:30px;font-size:12px;color:var(--muted);text-align:center;">Wiom Change Spec v1.0 (PM deliverable) · Quick Check + Part A (8) + Part B (5) + Closeout</p>
+
+</main>
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>
