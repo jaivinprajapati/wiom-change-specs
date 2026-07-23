@@ -5,7 +5,7 @@
 | | | | |
 |---|---|---|---|
 | **Owner** — Jaivin Prajapati (PM) | **Reviewer** — [Eng lead — TBD] ⚠️ *GENERATED — review* | **Status** — Draft | **Sign-off** — Pending |
-| **Version** — v0.1 · 2026-07-23 | **Consulted — Customer App** — [name] ⚠️ *GENERATED — review* | **Consulted — Connection lifecycle (CLOS)** — [name] ⚠️ *GENERATED — review* | **Consulted — Device custody (ACS/TAS)** — [name] ⚠️ *GENERATED — review* |
+| **Version** — v0.2 · 2026-07-23 | **Consulted — Customer App** — [name] ⚠️ *GENERATED — review* | **Consulted — Connection lifecycle (CLOS)** — [name] ⚠️ *GENERATED — review* | **Consulted — Device custody (ACS/TAS)** — [name] ⚠️ *GENERATED — review* |
 
 > **ID system:** G-n guardrails (§1) · R-n rules (§2) · T-n transitions (§3b, canon) · C-nn config (§5) · MQ-n measurement (§6) · AC-GROUP-n acceptance criteria (§7). §3b is canon — if any statement disagrees with it, §3b wins. This document states **what and why**; system decomposition, schemas, retry mechanics and instrumentation design belong to the implementer. This PRD is shared with both the **CSP** and **customer-app** teams.
 
@@ -15,7 +15,7 @@
 
 **Objective.** When a customer's plan lapses, their netbox is recovered on the **customer system's own plan-lapse signal** — sent by the customer app for **every** lapse scenario — instead of a delayed ISP-window timer; and once that device has been **picked up** or **returned to the warehouse**, the customer can **no longer recharge**, because there is no device to serve.
 
-**Boundary.** This spec governs **(a)** how a netbox pickup is *created* — the trigger moves off a CSP-internal timer and onto the customer plan-lapse signal — and **(b)** the *handshakes ACS owes the customer system* when a device's custody changes (notify + recharge lock). It **leaves unchanged**: the customer-initiated deactivation path (customer → CLOS `pending_deactivation` → ACS, AC-REG-1); the recharge-restoration chain (Customer → CRV → CAEOS → CLOS → ACS, AC-REG-2); the TAS pickup-task mechanics — assignment, verification, threshold timers (AC-REG-3); the recovery window itself (C-01); and the internal mechanics of warehouse return (governed by the device-warehouse-return spec — RETURNED appears here only for its notify + lock side-effect). It **removes** the CLOS **P76 timer** as a pickup-creation trigger. This is an **interim** architecture: the full segregation of CLOS / CAEOS / ACS roles is deferred to the future Customer OS.
+**Boundary.** This spec governs **(a)** how a netbox pickup is *created* — the trigger moves off a CSP-internal timer and onto the customer plan-lapse signal — and **(b)** the *handshakes ACS owes the customer system* when a device's custody changes (notify + recharge lock + a **refund-eligibility signal** whenever the device passes from the customer to CSP/warehouse). The **refund amount and its execution stay in the customer system** (R6); the recharge block is realised operationally as **archiving the customer**, whose full scope is an OPEN stub (see below). It **leaves unchanged**: the customer-initiated deactivation path (customer → CLOS `pending_deactivation` → ACS, AC-REG-1); the recharge-restoration chain (Customer → CRV → CAEOS → CLOS → ACS, AC-REG-2); the TAS pickup-task mechanics — assignment, verification, threshold timers (AC-REG-3); the recovery window itself (C-01); and the internal mechanics of warehouse return (governed by the device-warehouse-return spec — RETURNED appears here only for its notify + lock side-effect). It **removes** the CLOS **P76 timer** as a pickup-creation trigger. This is an **interim** architecture: the full segregation of CLOS / CAEOS / ACS roles is deferred to the future Customer OS.
 
 ### Guardrails — promises that hold on every path
 
@@ -24,6 +24,7 @@
 | G1 | **No self-created pickup** | Every pickup originates from the customer plan-lapse signal; ACS never self-initiates one — no timer, no P76, no fallback. | R1 · T1 · AC-CREATE-2 · AC-INV-1 · MQ-3 |
 | G2 | **Recharge lock on recovery** | Once a device is IDLE or RETURNED, recharge is blocked for that customer — real-time and permanent; it never lifts. | R3 · R5 · T3 · T7 · AC-PICKUP-2 · AC-RETURN-2 · AC-INV-2 · MQ-4 · C-02 |
 | G3 | **Recharge preserved with custody** | While a device is still with the customer (DEPLOYED, CUSTOMER_RECOVERY_PENDING, LOST), recharge is always honoured and wins over an open pickup. | R2 · R4 · T2 · T6 · AC-RECHARGE-1 · AC-EXPIRY-2 · MQ-2 |
+| G4 | **Refund on handover** | Whenever a device passes from the customer to CSP/warehouse (into IDLE, or into RETURNED from a customer-holding state), the customer system is signalled that the customer is refund-eligible; amount and execution are the customer system's. | R3c · R5c · T3 · T7 · AC-REFUND-1 · AC-REFUND-2 · MQ-6 |
 
 ### Success metrics
 
@@ -34,6 +35,10 @@
 **Invariant (not a metric):** **G1** pickups created without an originating customer signal = **0**, zero tolerance. Monitored continuously via MQ-3.
 **Invariant (not a metric):** **G2** recharges that succeed for a customer whose device is IDLE/RETURNED = **0**, zero tolerance. Monitored continuously via MQ-4.
 
+### Archiving a customer — OPEN (stub)
+
+> **STUB — to be defined by Jaivin Prajapati + Saurabh Jain.** The recharge block (G2) is realised operationally as **archiving the customer** (today's process). The **scope and boundaries of archiving** — what it entails beyond blocking recharge, exactly when it applies, and whether/how it can be reversed — are **OPEN** and outside this draft's settled scope. The G2 recharge-block outcome stands regardless; the broader archiving semantics are pending this discussion.
+
 ---
 
 ## 2. User Stories & Rules
@@ -42,9 +47,10 @@
 |---|---|---|---|
 | R1 | As the **customer system**, when a customer's plan lapses, I want the netbox pickup created off *my* signal, so recovery tracks the customer's real plan rather than the ISP billing window. | **(a)** ACS creates CUSTOMER_RECOVERY_PENDING + a pickup upon the customer plan-lapse signal (delivered via CLOS `pending_deactivation`), for **every** lapse scenario. | Create a pickup from **any** CSP-internal trigger — no timer, no P76, no fallback (G1). |
 | R2 | As a **customer whose device is still in my hands**, when I recharge, my service is restored and any pending pickup is stood down. | **(a)** On a recharge while the device is DEPLOYED, CUSTOMER_RECOVERY_PENDING or LOST, restore the device to DEPLOYED and cancel any open pickup (existing CRV→CAEOS→CLOS→ACS chain). | Block the recharge, or let a pickup proceed, while the device is still with the customer (G3). |
-| R3 | As **Wiom**, when a CSP has physically recovered the device, the customer must not be able to pay for a device they no longer have. | **(a)** On device → IDLE, notify the customer system in real-time (C-02). **(b)** Cause recharge to be blocked for that customer immediately and permanently. | Allow any recharge to succeed once the device is IDLE (G2). |
+| R3 | As **Wiom**, when a CSP has physically recovered the device, the customer must not be able to pay for a device they no longer have. | **(a)** On device → IDLE, notify the customer system in real-time (C-02). **(b)** Cause recharge to be blocked for that customer immediately and permanently. **(c)** In the same handshake, signal that the customer is eligible for a security refund — amount and execution are the customer system's (R6). | Allow any recharge to succeed once the device is IDLE (G2). |
 | R4 | As **Wiom**, when a pickup expires unrecovered, the **customer system** is informed, while the customer may still reclaim by recharging (the device is still with them). *(The notification target is the customer **system**, not the end customer — this spec makes no claim about end-customer messaging.)* | **(a)** On device → LOST, notify the customer system (EXPIRY) — informational. | Block recharge on LOST (G3). |
-| R5 | As **Wiom**, when a device is returned to the warehouse by 3PL/RA, the customer must not be able to pay for it. | **(a)** On device → RETURNED (from any holding state), notify the customer system in real-time (C-02). **(b)** Cause recharge to be blocked immediately and permanently. | Allow any recharge to succeed once the device is RETURNED (G2). |
+| R5 | As **Wiom**, when a device is returned to the warehouse by 3PL/RA (or handed back to a CSP), the customer must not be able to pay for it. | **(a)** On device → RETURNED (from any holding state), notify the customer system in real-time (C-02). **(b)** Cause recharge to be blocked immediately and permanently. **(c)** When the device entered RETURNED from a customer-holding state (DEPLOYED / CUSTOMER_RECOVERY_PENDING / LOST), signal that the customer is refund-eligible (R6) — not re-signalled on an IDLE→RETURNED move. | Allow any recharge to succeed once the device is RETURNED (G2). |
+| R6 | As **Wiom**, the security-refund amount stays computed by the customer system — unchanged, except that recovery type no longer affects it. | **(a)** The customer system issues a **full refund** with no recovery-type deduction. | Apply the former "returned to CSP office by customer" vs "picked up from the customer's house (₹50 deduction)" bifurcation — **removed**, because the new recovery flow is silent on the type of asset recovery. |
 
 > **Note on mechanism (R3b/R5b):** whether ACS sends an explicit "block recharge" instruction or emits the custody-change event for the customer system to act on is the **implementer's** decision. Product's requirement is only the *outcome*: no recharge succeeds once the device is IDLE/RETURNED.
 
@@ -92,11 +98,11 @@ Lifecycle of a **netbox device under recovery** — the state a deployed device 
 |---|---|---|---|---|---|
 | T1 | DEPLOYED | Customer plan-lapse signal (via CLOS `pending_deactivation`) | Device is DEPLOYED | CUSTOMER_RECOVERY_PENDING | Pickup created in TAS (R1a). Originates only from the customer signal — no CSP-internal creation (G1). |
 | T2 | CUSTOMER_RECOVERY_PENDING | Customer recharge (CRV→CAEOS→CLOS rescue) | — | DEPLOYED | Open pickup cancelled; service restored (R2a, G3). |
-| T3 | CUSTOMER_RECOVERY_PENDING | CSP completes the pickup (device physically recovered) | — | IDLE | Customer system notified DEVICE_PICKUP in real-time (R3a, C-02); recharge blocked for that customer, permanent (R3b, G2). |
+| T3 | CUSTOMER_RECOVERY_PENDING | CSP completes the pickup (device physically recovered) | — | IDLE | Customer system notified DEVICE_PICKUP in real-time (R3a, C-02); recharge blocked for that customer, permanent (R3b, G2); customer signalled refund-eligible — amount & execution customer-side (R3c, G4, R6). |
 | T4 | CUSTOMER_RECOVERY_PENDING | CSP reports unable to recover (before C-01) | — | LOST | Customer system notified EXPIRY — informational (R4a); recharge stays open (G3). |
 | T5 | CUSTOMER_RECOVERY_PENDING | Recovery window (C-01) elapses | — | LOST | Customer system notified EXPIRY (R4a); recharge stays open (G3). |
 | T6 | LOST | Customer recharge (rescue) | — | DEPLOYED | Device reclaimed; service restored (R2a, G3). |
-| T7 | DEPLOYED · CUSTOMER_RECOVERY_PENDING · LOST · IDLE | 3PL/RA returns device to warehouse | — | RETURNED | Customer system notified in real-time (R5a, C-02); recharge blocked, permanent (R5b, G2). Warehouse-return mechanics are outside this spec. |
+| T7 | DEPLOYED · CUSTOMER_RECOVERY_PENDING · LOST · IDLE | 3PL/RA returns device to warehouse, or customer hands the device back to a CSP | — | RETURNED | Customer system notified in real-time (R5a, C-02); recharge blocked, permanent (R5b, G2); when entered from a customer-holding state (DEPLOYED/CUSTOMER_RECOVERY_PENDING/LOST) the customer is signalled refund-eligible (R5c, G4) — the IDLE→RETURNED move does not re-signal. Warehouse-return mechanics — and CSP acceptance of a customer-returned device, a separate task whose completion emits the refund signal — are outside this spec. |
 
 *Terminal-for-this-spec states:* IDLE and RETURNED are recharge-locked; a re-dispatch of a RETURNED device to another CSP is a supply action for a different customer and is outside this spec. LOST is non-terminal (T6 reclaim, or T7 return).
 
@@ -130,6 +136,7 @@ Lifecycle of a **netbox device under recovery** — the state a deployed device 
 | MQ-3 | Was **any** pickup created in CSP without an originating customer signal? | G1 invariant · AC-INV-1 |
 | MQ-4 | Did **any** recharge succeed for a customer whose device was IDLE or RETURNED? | G2 invariant · AC-INV-2 |
 | MQ-5 | For each device reaching IDLE or RETURNED: was the recharge block effective in real-time (C-02)? | C-02 · G2 |
+| MQ-6 | For each device that passed from the customer to CSP/warehouse (entry to IDLE, or entry to RETURNED from a customer-holding state): was the customer system signalled refund-eligible exactly once? | G4 · R3c · R5c |
 
 ---
 
@@ -172,6 +179,16 @@ Lifecycle of a **netbox device under recovery** — the state a deployed device 
 | AC-RETURN-1 | **Given** a device in any holding state (DEPLOYED / CUSTOMER_RECOVERY_PENDING / LOST / IDLE), **When** 3PL/RA returns it to the warehouse, **Then** the device moves to RETURNED, the customer system is notified within C-02, and recharge is blocked. | R5a · R5b · T7 · C-02 · G2 | Settled |
 | AC-RETURN-2 | **Given** a device in RETURNED, **When** the customer attempts to recharge, **Then** the recharge does not succeed (now or ever). | R5 MUST NOT · G2 | Settled |
 
+### REFUND — Security-refund handshake (T3, T7)
+
+| AC | Given / When / Then | Verifies | Status |
+|---|---|---|---|
+| AC-REFUND-1 | **Given** a device in CUSTOMER_RECOVERY_PENDING, **When** the CSP completes the pickup (→ IDLE), **Then** the customer system is signalled that the customer is refund-eligible, within C-02. | R3c · T3 · G4 · C-02 | Settled |
+| AC-REFUND-2 | **Given** a device in a customer-holding state (DEPLOYED / CUSTOMER_RECOVERY_PENDING / LOST), **When** it is returned to the warehouse or handed back to a CSP (→ RETURNED), **Then** the customer system is signalled refund-eligible, within C-02. | R5c · T7 · G4 · C-02 | Settled |
+| AC-REFUND-3 | **Given** a recovered or returned device, **When** the customer system computes the refund, **Then** a full refund is issued with no recovery-type deduction (the former ₹50 office-vs-pickup bifurcation is not applied). | R6a · R6 MUST NOT | Settled |
+| AC-REFUND-4 | **Given** a device in LOST, **When** the customer returns it to CSP/3PL (→ RETURNED), **Then** the customer system is signalled refund-eligible (a recharge instead reclaims the device with no refund — AC-RECHARGE-2). | R5c · T7 · G4 | Settled |
+| AC-REFUND-5 | **Given** a device already in IDLE, **When** it is moved to the warehouse (IDLE → RETURNED), **Then** the refund-eligibility signal is not sent a second time. | R5c · T7 · G4 | Settled |
+
 ### INV — Cross-cutting invariants
 
 | AC | Given / When / Then | Verifies | Status |
@@ -198,7 +215,10 @@ Lifecycle of a **netbox device under recovery** — the state a deployed device 
 | CUSTOMER_RECOVERY_PENDING (CRP) | Device state: still with the customer, pickup open. Recharge remains available (G3). | Device custody (ACS) |
 | IDLE | Device physically recovered into CSP custody — no longer with the customer. Recharge-locked (G2). | Device custody (ACS) |
 | LOST | Pickup expired unrecovered; device still with the customer. Recharge stays open (reclaim, T6). | Device custody (ACS) |
-| RETURNED | Device returned to the warehouse (3PL/RA). Recharge-locked (G2). Internal mechanics governed by the device-warehouse-return spec. | Device custody (ACS) |
+| RETURNED | Device returned to the warehouse (3PL/RA) or handed back to a CSP. Recharge-locked (G2). Internal mechanics governed by the device-warehouse-return spec. | Device custody (ACS) |
+| Security refund | The deposit refund a customer is owed once they hand the device back. **Amount and execution live in the customer system**; this spec only signals *eligibility* on handover (G4, R3c/R5c). | Customer App |
+| Refund-eligibility signal | The signal ACS sends the customer system, alongside the custody change, when a device passes from the customer to CSP/warehouse — the customer is now owed a refund. | ACS → Customer App |
+| Archiving a customer | Today's operational name for blocking a customer from recharging (G2). Full scope/boundaries are **OPEN** (§1 stub, pending Jaivin + Saurabh Jain). | — |
 | P76 timer | The CLOS pause-duration timer that today auto-creates a pickup off the ISP pause window. **Removed** as a creation trigger by this spec. | Connection lifecycle (CLOS) |
 | Recharge lock | The permanent, real-time block on a customer's recharge once their device is IDLE or RETURNED (G2, C-02). Never lifts. | — |
 | CLOS | Connection lifecycle — internet-service status per the ISP recharge window. Carries the customer plan-lapse signal to ACS via `pending_deactivation`. | Connection lifecycle |
@@ -216,6 +236,7 @@ Lifecycle of a **netbox device under recovery** — the state a deployed device 
 | While a device is with the customer, honour a recharge and cancel any open pickup. | T2 · T6 · R2 · G3 |
 | Notify the customer system in real-time on device pickup (IDLE) and warehouse return (RETURNED), and cause recharge to be blocked permanently for that customer. | T3 · T7 · R3 · R5 · G2 · C-02 |
 | Notify the customer system on expiry (LOST) without blocking recharge. | T4 · T5 · R4 |
+| On the same handover handshake, signal the customer system that the customer is refund-eligible (amount & execution stay customer-side). | T3 · T7 · R3c · R5c · G4 |
 | Answer the reconciliation and negative-check questions across the creation and recharge handshakes. | MQ-1 · MQ-2 · MQ-3 · MQ-4 · MQ-5 |
 
 ---
@@ -233,3 +254,5 @@ Lifecycle of a **netbox device under recovery** — the state a deployed device 
 | §7 AC phrasings (all "Settled") | Given/When/Then wording and status | Derived from the rules/transitions per the skill; confirm the negative/precedence ACs (AC-CREATE-2, AC-RECHARGE-3, AC-PICKUP-2, AC-RETURN-2) read the way you intend. |
 | §1 objective — "no device to serve" ending | Final clause wording | You confirmed the objective "spot on"; this is my phrasing of the recharge-lock consequence — confirm tone. |
 | §7 AC-CREATE-3 (idempotency) | Duplicate lapse signal on an already-CRP device → no second pickup | Added by the lint's scenario sweep; you did not state duplicate-signal behaviour — confirm this is right (vs. treating a duplicate as an error). Marked OPEN. |
+| §1 Archiving stub | Archiving scope/boundaries left OPEN | Deliberate — pending your discussion with Saurabh Jain. |
+| §2 R6 / §7 AC-REFUND-3 | Removal of the ₹50 recovery-type deduction → full refund | You stated it; this is a cross-pod change the customer team owns — confirm "all other amount logic stays" and who signs on the customer side. |
