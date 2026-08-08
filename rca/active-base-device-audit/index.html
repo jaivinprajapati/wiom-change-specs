@@ -32,8 +32,8 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px}
   .lead{font-size:18px;line-height:1.5;margin:0}
   .lead b{color:var(--accent)}
+  p.intro{margin:0 0 16px;color:var(--muted)}
 
-  /* funnel */
   ol.funnel{list-style:none;counter-reset:s;margin:0;padding:0}
   ol.funnel li{counter-increment:s;position:relative;padding:0 0 0 52px;margin-bottom:20px}
   ol.funnel li:last-child{margin-bottom:0}
@@ -47,14 +47,25 @@
   .running .k{font-size:13px;color:var(--muted)}
   .minus{color:var(--warn);font-size:13px;font-variant-numeric:tabular-nums}
 
-  /* split result */
-  .split{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:4px}
+  .split{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
   .res{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
   .res .n{font-size:30px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
   .res .l{color:var(--muted);font-size:13px;margin-top:3px}
   .res.ok .n{color:var(--good)} .res.warn .n{color:var(--warn)}
+  .card .split .res{border:none;padding:0;background:none}
+  .card .split{gap:24px}
 
-  /* table */
+  /* before / after */
+  .ba{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .ba .b{font-size:34px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+         color:var(--muted);text-decoration:line-through;text-decoration-thickness:2px}
+  .ba .arrow{font-size:24px;color:var(--muted)}
+  .ba .a{font-size:42px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+         color:var(--accent)}
+  .ba .cap{font-size:13px;color:var(--muted);margin-top:2px}
+  .drop{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);
+        color:var(--good);font-size:15px;font-weight:600}
+
   .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{border-collapse:collapse;width:100%;font-size:15px;min-width:480px}
   th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
@@ -65,6 +76,7 @@
   .tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;
        background:var(--chip);color:var(--muted);white-space:nowrap}
   .tag.now{background:rgba(31,95,214,.13);color:var(--accent)}
+  .tag.ok{background:rgba(26,127,82,.14);color:var(--good)}
   .fn{color:var(--muted);font-size:14px;margin:14px 0 0;padding-top:14px;border-top:1px solid var(--line)}
   .fn b{color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
 
@@ -75,7 +87,7 @@
   ul.plain li{margin:5px 0}
   footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);
          color:var(--muted);font-size:13px}
-  @media (max-width:600px){h1{font-size:24px} .wrap{padding:28px 16px 60px}}
+  @media (max-width:600px){h1{font-size:24px} .wrap{padding:28px 16px 60px} .ba .a{font-size:34px}}
 </style>
 </head>
 <body>
@@ -92,7 +104,8 @@
     Every live customer has a device in their home. Our systems should show that device
     as <b>deployed and working</b>. We checked whether they do.
     <br><br>
-    Almost all are right. A small share are not, and some of those are costing us money.
+    Almost all are right. We then looked into the ones that were not, and most of those
+    turned out to be correct too.
   </p>
 </div>
 
@@ -122,13 +135,13 @@
 
 <h2>Step 2 — What the records say</h2>
 <div class="card">
-  <p style="margin:0 0 16px;color:var(--muted)">
+  <p class="intro">
     For each of those 89,397 customers we looked up the device we believe they hold,
     and the state it is recorded in.
   </p>
   <div class="split">
     <div class="res ok"><div class="n">87,447</div><div class="l">records correct — 97.82%</div></div>
-    <div class="res warn"><div class="n">1,950</div><div class="l">records wrong — 2.18%</div></div>
+    <div class="res warn"><div class="n">1,950</div><div class="l">records to examine — 2.18%</div></div>
   </div>
 </div>
 
@@ -141,30 +154,30 @@
         <th>Recorded state</th>
         <th class="num">Customers</th>
         <th class="num">Share</th>
-        <th>Action</th>
+        <th>Outcome</th>
       </tr>
     </thead>
     <tbody>
       <tr><td class="state">DEPLOYED</td><td class="num">87,447</td><td class="num">97.82%</td>
-          <td><span class="tag">Correct</span></td></tr>
+          <td><span class="tag ok">Correct</span></td></tr>
       <tr><td class="state">CUSTOMER_RECOVERY_PENDING</td><td class="num">642</td><td class="num">0.72%</td>
-          <td><span class="tag">Hold</span></td></tr>
+          <td><span class="tag ok">631 explained</span></td></tr>
       <tr><td class="state">LOST</td><td class="num">488</td><td class="num">0.55%</td>
           <td><span class="tag now">Fix now</span></td></tr>
       <tr><td class="state">No device on record</td><td class="num">331</td><td class="num">0.37%</td>
-          <td><span class="tag">Hold</span></td></tr>
+          <td><span class="tag">Investigating</span></td></tr>
       <tr><td class="state">WRITTEN_OFF</td><td class="num">256</td><td class="num">0.29%</td>
           <td><span class="tag now">Fix now</span></td></tr>
       <tr><td class="state">IDLE</td><td class="num">129</td><td class="num">0.14%</td>
-          <td><span class="tag">Hold</span></td></tr>
+          <td><span class="tag ok">128 explained</span></td></tr>
       <tr><td class="state">RETRIEVAL_PENDING</td><td class="num">49</td><td class="num">0.05%</td>
-          <td><span class="tag">Hold</span></td></tr>
+          <td><span class="tag">Investigating</span></td></tr>
       <tr><td class="state">More than one device</td><td class="num">45</td><td class="num">0.05%</td>
-          <td><span class="tag">Hold</span></td></tr>
+          <td><span class="tag">Investigating</span></td></tr>
       <tr><td class="state">RETURNED</td><td class="num">8</td><td class="num">0.01%</td>
-          <td><span class="tag">Hold</span></td></tr>
+          <td><span class="tag ok">All explained</span></td></tr>
       <tr><td class="state">CUSTODIED</td><td class="num">2</td><td class="num">0.00%</td>
-          <td><span class="tag">Hold</span></td></tr>
+          <td><span class="tag">Investigating</span></td></tr>
       <tr class="total"><td>Total</td><td class="num">89,397</td><td class="num">100%</td><td></td></tr>
     </tbody>
   </table>
@@ -174,6 +187,76 @@
     against this customer at all. <b>More than one device</b> — two records exist for one
     customer, usually an old swap left open.
   </p>
+</div>
+
+<h2>Step 4 — Customers do return devices while still paying</h2>
+<div class="card">
+  <p class="intro">
+    Five of those states mean the device has come back to us. That is not always an error.
+    Customers sometimes hand a device back while their plan is still running. So for each
+    of these <b>830</b> customers we traced the device history, to see whether it genuinely
+    left the customer or whether the record was simply created that way.
+  </p>
+  <div class="split">
+    <div class="res ok"><div class="n">771</div><div class="l">records confirmed correct</div></div>
+    <div class="res warn"><div class="n">59</div><div class="l">still unexplained</div></div>
+  </div>
+  <p class="fn" style="border-top:1px solid var(--line);margin-top:18px;padding-top:16px">
+    Of the 771 confirmed: <b>538</b> where the plan had already ended — a normal
+    end-of-plan collection, nothing to do. <b>233</b> where the customer returned the
+    device but is still paying — the device record is right, so billing should confirm
+    the plan should still be running.
+  </p>
+</div>
+
+<h2>Step 5 — Where we now stand</h2>
+<div class="card">
+  <div class="ba">
+    <div>
+      <div class="b">1,950</div>
+      <div class="cap">looked wrong at first</div>
+    </div>
+    <div class="arrow">→</div>
+    <div>
+      <div class="a">1,179</div>
+      <div class="cap">genuinely need action</div>
+    </div>
+  </div>
+  <div class="drop">771 cases cleared — the actionable list is 40% smaller.</div>
+</div>
+
+<h2>What is left, and what we are doing</h2>
+<div class="card">
+  <div class="scroll">
+  <table>
+    <thead>
+      <tr><th>Case</th><th class="num">Customers</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Marked lost or written off, but customer is connected</td>
+          <td class="num">744</td><td><span class="tag now">Restoring now</span></td></tr>
+      <tr><td>No device on record at all</td>
+          <td class="num">331</td><td><span class="tag">Investigating</span></td></tr>
+      <tr><td>Collection record with no history behind it</td>
+          <td class="num">48</td><td><span class="tag">Investigating</span></td></tr>
+      <tr><td>More than one device on record</td>
+          <td class="num">45</td><td><span class="tag">Investigating</span></td></tr>
+      <tr><td>Collection open but no recent task</td>
+          <td class="num">11</td><td><span class="tag">Checking</span></td></tr>
+      <tr class="total"><td>Total</td><td class="num">1,179</td><td></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="fn">
+    45 of the 48 unexplained collection records were created on the same day, 16 June.
+    That points to one cause, not 48 separate problems.
+  </p>
+
+  <div class="note">
+    <b>One point needs a decision.</b> 253 of the 256 written-off devices were written off
+    deliberately by the July finance audit. Restoring them reverses that decision.
+    Finance should confirm before we proceed.
+  </div>
 </div>
 
 <h2>Why this matters</h2>
@@ -187,49 +270,23 @@
   </ul>
 </div>
 
-<h2>Step 4 — What we are doing now</h2>
-<div class="card">
-  <ol class="funnel">
-    <li>
-      <div class="t">Restore the lost and written-off devices</div>
-      <div class="d">These are the unambiguous ones. The customer is paying and connected,
-        so the device is neither lost nor gone.</div>
-      <div class="running"><span class="v">743</span><span class="k">devices restored to deployed</span></div>
-    </li>
-    <li>
-      <div class="t">Match how the system already behaves</div>
-      <div class="d">Our platform already makes this same correction automatically when a
-        connection is reactivated. We reproduce exactly that, nothing more.</div>
-    </li>
-    <li>
-      <div class="t">Hold the rest</div>
-      <div class="d">Pickups, missing records and duplicates each need a different decision.
-        We return to them once the cause is clear.</div>
-      <div class="running"><span class="v">1,206</span><span class="k">cases on hold</span></div>
-    </li>
-  </ol>
-
-  <div class="note">
-    <b>One point needs a decision.</b> 253 of the 256 written-off devices were written off
-    deliberately by the July finance audit. Restoring them reverses that decision.
-    Finance should confirm before we proceed.
-  </div>
-</div>
-
 <h2>Open questions</h2>
 <div class="card">
   <ul class="plain">
     <li>Why do 331 paying customers have no device on record?</li>
-    <li>Why are pickups open against 642 customers who are still paying?</li>
+    <li>What created 45 collection records on 16 June with no history behind them?</li>
+    <li>Should 233 customers who returned their device still be on a paid plan?</li>
     <li>Should the 994 customers on not-yet-onboarded partners be in scope at all?</li>
   </ul>
 </div>
 
 <footer>
   Sources: customer plan records, customer account register, and the device custody register.
-  Figures as at 8 August 2026. The 744 lost and written-off customers cover 746 devices;
-  743 are eligible to restore, 3 have no connection on record. Full device-level detail
-  available on request.
+  Figures as at 8 August 2026. Counts are customers; a few hold more than one device, so
+  device totals differ slightly. Of the 744 lost and written-off customers, 743 devices are
+  eligible to restore — 3 have no connection on record. Collection records were counted as
+  open only where a pickup task was active and raised in the last 21 days.
+  Full device-level detail available on request.
 </footer>
 
 </div>
