@@ -114,6 +114,10 @@
 
   <h2>RCA</h2>
   <ul class="specs">
+    <li style="border-left-color:#0d47a1;"><a href="rca/active-base-device-audit/index.html">
+      <div class="spec-title">Active Base — Device Record Audit</div>
+      <div class="spec-sub">2026-08-08 · Stakeholder view. Do our records show the right device for every paying customer? Base = plan live or expired ≤15 days, restricted to partners onboarded to CSP (<code>csp_account.partner_id</code>) · <b>89,397 customers checked · 97.82% correct · 1,950 mismatched</b> (642 pickup-open, 488 lost, 331 no device on record, 256 written off, 129 idle, 49 retrieval, 45 multi-device, 10 returned/custodied) · <b>743 lost/written-off devices queued for restore to DEPLOYED</b> — column set derived from 1,257 devices the platform itself already restored via <code>CL_CONNECTION_RESCUED</code>/<code>CL_CONNECTION_ACTIVATED</code> · <b>open</b>: 253 of the write-offs came from <code>FIN-PHYS-AUDIT-2026-07</code> and need finance sign-off before reversal.</div>
+    </a></li>
     <li style="border-left-color:#0d47a1;"><a href="rca/put-nbrec-creation/index.html">
       <div class="spec-title">Netbox-Pickup (PUT / nbrec) Creation — RCA</div>
       <div class="spec-sub">2026-07-01 · Why ~3,579 netbox-pickup PUTs were created (≥18 Jun). 100% triggered <b>outside CSP-OS</b> (i2e1 customer stack), stamped <code>CUSTOMER_DEACTIVATION_REQUEST</code>/<code>source_surface=CUSTOMER_APP</code> · two real sources (Datadog trace evidence): <b>CRON</b> scheduled router-recovery (python-urllib3 → <code>/internal/events/scheduled/execute</code>, 88.6%) vs <b>APP</b> customer UPI tap (okhttp → <code>/api/security-deposit</code>, 11.4%) · verified in <code>SECURITY_DEPOSIT_ORDERS</code> (UPI present=app 410/410; UPI null=cron 3,175/3,178) · <b>R15 confirmed</b>: cron PUT created ~15 days after plan expiry (median 14.8d, p25–p75 14.8–15.1). Full ingress→cascade event chain + service/endpoint/user-agent/workflow names for tech review.</div>
