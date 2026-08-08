@@ -161,23 +161,23 @@
       <tr><td class="state">DEPLOYED</td><td class="num">87,447</td><td class="num">97.82%</td>
           <td><span class="tag ok">Correct</span></td></tr>
       <tr><td class="state">CUSTOMER_RECOVERY_PENDING</td><td class="num">642</td><td class="num">0.72%</td>
-          <td><span class="tag ok">631 explained</span></td></tr>
+          <td><span class="tag ok">631 explained</span> <span class="tag">11 open</span></td></tr>
       <tr><td class="state">LOST</td><td class="num">488</td><td class="num">0.55%</td>
-          <td><span class="tag now">Fix now</span></td></tr>
+          <td><span class="tag now">488 restoring</span></td></tr>
       <tr><td class="state">No device on record</td><td class="num">331</td><td class="num">0.37%</td>
-          <td><span class="tag">Investigating</span></td></tr>
+          <td><span class="tag">331 open</span></td></tr>
       <tr><td class="state">WRITTEN_OFF</td><td class="num">256</td><td class="num">0.29%</td>
-          <td><span class="tag now">Fix now</span></td></tr>
+          <td><span class="tag now">256 restoring</span></td></tr>
       <tr><td class="state">IDLE</td><td class="num">129</td><td class="num">0.14%</td>
-          <td><span class="tag ok">128 explained</span></td></tr>
+          <td><span class="tag ok">128 explained</span> <span class="tag">1 open</span></td></tr>
       <tr><td class="state">RETRIEVAL_PENDING</td><td class="num">49</td><td class="num">0.05%</td>
-          <td><span class="tag">Investigating</span></td></tr>
+          <td><span class="tag ok">4 explained</span> <span class="tag">45 open</span></td></tr>
       <tr><td class="state">More than one device</td><td class="num">45</td><td class="num">0.05%</td>
-          <td><span class="tag">Investigating</span></td></tr>
+          <td><span class="tag">45 open</span></td></tr>
       <tr><td class="state">RETURNED</td><td class="num">8</td><td class="num">0.01%</td>
-          <td><span class="tag ok">All explained</span></td></tr>
+          <td><span class="tag ok">8 explained</span></td></tr>
       <tr><td class="state">CUSTODIED</td><td class="num">2</td><td class="num">0.00%</td>
-          <td><span class="tag">Investigating</span></td></tr>
+          <td><span class="tag">2 open</span></td></tr>
       <tr class="total"><td>Total</td><td class="num">89,397</td><td class="num">100%</td><td></td></tr>
     </tbody>
   </table>
@@ -192,10 +192,12 @@
 <h2>Step 4 — Customers do return devices while still paying</h2>
 <div class="card">
   <p class="intro">
-    Five of those states mean the device has come back to us. That is not always an error.
-    Customers sometimes hand a device back while their plan is still running. So for each
-    of these <b>830</b> customers we traced the device history, to see whether it genuinely
-    left the customer or whether the record was simply created that way.
+    Five of those states mean the device has come back to us —
+    <b>CUSTOMER_RECOVERY_PENDING</b>, <b>IDLE</b>, <b>RETRIEVAL_PENDING</b>,
+    <b>RETURNED</b> and <b>CUSTODIED</b>. That is not always an error. Customers
+    sometimes hand a device back while their plan is still running. So for each of these
+    <b>830</b> customers we traced the device history, to see whether it genuinely left
+    the customer or whether the record was simply created that way.
   </p>
   <div class="split">
     <div class="res ok"><div class="n">771</div><div class="l">records confirmed correct</div></div>
@@ -230,26 +232,41 @@
   <div class="scroll">
   <table>
     <thead>
-      <tr><th>Case</th><th class="num">Customers</th><th>Action</th></tr>
+      <tr><th>Recorded state</th><th class="num">Customers</th>
+          <th>Why it is still open</th><th>Action</th></tr>
     </thead>
     <tbody>
-      <tr><td>Marked lost or written off, but customer is connected</td>
-          <td class="num">744</td><td><span class="tag now">Restoring now</span></td></tr>
-      <tr><td>No device on record at all</td>
-          <td class="num">331</td><td><span class="tag">Investigating</span></td></tr>
-      <tr><td>Collection record with no history behind it</td>
-          <td class="num">48</td><td><span class="tag">Investigating</span></td></tr>
-      <tr><td>More than one device on record</td>
-          <td class="num">45</td><td><span class="tag">Investigating</span></td></tr>
-      <tr><td>Collection open but no recent task</td>
-          <td class="num">11</td><td><span class="tag">Checking</span></td></tr>
-      <tr class="total"><td>Total</td><td class="num">1,179</td><td></td></tr>
+      <tr><td class="state">LOST</td><td class="num">488</td>
+          <td>Customer is paying and connected, so the device is not lost.</td>
+          <td><span class="tag now">Restoring now</span></td></tr>
+      <tr><td class="state">WRITTEN_OFF</td><td class="num">256</td>
+          <td>Same. 253 of these were written off by the July finance audit.</td>
+          <td><span class="tag now">Restoring now</span></td></tr>
+      <tr><td>No device on record</td><td class="num">331</td>
+          <td>No device is held against this customer at all.</td>
+          <td><span class="tag">Investigating</span></td></tr>
+      <tr><td class="state">RETRIEVAL_PENDING</td><td class="num">45</td>
+          <td>Record shows a retrieval, but nothing in the history moved it there.</td>
+          <td><span class="tag">Investigating</span></td></tr>
+      <tr><td>More than one device</td><td class="num">45</td>
+          <td>Two records for one customer, usually an old swap left open.</td>
+          <td><span class="tag">Investigating</span></td></tr>
+      <tr><td class="state">CUSTOMER_RECOVERY_PENDING</td><td class="num">11</td>
+          <td>Collection is open with no active pickup task raised in the last 21 days.</td>
+          <td><span class="tag">Checking</span></td></tr>
+      <tr><td class="state">CUSTODIED</td><td class="num">2</td>
+          <td>Held by the partner, with no history explaining how.</td>
+          <td><span class="tag">Investigating</span></td></tr>
+      <tr><td class="state">IDLE</td><td class="num">1</td>
+          <td>Recorded as unused, with no history explaining how.</td>
+          <td><span class="tag">Investigating</span></td></tr>
+      <tr class="total"><td>Total</td><td class="num">1,179</td><td></td><td></td></tr>
     </tbody>
   </table>
   </div>
   <p class="fn">
-    45 of the 48 unexplained collection records were created on the same day, 16 June.
-    That points to one cause, not 48 separate problems.
+    Most of the 45 <b>RETRIEVAL_PENDING</b> records were created on a single day,
+    16 June. That points to one cause, not 45 separate problems.
   </p>
 
   <div class="note">
@@ -274,7 +291,7 @@
 <div class="card">
   <ul class="plain">
     <li>Why do 331 paying customers have no device on record?</li>
-    <li>What created 45 collection records on 16 June with no history behind them?</li>
+    <li>What put 45 devices into <b>RETRIEVAL_PENDING</b> on 16 June with no history behind it?</li>
     <li>Should 233 customers who returned their device still be on a paid plan?</li>
     <li>Should the 994 customers on not-yet-onboarded partners be in scope at all?</li>
   </ul>
@@ -284,8 +301,9 @@
   Sources: customer plan records, customer account register, and the device custody register.
   Figures as at 8 August 2026. Counts are customers; a few hold more than one device, so
   device totals differ slightly. Of the 744 lost and written-off customers, 743 devices are
-  eligible to restore — 3 have no connection on record. Collection records were counted as
-  open only where a pickup task was active and raised in the last 21 days.
+  eligible to restore — 3 have no connection on record. A <b>CUSTOMER_RECOVERY_PENDING</b>
+  record was treated as explained only where a pickup task was active and raised in the
+  last 21 days.
   Full device-level detail available on request.
 </footer>
 
