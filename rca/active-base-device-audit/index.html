@@ -32,6 +32,9 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px}
   .lead{font-size:18px;line-height:1.5;margin:0}
   .lead b{color:var(--accent)}
+  .method{margin:20px 0 0;padding-top:18px;border-top:1px solid var(--line);
+          color:var(--muted);font-size:15px;line-height:1.55}
+  .method b{color:var(--ink)}
   p.intro{margin:0 0 16px;color:var(--muted)}
 
   ol.funnel{list-style:none;counter-reset:s;margin:0;padding:0}
@@ -104,8 +107,14 @@
     Every live customer has a device in their home. Our systems should show that device
     as <b>deployed and working</b>. We checked whether they do.
     <br><br>
-    Almost all are right. We then looked into the ones that were not, and most of those
-    turned out to be correct too.
+    Almost all are right. We examined every one that was not, and are fixing what is
+    genuinely wrong.
+  </p>
+  <p class="method">
+    <b>Where the customer list came from.</b> We did not ask the device system who its
+    customers are. We started from the recharge and connection records — the independent
+    evidence that someone is paying and online right now — and only then asked the device
+    system what it holds against them. A system cannot be checked against its own answer.
   </p>
 </div>
 
@@ -114,7 +123,8 @@
   <ol class="funnel">
     <li>
       <div class="t">Start with paying customers</div>
-      <div class="d">Anyone whose plan is live, or expired in the last 15 days.</div>
+      <div class="d">Taken from the recharge records, not the device system.
+        Anyone whose plan is live, or expired in the last 15 days.</div>
       <div class="running"><span class="v">90,393</span><span class="k">customers</span></div>
     </li>
     <li>
